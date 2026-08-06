@@ -1,0 +1,1457 @@
+Date,Location,Customer,Officer,Start,Finish,Hours,Rate,Amount,Status
+05/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Liaqat Khan,14:00,22:00,8,11,88,Confirmed
+07/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Liaqat Khan,14:00,22:00,8,11,88,Confirmed
+23/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Liaqat Khan,13:00,22:00,9,11,99,Confirmed
+20/08/2022,Blackfriars Rd Kings Lynn PE30 1NX,STM Security,TABARIK HUSSAIN,06:00,18:00,12,11,132,Confirmed
+01/10/2022,Blackfriars Rd Kings Lynn PE30 1NX,STM Security,TABARIK HUSSAIN,06:00,18:00,12,11,132,Confirmed
+19/11/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,TABARIK HUSSAIN,07:00,16:00,9,11,99,Confirmed
+24/11/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,TABARIK HUSSAIN,12:00,21:00,9,11,99,Confirmed
+26/11/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,TABARIK HUSSAIN,12:00,21:00,9,11,99,Confirmed
+03/12/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,TABARIK HUSSAIN,07:00,16:00,9,11,99,Confirmed
+10/12/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,TABARIK HUSSAIN,07:00,16:00,9,11,99,Confirmed
+10/08/2022,Bury St EdmondsIP33 1TR,OCS Security,FAISAL ADAM,08:00,17:00,9,11,99,Confirmed
+16/03/2022,TSB South Stowmarket 7 Market Place Stowmarket IP14 1DY,ISS World,Ahmed Karda,16:30,05:30,13,11,143,Confirmed
+23/03/2022,BT Adastral Park Advance Comms Tech Centre Martlesham Heath Ipswich Suffolk IP5 3RE,ISS World,Ahmed Karda,06:30,18:30,12,11,132,Confirmed
+31/03/2022,BT Adastral Park Advance Comms Tech Centre Martlesham Heath Ipswich Suffolk IP5 3RE,ISS World,Ahmed Karda,18:30,06:30,12,11,132,Confirmed
+23/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+24/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+30/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+01/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+07/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+08/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+14/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+15/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+13/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,19:00,07:00,12,11,132,Confirmed
+21/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,06:00,19:00,13,11,143,Confirmed
+22/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+23/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+24/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+25/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+26/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+27/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ahmed Karda,07:00,19:00,12,11,132,Confirmed
+30/09/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:30,17:00,8.5,11,93.5,Confirmed
+23/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:00,17:00,9,11,99,Confirmed
+10/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:30,17:00,8.5,11,93.5,Confirmed
+03/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:30,17:00,8.5,11,93.5,Confirmed
+06/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:30,17:00,8.5,11,93.5,Confirmed
+09/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,SHIVAM MALIK,08:30,17:00,8.5,11,93.5,Confirmed
+21/02/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,ROHIT DHYANI,06:00,18:00,12,11,132,Confirmed
+28/11/2022,Bury St EdmondsIP33 1TR,OCS Security,AHMED AHMED,08:00,17:00,9,11,99,Confirmed
+29/11/2022,Bury St EdmondsIP33 1TR,OCS Security,AHMED AHMED,08:00,17:00,9,11,99,Confirmed
+04/02/2022,TSB Bishop Stortford Hertfordshire CM23 3UU,ISS World,VIPIN KUMAR,12:00,18:00,6,11,66,Confirmed
+23/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,VIPIN KUMAR,10:00,19:00,9,11,99,Confirmed
+24/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,VIPIN KUMAR,11:00,18:00,7,11,77,Confirmed
+27/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,VIPIN KUMAR,11:00,20:00,9,11,99,Confirmed
+28/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,VIPIN KUMAR,11:00,20:00,9,11,99,Confirmed
+29/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,VIPIN KUMAR,11:00,20:00,9,11,99,Confirmed
+21/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,VIPIN KUMAR,07:00,19:00,12,11,132,Confirmed
+22/05/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,VIPIN KUMAR,07:00,19:00,12,11,132,Confirmed
+05/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,VIPIN KUMAR,19:00,07:00,12,11,132,Confirmed
+06/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,VIPIN KUMAR,19:00,07:00,12,11,132,Confirmed
+19/05/2022,Sterling Way CB23 3GY,Brooknight Security Ltd,ASEEL SAYEH,22:30,08:00,9.5,11,104.5,Confirmed
+27/10/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest,ASEEL SAYEH,18:00,06:00,12,11,132,Confirmed
+04/11/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest,ASEEL SAYEH,06:00,18:00,12,11,132,Confirmed
+18/11/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest,ASEEL SAYEH,18:00,06:00,12,11,132,Confirmed
+01/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,RISHABH RATHORE,08:30,21:30,13,11,143,Confirmed
+07/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,RISHABH RATHORE,08:30,17:00,8.5,11,93.5,Confirmed
+08/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,RISHABH RATHORE,08:30,17:00,8.5,11,93.5,Confirmed
+10/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,RISHABH RATHORE,08:30,17:00,8.5,11,93.5,Confirmed
+07/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+10/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+23/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+24/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+01/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+03/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+04/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+07/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+08/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+09/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+14/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+15/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+16/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+17/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+18/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+22/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+23/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+24/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+25/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+28/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+29/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+30/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+01/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+04/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+05/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+06/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+07/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+08/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+11/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+12/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+13/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+14/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+19/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:33,9.05,11,99.55,Confirmed
+21/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+22/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+25/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+26/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+27/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+28/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+29/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+03/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+04/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+05/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+06/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+09/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+10/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+11/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+12/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+13/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+16/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+17/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+18/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+19/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+20/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+30/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+13/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+06/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+26/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+27/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+29/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+01/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+02/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+04/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+05/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+08/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+09/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+10/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+11/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+12/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+15/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+16/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+17/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+18/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+19/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+22/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+23/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+24/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+25/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+26/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+30/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+31/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+01/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+02/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+05/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+06/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+07/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+08/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+09/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+12/09/2022,Maidstone Combined ME16 8EQ,OCS Security,BALWINDER SINGH,08:30,16:30,8,11,88,Confirmed
+13/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BALWINDER SINGH,08:30,17:30,9,11,99,Confirmed
+08/04/2022,Kings Lynn Hardwick Scania Way PE30 4LR,mitie services and security,MUSTAFA ALHADHRAMI,11:00,20:00,9,11,99,Confirmed
+09/04/2022,Kings Lynn Sainsburys PE30 1DS,mitie services and security,MUSTAFA ALHADHRAMI,10:00,19:00,9,11,99,Confirmed
+12/04/2022,Kings Lynn Magistrates PE30 1PQ,OCS Security,MUSTAFA ALHADHRAMI,10:30,18:30,8,11,88,Confirmed
+13/04/2022,Kings Lynn Magistrates PE30 1PQ,OCS Security,MUSTAFA ALHADHRAMI,10:30,18:30,8,11,88,Confirmed
+14/04/2022,Kings Lynn Magistrates PE30 1PQ,OCS Security,MUSTAFA ALHADHRAMI,10:30,18:30,8,11,88,Confirmed
+25/04/2022,Kings Lynn Sainsburys PE30 1DS,mitie services and security,MUSTAFA ALHADHRAMI,10:00,19:00,9,11,99,Confirmed
+28/04/2022,Kings Lynn Sainsburys PE30 1DS,mitie services and security,MUSTAFA ALHADHRAMI,10:00,19:00,9,11,99,Confirmed
+29/04/2022,Kings Lynn Sainsburys PE30 1DS,mitie services and security,MUSTAFA ALHADHRAMI,10:00,21:00,11,11,121,Confirmed
+05/05/2022,O2 Huntingdon Unit 4 St Benedicts Court Shopping Centre Camb Huntingdon PE29 3NA United Kingdom,ISS World,MUSTAFA ALHADHRAMI,16:30,05:30,13,11,143,Confirmed
+11/05/2022,Kings Lynn Magistrates PE30 1PQ,OCS Security,MUSTAFA ALHADHRAMI,08:30,16:30,8,11,88,Confirmed
+27/05/2022,O2-Kings Lynn 37 High Street KINGS LYNN PE30 3BJ,ISS World,MUSTAFA ALHADHRAMI,09:00,17:00,8,11,88,Confirmed
+28/06/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest,MUSTAFA ALHADHRAMI,18:00,06:00,12,11,132,Confirmed
+27/04/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,12:00,21:00,9,11,99,Confirmed
+28/04/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,12:00,21:00,9,11,99,Confirmed
+09/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+29/09/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+30/09/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+02/10/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,09:30,16:30,7,11,77,Confirmed
+03/10/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+08/10/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+15/10/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,GURPREET SINGH,07:00,16:00,9,11,99,Confirmed
+07/02/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,AKSHAY DEVARORU,18:00,06:00,12,11,132,Confirmed
+14/02/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,AKSHAY DEVARORU,18:00,06:00,12,11,132,Confirmed
+02/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/02/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+03/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+10/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+16/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+24/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+29/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+30/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+06/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+12/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+19/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+29/04/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+03/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+06/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,18:35,10.08,11,110.88,Confirmed
+12/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+16/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+18/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+19/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+24/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+30/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+31/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+06/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+10/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+16/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+24/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+29/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+30/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+12/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+18/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+19/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+29/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+02/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+03/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+10/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+12/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+16/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+18/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+19/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+24/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+30/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+31/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+02/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+06/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+12/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+15/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+16/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+22/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+23/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+29/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+30/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+03/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+05/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+06/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+10/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+12/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+13/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+14/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+17/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+18/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+19/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+20/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+24/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+25/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+26/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+27/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+31/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+01/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+02/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+03/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+04/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+07/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+08/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+09/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+10/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+11/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+21/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BEANT KAUR,08:30,17:30,9,11,99,Confirmed
+28/11/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:30,17:00,8.5,11,93.5,Confirmed
+29/11/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:30,17:00,8.5,11,93.5,Confirmed
+30/11/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:30,17:00,8.5,11,93.5,Confirmed
+01/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+02/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+05/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+06/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+07/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+08/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+09/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+13/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+14/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+15/12/2022,Great Danes Hotel CourtME171RE,OCS Security,BEANT KAUR,08:00,17:00,9,11,99,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,WAQAR ALI,08:00,21:00,13,11,143,Confirmed
+02/03/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+05/04/2022,ACTC Rochester Chatham Kent ME5 9SF,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+23/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+24/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+25/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+26/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+27/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+31/05/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+01/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+06/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+07/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+08/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+09/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+10/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+14/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+15/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+16/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+17/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+20/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+21/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+22/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+23/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+24/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+27/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+28/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+29/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+30/06/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+01/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+04/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+05/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+06/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+07/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+08/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+11/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+12/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+13/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+14/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+15/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+18/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+19/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+20/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+21/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+22/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+30/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+31/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+01/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+02/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+12/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+14/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+15/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+16/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+20/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+21/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+22/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+23/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+26/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+27/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+28/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+29/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+30/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+03/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+04/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+05/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+06/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+07/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+10/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+11/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+12/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+13/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+14/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+17/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+18/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+19/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+20/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+21/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+24/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+25/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+26/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+27/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+28/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+31/10/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+01/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+02/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+03/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+04/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+07/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+08/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+09/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+10/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+11/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+14/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+15/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+16/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+17/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+18/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+21/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+22/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+23/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+24/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,MILEN SREDOVSKI,08:30,17:30,9,11,99,Confirmed
+20/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,sai kiran pujala,11:00,20:00,9,11,99,Confirmed
+21/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,sai kiran pujala,10:00,19:00,9,11,99,Confirmed
+22/04/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,sai kiran pujala,11:00,20:00,9,11,99,Confirmed
+07/01/2023,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,USAMA RAFIQUE,11:00,23:00,12,11,132,Confirmed
+28/03/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+29/03/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+30/03/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+31/03/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+04/04/2022,Norwich TribunalNR1 3PL,OCS Security,LOAY ALKREWISH,09:00,17:00,8,11,88,Confirmed
+05/04/2022,Norwich TribunalNR1 3PL,OCS Security,LOAY ALKREWISH,09:00,17:00,8,11,88,Confirmed
+11/04/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+12/04/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+19/04/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,LOAY ALKREWISH,08:00,16:00,8,11,88,Confirmed
+22/04/2022,Norwich Combined Norfolk NR3 1UP,OCS Security,LOAY ALKREWISH,16:00,05:00,13,11,143,Confirmed
+25/04/2022,Norwich Mags NR31UP,OCS Security,LOAY ALKREWISH,18:00,07:00,13,11,143,Confirmed
+28/04/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,LOAY ALKREWISH,17:00,06:00,13,11,143,Confirmed
+01/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,12:00,20:00,8,11,88,Confirmed
+02/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,12:00,20:00,8,11,88,Confirmed
+03/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,12:00,20:00,8,11,88,Confirmed
+04/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,12:00,20:00,8,11,88,Confirmed
+05/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,11:00,19:00,8,11,88,Confirmed
+06/02/2022,Dunelm Peterborough Bourges Boulevard PE1 2HS,Amberstone Security Ltd,MUHESH KUMARAVELU,11:00,17:00,6,11,66,Confirmed
+12/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+13/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+18/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+19/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+20/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+25/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+27/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+28/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,MUHESH KUMARAVELU,10:00,19:00,9,11,99,Confirmed
+01/02/2022,Maidstone Combined ME16 8EQ,OCS Security,JASVIR SINGH,08:30,16:30,8,11,88,Confirmed
+02/02/2022,Great Danes Hotel CourtME171RE,OCS Security,JASVIR SINGH,08:30,21:30,13,11,143,Confirmed
+02/02/2022,Bury St EdmondsIP33 1TR,OCS Security,GERTRUDE NJUGUNA,08:00,17:00,9,11,99,Confirmed
+03/02/2022,Bury St EdmondsIP33 1TR,OCS Security,GERTRUDE NJUGUNA,08:00,17:00,9,11,99,Confirmed
+13/02/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+19/02/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+20/02/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+27/02/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+05/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+06/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+12/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+19/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+20/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+26/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+27/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,GERTRUDE NJUGUNA,07:00,19:00,12,11,132,Confirmed
+25/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,KWAME OTCHERE,19:00,07:00,12,11,132,Confirmed
+28/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,KWAME OTCHERE,19:00,08:00,13,11,143,Confirmed
+08/02/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,ZAKARIA ABDULLAH,17:00,06:00,13,11,143,Confirmed
+10/02/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,ZAKARIA ABDULLAH,17:00,06:00,13,11,143,Confirmed
+14/02/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,ZAKARIA ABDULLAH,17:00,06:00,13,11,143,Confirmed
+15/02/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,ZAKARIA ABDULLAH,17:00,06:00,13,11,143,Confirmed
+21/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,10:00,19:00,9,11,99,Confirmed
+23/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,10:00,19:00,9,11,99,Confirmed
+24/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,09:30,16:30,7,11,77,Confirmed
+25/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,10:00,19:00,9,11,99,Confirmed
+27/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,11:00,21:00,10,11,110,Confirmed
+28/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,10:00,19:00,9,11,99,Confirmed
+29/04/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,11:00,21:00,10,11,110,Confirmed
+09/09/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,ZAKARIA ABDULLAH,11:00,20:00,9,11,99,Confirmed
+20/09/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,16:00,9,11,99,Confirmed
+21/09/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+23/09/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+26/09/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+30/09/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+24/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+25/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:30,12.5,11,137.5,Confirmed
+26/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,20:00,13,11,143,Confirmed
+27/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+28/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ZAKARIA ABDULLAH,07:00,19:00,12,11,132,Confirmed
+08/02/2022,Tesco Aylesford CFC ME20 7PP,Amberstone Security Ltd,SAJJAD KARIM,11:00,19:00,8,11,88,Confirmed
+14/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+16/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+17/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+18/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+21/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+23/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+24/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,GHAZAFE ALI,08:30,16:30,8,11,88,Confirmed
+21/02/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,KINIVILIAME KILIRAKI,19:00,07:00,12,11,132,Confirmed
+01/03/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,KINIVILIAME KILIRAKI,19:00,07:00,12,11,132,Confirmed
+10/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,KINIVILIAME KILIRAKI,07:00,19:00,12,11,132,Confirmed
+25/02/2022,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MANOHAR PUCHAKAYALA,08:30,18:00,9.5,11,104.5,Confirmed
+21/03/2022,Ipswich Magistrates Suffolk IP1 2AP,OCS Security,DHANUSHKA WIJERATHNA ARACHCHIGE,08:45,17:45,9,11,99,Confirmed
+28/03/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,MUSTAFA ALI,11:30,20:00,8.5,11,93.5,Confirmed
+29/03/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,MUSTAFA ALI,11:30,20:00,8.5,11,93.5,Confirmed
+01/04/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,MUSTAFA ALI,11:30,20:00,8.5,11,93.5,Confirmed
+02/04/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,MUSTAFA ALI,09:30,18:00,8.5,11,93.5,Confirmed
+03/04/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,MUSTAFA ALI,10:30,16:30,6,11,66,Confirmed
+12/04/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+13/04/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+14/04/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+19/04/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+30/05/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+31/05/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+01/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+02/06/2022,Norwich Combined Court NR3 1UR,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+06/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+07/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+13/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+14/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+20/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+21/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+27/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+28/06/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+28/07/2022,Norwich TribunalNR1 3PL,OCS Security,OSMAN EDRIS,09:00,17:00,8,11,88,Confirmed
+30/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,BARZAN MALLA,08:30,16:30,8,11,88,Confirmed
+31/03/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,BARZAN MALLA,08:30,16:30,8,11,88,Confirmed
+04/04/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,BARZAN MALLA,18:30,07:30,13,11,143,Confirmed
+05/04/2022,Great Yarmouth Norfolk NR30 1PW,OCS Security,BARZAN MALLA,18:30,07:30,13,11,143,Confirmed
+06/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+07/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+08/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+19/04/2022,Norwich Mags NR31UP,OCS Security,BARZAN MALLA,17:30,06:30,13,11,143,Confirmed
+20/04/2022,Norwich Mags NR31UP,OCS Security,BARZAN MALLA,17:30,06:30,13,11,143,Confirmed
+29/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+27/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+28/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+29/04/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+03/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+04/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+05/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+06/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+09/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+10/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+11/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+12/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+13/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+16/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+17/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+18/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+19/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+20/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+23/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+24/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+25/05/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+26/05/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+27/05/2022,Norwich TribunalNR1 3PL,OCS Security,BARZAN MALLA,09:00,17:00,8,11,88,Confirmed
+30/08/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BARZAN MALLA,08:00,16:00,8,11,88,Confirmed
+26/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,ERJON RASKA,10:00,19:00,9,11,99,Confirmed
+06/04/2022,Kings Lynn Hardwick Scania Way PE30 4LR,mitie services and security,ERJON RASKA,12:00,21:30,9.5,11,104.5,Confirmed
+07/04/2022,Kings Lynn Hardwick Scania Way PE30 4LR,mitie services and security,ERJON RASKA,10:00,19:30,9.5,11,104.5,Confirmed
+20/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ERJON RASKA,19:00,07:00,12,11,132,Confirmed
+21/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ERJON RASKA,19:00,07:00,12,11,132,Confirmed
+23/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ERJON RASKA,19:00,07:00,12,11,132,Confirmed
+24/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,ERJON RASKA,19:00,07:00,12,11,132,Confirmed
+17/08/2022,Js Haverhill S 419 Haycocks Road Haverhill CB9 7YL,mitie services and security,ERJON RASKA,10:00,22:00,12,11,132,Confirmed
+18/08/2022,Js Haverhill S 419 Haycocks Road Haverhill CB9 7YL,mitie services and security,ERJON RASKA,10:00,22:00,12,11,132,Confirmed
+05/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,13:30,22:30,9,11,99,Confirmed
+10/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+11/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,09:30,16:30,7,11,77,Confirmed
+13/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+14/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+15/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+16/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+17/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,07:00,16:00,9,11,99,Confirmed
+18/09/2022,278678 Oxney Road Peterbrough Super Market PE1 5NG,mitie services and security,ERJON RASKA,10:00,17:00,7,11,77,Confirmed
+10/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,ERJON RASKA,08:00,17:00,9,11,99,Confirmed
+12/11/2022,Peterborough Brotherhood Retail Park Brotherhood close Peterborough PE4 6ZR,Galaxon Services Ltd,ERJON RASKA,10:00,19:00,9,11,99,Confirmed
+17/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,ERJON RASKA,08:00,17:00,9,11,99,Confirmed
+19/11/2022,Peterborough Brotherhood Retail Park Brotherhood close Peterborough PE4 6ZR,Galaxon Services Ltd,ERJON RASKA,10:00,19:00,9,11,99,Confirmed
+02/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,OBED ANKU,07:00,19:00,12,11,132,Confirmed
+09/04/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,BAHIRALDIN ZAHIYA,07:00,19:00,12,11,132,Confirmed
+09/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,BAHIRALDIN ZAHIYA,19:00,07:00,12,11,132,Confirmed
+25/04/2022,Sainsburys High Wycombe Oxford Rd High Wycombe HP11 2DN,mitie services and security,FARAZ AFTAB,14:00,23:00,9,11,99,Confirmed
+26/04/2022,Sainsburys High Wycombe Oxford Rd High Wycombe HP11 2DN,mitie services and security,FARAZ AFTAB,14:00,23:00,9,11,99,Confirmed
+20/04/2022,Norwich TribunalNR1 3PL,OCS Security,Nabil Juma,09:00,17:00,8,11,88,Confirmed
+21/04/2022,Norwich TribunalNR1 3PL,OCS Security,Nabil Juma,09:00,17:00,8,11,88,Confirmed
+22/04/2022,Norwich TribunalNR1 3PL,OCS Security,Nabil Juma,09:00,17:00,8,11,88,Confirmed
+21/04/2022,JS Leicester London Road 146 London Road Leicester LE2 1ED,mitie services and security,MUHAMMAD IMRAN,13:00,23:00,10,11,110,Confirmed
+25/04/2022,JS Leicester London Road 146 London Road Leicester LE2 1ED,mitie services and security,MUHAMMAD IMRAN,14:00,23:00,9,11,99,Confirmed
+26/04/2022,JS Leicester London Road 146 London Road Leicester LE2 1ED,mitie services and security,MUHAMMAD IMRAN,14:00,23:00,9,11,99,Confirmed
+27/04/2022,Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ,mitie services and security,MUHAMMAD IMRAN,07:00,16:00,9,11,99,Confirmed
+28/04/2022,Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ,mitie services and security,MUHAMMAD IMRAN,07:00,16:00,9,11,99,Confirmed
+29/04/2022,Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ,mitie services and security,MUHAMMAD IMRAN,07:00,16:00,9,11,99,Confirmed
+30/04/2022,JS Leicester London Road 146 London Road Leicester LE2 1ED,mitie services and security,MUHAMMAD IMRAN,14:00,23:00,9,11,99,Confirmed
+27/04/2022,278634 Sainsburys Sidney Street CB2 3HX,mitie services and security,UMER SHAHZAD,11:00,21:00,10,11,110,Confirmed
+25/04/2022,278634 Sainsburys Sidney Street CB2 3HX,mitie services and security,TEJINDER SINGH,10:00,19:00,9,11,99,Confirmed
+16/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+17/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+18/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+19/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+23/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+24/05/2022,Norwich TribunalNR1 3PL,OCS Security,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+25/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+26/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+30/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+31/05/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+01/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+02/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+07/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+08/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+09/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+10/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+13/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+14/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+15/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+16/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+17/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+18/06/2022,Norwich Mags NR31UP,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+20/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+21/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+22/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+23/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+24/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+25/06/2022,Norwich Combined Norfolk NR3 1UP,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+28/06/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL SADAT,08:00,16:00,8,11,88,Confirmed
+12/07/2022,nationwide norfolk 32 st stephens street NR1 3SH,Amberstone Security Ltd,BILAL SADAT,09:00,17:00,8,11,88,Confirmed
+21/03/2023,Bath Westgate Street Boots BA1 1EL,SSGC,SAJAWAL RANDAWA,16:00,05:00,13,11,143,Confirmed
+23/03/2023,Frome Market Place Boots BA11 1AB,SSGC,SAJAWAL RANDAWA,15:30,04:30,13,11,143,Confirmed
+29/04/2022,278634 Sainsburys Sidney Street CB2 3HX,mitie services and security,SAIKUMAR ORSU,11:00,00:30,13.5,11,148.5,Confirmed
+03/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,SAIKUMAR ORSU,07:30,17:30,10,11,110,Confirmed
+04/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,SAIKUMAR ORSU,07:30,17:30,10,11,110,Confirmed
+02/12/2022,BT Cambridge Trunks CB2 8HG,ISS World,SAIKUMAR ORSU,07:30,17:30,10,11,110,Confirmed
+05/12/2022,BT Cambridge Trunks CB2 8HG,ISS World,SAIKUMAR ORSU,07:30,17:30,10,11,110,Confirmed
+05/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,VENKATESH CHINTALA,07:30,17:30,10,11,110,Confirmed
+06/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+08/05/2022,Sterling Way CB23 3GY,Brooknight Security Ltd,Sureddy Venkatreddy,06:00,18:00,12,11,132,Confirmed
+09/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+10/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+11/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+12/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+13/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+16/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+17/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+18/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+19/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+20/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+23/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+24/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+25/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+26/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+27/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+30/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+31/05/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+01/06/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+06/06/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+07/06/2022,BT Cambridge Trunks CB2 8HG,ISS World,Sureddy Venkatreddy,07:30,17:30,10,11,110,Confirmed
+06/05/2022,Wilko Avonmeads Unit 5 AvonMeads Shopping Par The Causeway St Philips BS2 0SP,Brooknight Security Ltd,WARSAME MUSE,09:00,17:00,8,11,88,Confirmed
+07/05/2022,Sterling Way CB23 3GY,Brooknight Security Ltd,SRI HARSHA PATIBANDLA,06:30,18:00,11.5,11,126.5,Confirmed
+19/05/2022,Biddulph Wharf Road ST8 6AJ,mitie services and security,FAHIM AHMED,10:00,19:00,9,11,99,Confirmed
+21/05/2022,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,FAHIM AHMED,06:00,18:00,12,11,132,Confirmed
+23/05/2022,Aspall Stowmarket IP14 6NY,OCS Security,HATIM ABDULWAHAB,19:00,07:00,12,11,132,Confirmed
+21/05/2022,O2 Oxford London W1D 1LT,ISS World,ALI ARSLAN,11:33,20:00,8.45,11,92.95,Confirmed
+22/05/2022,The North Face 30 32 Southampton Road Covent Garden WC2E 7HE,Ellis Birgham,ALI ARSLAN,11:30,17:30,6,11,66,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,ALI ARSLAN,08:00,21:00,13,11,143,Confirmed
+31/05/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,19:30,11,11,121,Confirmed
+01/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+06/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+07/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+08/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+09/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+10/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+13/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+14/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+15/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+29/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+30/06/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+01/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+04/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+05/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+06/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+07/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+08/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+11/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+12/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+13/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+14/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+15/07/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Sowjanya konathala,08:30,17:00,8.5,11,93.5,Confirmed
+04/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+05/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+06/06/2022,Bury St Edmonds IP331TR,OCS Security,MIR ZIHAD AHAMED,08:30,16:30,8,11,88,Confirmed
+10/06/2022,Bury St Edmonds IP331TR,OCS Security,MIR ZIHAD AHAMED,08:30,16:30,8,11,88,Confirmed
+11/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+12/06/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+02/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+03/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,MIR ZIHAD AHAMED,07:00,19:00,12,11,132,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,ABDUL HANAN,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,GUL GHANI,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,MUHAMMAD TAHIR,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,ASHRAF IQBAL,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,MUHAMMAD AKRAM,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,TASNEEM KAUSER,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,KARANPREET SINGH,08:00,21:00,13,11,143,Confirmed
+03/06/2022,Royal Derby Epsom KT18 5LQ,Prime Secure,KAMRAN QADEER,08:00,21:00,13,11,143,Confirmed
+04/06/2022,Hobbycraft Peterborough PE4 6ZR,Brooknight Security Ltd,KASHIR HUSSAIN,10:00,18:00,8,11,88,Confirmed
+11/06/2022,Tesco Staplee Way Peterborough PE1 4YT,Atlian Servest,KASHIR HUSSAIN,12:00,00:00,12,11,132,Confirmed
+12/06/2022,Tesco Staplee Way Peterborough PE1 4YT,Atlian Servest,KASHIR HUSSAIN,12:00,00:00,12,11,132,Confirmed
+04/06/2022,Patch East 80 Leadenhall St London EC3A 3DH,Unrivalled SS Ltd,AZAD AKGUNDOGDU,19:30,02:00,6.5,11,71.5,Confirmed
+08/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+09/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+10/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+11/06/2022,Norwich Mags NR31UP,OCS Security,HAFIZ ABUBAKR,08:00,14:00,6,11,66,Confirmed
+15/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+16/06/2022,Norwich Combined Court NR3 1UR,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+17/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+22/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+23/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+24/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+29/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+30/06/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+01/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+05/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+06/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+07/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+08/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+12/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+13/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+14/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+15/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+19/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+20/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+21/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+22/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+26/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+27/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+29/07/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+01/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+02/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+03/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+04/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+05/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+08/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+09/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+10/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+11/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+12/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+15/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+16/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+17/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+18/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+19/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+22/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+23/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+24/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+25/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+26/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+30/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+31/08/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+01/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+02/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+06/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+07/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+09/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+13/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+16/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+20/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+23/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+27/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+30/09/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+04/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+07/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+11/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+14/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+18/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+21/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+25/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+28/10/2022,Norwich TribunalNR1 3PL,OCS Security,HAFIZ ABUBAKR,09:00,17:00,8,11,88,Confirmed
+28/11/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+29/11/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+30/11/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+01/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+02/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+03/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+04/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+05/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+06/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+07/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+08/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+09/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+10/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+11/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+12/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+13/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+14/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+15/12/2022,Snetterton Cold Store NR16 2JZ,Traditional Norfolk Poultry Ltd,HAFIZ ABUBAKR,18:00,06:00,12,11,132,Confirmed
+17/06/2022,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,HARISH SADINENI,14:00,23:00,9,11,99,Confirmed
+18/06/2022,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,HARISH SADINENI,14:00,23:00,9,11,99,Confirmed
+13/06/2022,Dunelm Bangor Caernarfon Rd Bangor LL57 4SU,Amberstone Security Ltd,WALEED SHOUKAT,20:00,09:00,13,11,143,Confirmed
+24/06/2022,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,14:00,02:32,12.54,11,137.94,Confirmed
+01/07/2022,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,14:00,23:00,9,11,99,Confirmed
+02/07/2022,278647 Js Cambridge Cherry Hinton Cambridge Leisure Park Cambridge CB1 7DY,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,14:00,23:00,9,11,99,Confirmed
+24/11/2022,BT Cambridge Trunks CB2 8HG,ISS World,MUHAMMED JASHEER PALLIPARAMBAN,07:30,17:30,10,11,110,Confirmed
+25/11/2022,BT Cambridge Trunks CB2 8HG,ISS World,MUHAMMED JASHEER PALLIPARAMBAN,07:30,17:30,10,11,110,Confirmed
+30/11/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+01/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+02/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+05/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+06/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+07/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+08/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+14/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+15/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+16/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,08:00,17:00,9,11,99,Confirmed
+19/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+21/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+22/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,08:00,17:00,9,11,99,Confirmed
+23/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,08:00,17:00,9,11,99,Confirmed
+29/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,MUHAMMED JASHEER PALLIPARAMBAN,08:00,17:00,9,11,99,Confirmed
+31/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,MUHAMMED JASHEER PALLIPARAMBAN,08:30,17:00,8.5,11,93.5,Confirmed
+21/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+22/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+23/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+24/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+29/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+30/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+31/07/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+04/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+05/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+06/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+07/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+08/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+09/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+11/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+12/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+13/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+14/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+17/08/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,SALIM HAMED,11:00,21:00,10,11,110,Confirmed
+19/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,07:00,19:00,12,11,132,Confirmed
+20/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,10:00,23:00,13,11,143,Confirmed
+31/08/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+01/09/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+02/09/2022,Bury St EdmondsIP33 1TR,OCS Security,SALIM HAMED,08:00,17:00,9,11,99,Confirmed
+11/09/2022,278625 Bury St Edmunds Bedingfeld Way IP32 7EJ,mitie services and security,SALIM HAMED,09:30,16:30,7,11,77,Confirmed
+01/11/2022,Next Ipswich Martlesham Heath 667 1 3 Beardmore Park Martlesham Heath Martlesham Ipswich IP5 3RX,Amberstone Security Ltd,SALIM HAMED,20:30,06:30,10,11,110,Confirmed
+02/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,17:30,06:30,13,11,143,Confirmed
+03/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+08/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+11/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+14/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+15/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+20/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+21/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+22/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+23/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+28/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+29/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+30/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,SALIM HAMED,19:00,07:00,12,11,132,Confirmed
+24/07/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+27/07/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+28/07/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+01/08/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+02/08/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+03/08/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+04/08/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Shehzad Hussain,21:00,07:00,10,11,110,Confirmed
+25/07/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Hafiz Umair Hassan,21:00,07:00,10,11,110,Confirmed
+26/07/2022,4 Fourth Avenue Halsted Essex CO9 2SY United Kingdom,Galaxon Services Ltd,Hafiz Umair Hassan,21:00,07:00,10,11,110,Confirmed
+25/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Irfan Ahmed,08:30,00:42,16.2,11,178.2,Confirmed
+28/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Irfan Ahmed,08:30,21:30,13,11,143,Confirmed
+01/08/2022,Bury St EdmondsIP33 1TR,OCS Security,Ahmed Muhammad Yousaf,08:00,17:00,9,11,99,Confirmed
+02/08/2022,Bury St EdmondsIP33 1TR,OCS Security,Ahmed Muhammad Yousaf,08:00,17:00,9,11,99,Confirmed
+03/08/2022,Bury St EdmondsIP33 1TR,OCS Security,Ahmed Muhammad Yousaf,08:00,17:00,9,11,99,Confirmed
+01/09/2022,Bury St EdmondsIP33 1TR,OCS Security,Ahmed Muhammad Yousaf,17:00,06:00,13,11,143,Confirmed
+02/08/2022,Norwich Combined Court NR3 1UR,OCS Security,Martin Georgiev,09:00,17:00,8,11,88,Confirmed
+24/08/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,Martin Georgiev,08:00,16:00,8,11,88,Confirmed
+25/08/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,Martin Georgiev,08:00,16:00,8,11,88,Confirmed
+26/08/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,Martin Georgiev,08:00,16:00,8,11,88,Confirmed
+03/08/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zarki Zalmai,08:30,17:30,9,11,99,Confirmed
+03/08/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,HUSSEIN SENEEN,18:00,07:00,13,11,143,Confirmed
+15/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+17/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+18/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+19/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+22/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+23/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+24/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+25/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+26/08/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Goutam Kududula,08:30,17:00,8.5,11,93.5,Confirmed
+13/08/2022,Baytree Centre Brentwood Essex CM14 4BX,OCS Security,Sushmitha Jaddu,07:30,17:30,10,11,110,Confirmed
+19/08/2022,Js Haverhill S 419 Haycocks Road Haverhill CB9 7YL,mitie services and security,Hazem Abdelmagid,10:00,22:00,12,11,132,Confirmed
+31/08/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,BILAL KHAMIS,08:00,21:00,13,11,143,Confirmed
+02/09/2022,Majestic Wine 115 N Station Rd Colchester CO1 1SB United Kingdom,OSS,BISMA FERDOZ,21:00,09:00,12,11,132,Confirmed
+31/08/2022,Norwich Mags NR31UP,OCS Security,YASSIN SIDIQ,10:00,23:00,13,11,143,Confirmed
+01/09/2022,Norwich Mags NR31UP,OCS Security, YASSIN SIDIQ,10:00,18:00,8,11,88,Confirmed
+02/09/2022,Norwich Mags NR31UP,OCS Security, YASSIN SIDIQ,10:00,18:00,8,11,88,Confirmed
+28/09/2022,Norwich TribunalNR1 3PL,OCS Security, YASSIN SIDIQ,09:00,17:00,8,11,88,Confirmed
+05/11/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest, YASSIN SIDIQ,18:00,06:00,12,11,132,Confirmed
+06/11/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest, YASSIN SIDIQ,18:00,06:00,12,11,132,Confirmed
+08/09/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushek Kumar,10:00,19:00,9,11,99,Confirmed
+09/09/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushek Kumar,11:00,20:00,9,11,99,Confirmed
+10/09/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushek Kumar,10:00,19:00,9,11,99,Confirmed
+11/09/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushek Kumar,11:00,18:00,7,11,77,Confirmed
+15/09/2022,278649 Cambridge St Andrews Street Local CB2 3AH,mitie services and security,Anushek Kumar,10:00,22:00,12,11,132,Confirmed
+16/09/2022,278649 Cambridge St Andrews Street Local CB2 3AH,mitie services and security,Anushek Kumar,10:00,22:00,12,11,132,Confirmed
+18/09/2022,278649 Cambridge St Andrews Street Local CB2 3AH,mitie services and security,Anushek Kumar,10:00,22:00,12,11,132,Confirmed
+25/09/2022,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushek Kumar,11:00,18:00,7,11,77,Confirmed
+29/09/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+03/10/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+04/10/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+09/10/2022,278649 Cambridge St Andrews Street Local CB2 3AH,mitie services and security,Anushek Kumar,10:00,22:00,12,11,132,Confirmed
+20/10/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+25/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+01/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+02/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+03/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,12:30,22:30,10,11,110,Confirmed
+08/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+09/12/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushek Kumar,08:00,17:00,9,11,99,Confirmed
+13/12/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,17:30,23:30,6,11,66,Confirmed
+14/12/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,07:00,19:00,12,11,132,Confirmed
+15/12/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,07:00,19:00,12,11,132,Confirmed
+16/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+20/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+29/12/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,07:00,19:00,12,11,132,Confirmed
+30/12/2022,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,07:00,19:00,12,11,132,Confirmed
+03/01/2023,101 Cambridge Science Park Cambridge CB4 0FY,Atlian Servest,Anushek Kumar,07:00,19:00,12,11,132,Confirmed
+09/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+11/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+13/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+19/01/2023,62 74 Burleigh St Cambridge CB1 1DJ,Brooknight Security Ltd,Anushek Kumar,19:00,07:00,12,11,132,Confirmed
+08/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+17/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+21/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+22/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+23/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+24/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Anushek Kumar,08:30,17:00,8.5,11,93.5,Confirmed
+06/09/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+07/09/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+08/09/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,17:00,8.5,11,93.5,Confirmed
+09/09/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+12/09/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+20/09/2022,Bury St EdmondsIP33 1TR,OCS Security,Essam Maarouf,08:00,17:00,9,11,99,Confirmed
+26/09/2022,Bury St EdmondsIP33 1TR,OCS Security,Essam Maarouf,08:00,17:00,9,11,99,Confirmed
+05/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+06/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+07/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+10/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+24/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+25/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+26/10/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:30,8,11,88,Confirmed
+27/10/2022,Bury St Edmonds IP331TR,OCS Security,Essam Maarouf,08:00,18:00,10,11,110,Confirmed
+28/10/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:30,8,11,88,Confirmed
+31/10/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+01/11/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+02/11/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+03/11/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,16:00,7.5,11,82.5,Confirmed
+04/11/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,Essam Maarouf,08:30,18:00,9.5,11,104.5,Confirmed
+14/09/2022,Norwich TribunalNR1 3PL,OCS Security,Robel Hagos,09:00,17:00,8,11,88,Confirmed
+05/11/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Taimur Irshad,13:00,22:00,9,11,99,Confirmed
+12/11/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,Taimur Irshad,07:00,16:00,9,11,99,Confirmed
+16/11/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Taimur Irshad,14:00,22:00,8,11,88,Confirmed
+19/11/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Taimur Irshad,13:00,22:00,9,11,99,Confirmed
+22/12/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,Taimur Irshad,12:00,21:00,9,11,99,Confirmed
+24/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,Taimur Irshad,09:00,18:00,9,11,99,Confirmed
+22/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Zahid bin Mehmood,14:00,00:00,10,11,110,Confirmed
+06/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Zahid bin Mehmood,14:00,00:00,10,11,110,Confirmed
+21/09/2022,Norwich TribunalNR1 3PL,OCS Security,Srimanth Kumar thotakura,09:00,17:00,8,11,88,Confirmed
+22/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+23/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+24/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+25/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+26/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+27/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+28/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+29/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+30/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+01/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+02/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+03/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+04/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+05/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+06/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+07/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+08/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+09/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+10/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+11/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+12/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+13/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+14/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+15/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+16/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+17/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+18/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+19/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Abbas Fana,14:00,00:00,10,11,110,Confirmed
+23/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+24/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+25/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+26/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+27/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+28/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+29/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+30/09/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+01/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+02/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+03/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+04/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+05/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+07/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+08/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+09/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+10/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+11/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+12/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+13/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+14/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+15/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+16/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+17/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+18/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+19/10/2022,Peterborough Station PE1 1QL United Kingdom,STM Security,Shahid Zafar,14:00,00:00,10,11,110,Confirmed
+07/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,Uchenna Onianwa ,12:00,19:00,7,11,77,Confirmed
+15/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,Uchenna Onianwa ,12:00,18:00,6,11,66,Confirmed
+28/09/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,21:30,13,11,143,Confirmed
+30/10/2022,278649 Cambridge St Andrews Street Local CB2 3AH,mitie services and security,Arun Kumar chinnasamy,10:00,22:00,12,11,132,Confirmed
+22/12/2022,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+27/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+30/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+31/01/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+01/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+02/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+06/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+07/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+09/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+10/02/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,Arun Kumar chinnasamy,08:30,17:00,8.5,11,93.5,Confirmed
+20/03/2023,BT Cambridge Trunks CB2 8HG,ISS World,Arun Kumar chinnasamy,07:30,17:30,10,11,110,Confirmed
+21/03/2023,BT Cambridge Trunks CB2 8HG,ISS World,Arun Kumar chinnasamy,07:30,17:30,10,11,110,Confirmed
+22/03/2023,BT Cambridge Trunks CB2 8HG,ISS World,Arun Kumar chinnasamy,07:30,17:30,10,11,110,Confirmed
+23/03/2023,BT Cambridge Trunks CB2 8HG,ISS World,Arun Kumar chinnasamy,07:30,17:30,10,11,110,Confirmed
+24/03/2023,BT Cambridge Trunks CB2 8HG,ISS World,Arun Kumar chinnasamy,07:30,17:30,10,11,110,Confirmed
+28/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BISHNU BHATTARAI,08:30,21:30,13,11,143,Confirmed
+03/10/2022,Norwich TribunalNR1 3PL,OCS Security,SHAIK SHABEER,09:00,17:00,8,11,88,Confirmed
+13/10/2022,Norwich Combined Court NR3 1UR,OCS Security,SHAIK SHABEER,09:00,17:00,8,11,88,Confirmed
+14/10/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,SHAIK SHABEER,08:00,16:00,8,11,88,Confirmed
+18/10/2022,Norwich Combined Court NR3 1UR,OCS Security,SHAIK SHABEER,18:00,06:00,12,11,132,Confirmed
+19/10/2022,Norwich Combined Court NR3 1UR,OCS Security,SHAIK SHABEER,18:00,06:00,12,11,132,Confirmed
+20/10/2022,Norwich Combined Court NR3 1UR,OCS Security,SHAIK SHABEER,18:00,06:00,12,11,132,Confirmed
+26/10/2022,Norwich Mags NR31UP,OCS Security,SHAIK SHABEER,18:30,07:00,12.5,11,137.5,Confirmed
+31/10/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,SHAIK SHABEER,08:00,16:00,8,11,88,Confirmed
+13/11/2022,Cotswold Outdoor Norwich NR2 1RG,Amberstone Security Ltd,SHAIK SHABEER,16:00,05:00,13,11,143,Confirmed
+05/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+06/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+10/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+12/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+13/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+14/10/2022,Norwich Combined Court NR3 1UR,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+15/10/2022,Norwich Mags NR31UP,OCS Security,Abdul Majeed,08:00,16:00,8,11,88,Confirmed
+17/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+19/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+20/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+22/10/2022,Norwich Mags NR31UP,OCS Security,Abdul Majeed,08:00,16:00,8,11,88,Confirmed
+24/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+26/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+27/10/2022,Norwich TribunalNR1 3PL,OCS Security,Abdul Majeed,09:00,17:00,8,11,88,Confirmed
+22/10/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,12:30,22:30,10,11,110,Confirmed
+27/10/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,08:00,17:00,9,11,99,Confirmed
+29/10/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,12:30,22:30,10,11,110,Confirmed
+03/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,08:00,17:00,9,11,99,Confirmed
+05/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,12:30,22:30,10,11,110,Confirmed
+06/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,08:00,17:00,9,11,99,Confirmed
+12/11/2022,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,Anushak Kumar,12:30,22:30,10,11,110,Confirmed
+14/02/2023,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushak Kumar,11:00,20:00,9,11,99,Confirmed
+17/02/2023,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,Anushak Kumar,11:00,21:00,10,11,110,Confirmed
+13/10/2022,ACTC Norwich Whitefriars NR3 1SE,OCS Security,HASSAN TAHA,08:00,16:00,8,11,88,Confirmed
+18/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+19/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+20/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+21/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+24/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+25/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+26/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+27/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+28/10/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+04/11/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+08/11/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+11/11/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+18/11/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+25/11/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+02/12/2022,Colchester Magistrates Essex CO2 7EF,OCS Security,SAAD AHSAN,08:15,17:30,9.25,11,101.75,Confirmed
+20/10/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,HAFIZA RIMSHA AKRAM,10:30,20:00,9.5,11,104.5,Confirmed
+21/10/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,HAFIZA RIMSHA AKRAM,10:30,20:00,9.5,11,104.5,Confirmed
+30/12/2022,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+31/12/2022,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+01/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,10:15,16:45,6.5,11,71.5,Confirmed
+02/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+03/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+05/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+06/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+28/01/2023,Primark Shopping Centre 77 Lion Walk Culver St E Colchester CO1 1LF United Kingdom,Brooknight Security Ltd,HAFIZA RIMSHA AKRAM,09:00,18:15,9.25,11,101.75,Confirmed
+25/10/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,AHMED AHMED,19:00,07:00,12,11,132,Confirmed
+28/10/2022,Cushman Wakefield Huawei The Spicers Site Sawston Cambridge CB22 3JG,Atlian Servest,Sohaib Hasan,06:00,19:00,13,11,143,Confirmed
+01/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+03/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+04/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+05/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+06/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,16:30,6,11,66,Confirmed
+07/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+08/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+09/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+10/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+11/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+12/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+13/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,16:30,6,11,66,Confirmed
+14/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+16/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+18/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+19/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+20/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:00,16:00,6,11,66,Confirmed
+21/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+23/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+24/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+25/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+28/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+29/11/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+01/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+02/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+03/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+04/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,09:30,16:30,7,11,77,Confirmed
+05/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+06/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+07/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+08/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+09/12/2022,Sainsburys Braintree 1 Tofts Walk Braintree CM7 1XH,mitie services and security,MUHAMMAD HASHAM KHAN,10:00,23:00,13,11,143,Confirmed
+10/12/2022,JS Colchester CO11LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:00,19:00,9,11,99,Confirmed
+12/12/2022,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+13/12/2022,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+16/12/2022,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+17/12/2022,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+18/12/2022,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:00,18:00,8,11,88,Confirmed
+19/12/2022,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+22/12/2022,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+23/12/2022,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,08:00,17:00,9,11,99,Confirmed
+24/12/2022,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+27/12/2022,Aldi Bishops Stortford CM23 5NF,Amberstone Security Ltd,MUHAMMAD HASHAM KHAN,08:00,20:00,12,11,132,Confirmed
+28/12/2022,Aldi Bishops Stortford CM23 5NF,Amberstone Security Ltd,MUHAMMAD HASHAM KHAN,08:00,20:00,12,11,132,Confirmed
+02/01/2023,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+03/01/2023,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+04/01/2023,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+06/01/2023,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,08:00,17:00,9,11,99,Confirmed
+07/01/2023,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,10:30,20:00,9.5,11,104.5,Confirmed
+08/01/2023,Colchester town centre CO1 1LG,mitie services and security,MUHAMMAD HASHAM KHAN,09:30,16:30,7,11,77,Confirmed
+09/01/2023,Sainsburys Springfield White Hart Lane CM2 5PA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+10/01/2023,Sainsburys Springfield White Hart Lane CM2 5PA,mitie services and security,MUHAMMAD HASHAM KHAN,07:00,17:00,10,11,110,Confirmed
+26/01/2023,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+28/01/2023,Stanway site 1 Western Approach Stanway Colchester CO3 8AA,mitie services and security,MUHAMMAD HASHAM KHAN,14:00,23:00,9,11,99,Confirmed
+31/10/2022,Norwich TribunalNR1 3PL,OCS Security,AHMED HAMAD,09:00,03:48,18.8,11,206.8,Confirmed
+01/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,AHMED HAMAD,07:00,19:00,12,11,132,Confirmed
+03/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,ASHA SHIVANNA,13:00,21:00,8,11,88,Confirmed
+04/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,ASHA SHIVANNA,13:00,21:00,8,11,88,Confirmed
+06/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,ASHA SHIVANNA,10:00,16:00,6,11,66,Confirmed
+13/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,ASHA SHIVANNA,10:00,16:00,6,11,66,Confirmed
+27/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,ASHA SHIVANNA,10:00,16:00,6,11,66,Confirmed
+06/11/2022,Waitrose 702 Exeter 2 Gladstone Road Exeter EX1 2EB,mitie services and security,ANAS KHAN,11:00,17:00,6,11,66,Confirmed
+10/11/2022,Norwich TribunalNR1 3PL,OCS Security,IMRAN MIAKHIEL,09:00,17:00,8,11,88,Confirmed
+10/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,Ali Ahmad,19:00,07:00,12,11,132,Confirmed
+11/11/2022,Ipswich County Suffolk IP1 1EJ,OCS Security,MUSTAFA KOKONEH,08:30,16:00,7.5,11,82.5,Confirmed
+14/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+15/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+16/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+17/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+18/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+22/11/2022,Medway Hospital Windmill Road Kent ME7 5NY,Galaxon Services Ltd,Jasvir Singh,08:00,20:00,12,11,132,Confirmed
+23/11/2022,Medway Hospital Windmill Road Kent ME7 5NY,Galaxon Services Ltd,Jasvir Singh,08:00,20:00,12,11,132,Confirmed
+24/11/2022,Medway Hospital Windmill Road Kent ME7 5NY,Galaxon Services Ltd,Jasvir Singh,08:00,20:00,12,11,132,Confirmed
+25/11/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Jasvir Singh,08:30,17:30,9,11,99,Confirmed
+12/02/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,Jasvir Singh,19:00,07:00,12,11,132,Confirmed
+13/02/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,Jasvir Singh,19:00,07:00,12,11,132,Confirmed
+15/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,KRISHAL PAUDEL,13:00,21:00,8,11,88,Confirmed
+16/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,KRISHAL PAUDEL,13:00,21:00,8,11,88,Confirmed
+17/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,KRISHAL PAUDEL,13:00,21:00,8,11,88,Confirmed
+18/11/2022,Waitrose 533 Canterbury CT1 1UL,mitie services and security,KRISHAL PAUDEL,13:00,21:00,8,11,88,Confirmed
+12/01/2023,Highway England Eclipse Park Maidstone ME14 3EN,Servoca Secure Solutions,KRISHAL PAUDEL,14:00,22:00,8,11,88,Confirmed
+16/02/2023,Hempstead Valley Dr Hempstead Gillingham ME7 3PD,Amberstone Security Ltd,KRISHAL PAUDEL,18:00,07:00,13,11,143,Confirmed
+14/03/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,KRISHAL PAUDEL,06:00,19:00,13,11,143,Confirmed
+08/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+14/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+16/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+17/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+19/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+24/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,17:40,9.16,11,100.76,Confirmed
+26/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+29/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+30/08/2022,Norwich Mags NR31UP,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+02/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+04/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+05/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+07/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+09/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+10/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+12/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,15:11,6.68,11,73.48,Confirmed
+13/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+18/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+19/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+21/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+22/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+26/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+28/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,Zulqarnain Rafiq,08:30,21:30,13,11,143,Confirmed
+25/11/2022,278640 Sainsburys Spalding Holland Market PE11 1RQ,mitie services and security,Zulqarnain Rafiq,12:00,01:00,13,11,143,Confirmed
+30/11/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,19:00,09:10,14.16,11,155.76,Confirmed
+01/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,19:00,07:00,12,11,132,Confirmed
+29/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+30/12/2022,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+01/01/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+02/01/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+10/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+20/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+13/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+17/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+23/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+24/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+27/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+28/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+29/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+31/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,hassan ali,07:00,19:00,12,11,132,Confirmed
+06/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,14:00,22:00,8,11,88,Confirmed
+08/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,14:00,22:00,8,11,88,Confirmed
+12/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,14:00,22:00,8,11,88,Confirmed
+14/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,13:00,22:00,9,11,99,Confirmed
+15/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,14:00,22:00,8,11,88,Confirmed
+16/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,13:00,22:00,9,11,99,Confirmed
+22/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,MOHAMED IMDAD ABDULCAREEM,14:00,20:00,6,11,66,Confirmed
+06/12/2022,Tesco Welwyn Garden AL7 1TW,Galaxon Services Ltd,BIKASH KC,09:00,17:00,8,11,88,Confirmed
+21/12/2022,Aldi Spalding St Thomas Road 29 PE11 2XY,Amberstone Security Ltd,BADRE HATTAB,14:00,22:00,8,11,88,Confirmed
+09/12/2022,Sainsburys Breck Hill 4603 276131 5 7 Plains Road Mapperley Nottingham NG3 5JH,mitie services and security,Faisal Salam,14:00,23:00,9,11,99,Confirmed
+12/12/2022,Sainsburys Breck Hill 4603 276131 5 7 Plains Road Mapperley Nottingham NG3 5JH,mitie services and security,Faisal Salam,14:00,23:00,9,11,99,Confirmed
+10/12/2022,Sainsburys Breck Hill 4603 276131 5 7 Plains Road Mapperley Nottingham NG3 5JH,mitie services and security,Muhammad Adeel Amin,14:00,23:00,9,11,99,Confirmed
+11/12/2022,Sainsburys Breck Hill 4603 276131 5 7 Plains Road Mapperley Nottingham NG3 5JH,mitie services and security,Muhammad Adeel Amin,14:00,23:00,9,11,99,Confirmed
+13/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Muhammad Shoaib  Abdul Haq,14:00,22:00,8,11,88,Confirmed
+14/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Muhammad Shoaib  Abdul Haq,14:00,22:00,8,11,88,Confirmed
+18/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Muhammad Shoaib  Abdul Haq,10:00,16:00,6,11,66,Confirmed
+15/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,MUHAMMAD OSAMA KHAN,14:00,22:00,8,11,88,Confirmed
+19/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,MUHAMMAD OSAMA KHAN,14:00,22:00,8,11,88,Confirmed
+17/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Hassan Moin,14:00,22:00,8,11,88,Confirmed
+20/12/2022,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Hassan Moin,14:00,22:00,8,11,88,Confirmed
+22/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+26/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+04/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+07/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+10/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+11/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+13/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+14/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+17/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+18/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+19/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+20/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+24/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+25/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+09/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+11/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+13/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+15/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+17/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+18/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+21/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+25/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+01/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+03/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+14/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,08:00,18:00,10,11,110,Confirmed
+15/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+16/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+17/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+20/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+21/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+23/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+25/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+27/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,09:00,19:00,10,11,110,Confirmed
+28/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+29/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+31/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Umair Naseer,10:00,20:00,10,11,110,Confirmed
+20/12/2022,Swadlincote Civic Way DE11 0AD,mitie services and security,USMAN MUNIR,14:00,23:00,9,11,99,Confirmed
+24/12/2022,Ocado CFC Erith,Atlian Servest,Guru Singh,10:00,23:00,13,11,143,Confirmed
+26/12/2022,Ocado CFC Erith,Atlian Servest,Guru Singh,06:00,18:00,12,11,132,Confirmed
+29/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,08:00,23:11,15.19,11,167.09,Confirmed
+06/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,09:00,19:00,10,11,110,Confirmed
+07/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,10:00,20:00,10,11,110,Confirmed
+20/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,09:00,19:00,10,11,110,Confirmed
+23/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,09:00,19:00,10,11,110,Confirmed
+27/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,09:00,19:00,10,11,110,Confirmed
+04/03/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,Abdullah Ahmed,09:00,19:00,10,11,110,Confirmed
+02/01/2023,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Tahir Bin Ilyas,12:00,20:00,8,11,88,Confirmed
+30/01/2023,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,Tahir Bin Ilyas,14:00,22:00,8,11,88,Confirmed
+09/01/2023,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,I Igbokwe,14:00,22:00,8,11,88,Confirmed
+16/01/2023,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,I Igbokwe,14:00,22:00,8,11,88,Confirmed
+23/01/2023,Aldi Colchester Magdalen Street CO1 2FJ,Amberstone Security Ltd,I Igbokwe,14:00,22:00,8,11,88,Confirmed
+04/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+06/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+09/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+10/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+11/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+12/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+13/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+16/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+17/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+18/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+19/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+20/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+23/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+24/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+25/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+26/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+27/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+30/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+31/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+01/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+02/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+03/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+06/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+07/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+08/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+09/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+10/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+13/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+14/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+15/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+16/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+17/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+20/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+21/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+22/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+23/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+24/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+27/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+28/02/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Hassan Sarfaraz,08:45,17:15,8.5,11,93.5,Confirmed
+05/01/2023,1 Cutler St Ipswich IP1 1UQ,Atlian Servest,Ali Zia,08:45,17:15,8.5,11,93.5,Confirmed
+03/02/2023,The Meadows Shopping Centre Chelmsford Essex CM2 6FD,OCS Security,FAIZAN SHAH,08:00,18:00,10,11,110,Confirmed
+04/02/2023,The Meadows Shopping Centre Chelmsford Essex CM2 6FD,OCS Security,FAIZAN SHAH,08:00,18:00,10,11,110,Confirmed
+27/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,09:00,19:00,10,11,110,Confirmed
+28/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,10:00,20:00,10,11,110,Confirmed
+31/01/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,10:00,20:00,10,11,110,Confirmed
+01/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,10:00,20:00,10,11,110,Confirmed
+03/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,10:00,20:00,10,11,110,Confirmed
+04/02/2023,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,WAQAS SHAHBAZ,09:00,19:00,10,11,110,Confirmed
+31/01/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MUDASSER ALI,08:30,21:30,13,11,143,Confirmed
+07/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MUDASSER ALI,08:30,18:00,9.5,11,104.5,Confirmed
+08/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MUDASSER ALI,08:30,18:00,9.5,11,104.5,Confirmed
+09/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MUDASSER ALI,08:30,18:00,9.5,11,104.5,Confirmed
+10/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,MUDASSER ALI,08:30,18:00,9.5,11,104.5,Confirmed
+28/01/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,ALI DIN,19:00,08:00,13,11,143,Confirmed
+11/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,KOMALDEEP SINGH,08:30,18:00,9.5,11,104.5,Confirmed
+12/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,KOMALDEEP SINGH,09:30,17:30,8,11,88,Confirmed
+14/02/2023,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,KOMALDEEP SINGH,13:30,22:30,9,11,99,Confirmed
+03/02/2023,The Meadows Shopping Centre Chelmsford Essex CM2 6FD,OCS Security,Daniyal Akhtar,08:00,18:00,10,11,110,Confirmed
+04/02/2023,The Meadows Shopping Centre Chelmsford Essex CM2 6FD,OCS Security,Daniyal Akhtar,12:32,18:32,6,11,66,Confirmed
+06/02/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,ZAFAR IQBAL,08:30,18:00,9.5,11,104.5,Confirmed
+13/02/2023,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,ABDUL KHAN,10:00,19:00,9,11,99,Confirmed
+15/02/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,NAVAS SALIM,07:00,19:00,12,11,132,Confirmed
+16/02/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,NAVAS SALIM,07:00,19:00,12,11,132,Confirmed
+17/02/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,NAVAS SALIM,07:00,19:00,12,11,132,Confirmed
+21/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,NAVAS SALIM,19:00,07:00,12,11,132,Confirmed
+30/03/2023,The Cyder House Stowmarket IP14 6PD,OCS Security,NAVAS SALIM,07:00,19:00,12,11,132,Confirmed
+17/02/2023,278636 Coldhams Lane Brooks Road CB1 3HP,mitie services and security,IMRAN UMRAJ,12:30,22:30,10,11,110,Confirmed
+20/03/2023,Huawei 302 Cambridge Science Park Milton Road Cambridge CB4 0WG,OCS Security,IMRAN UMRAJ,08:30,17:00,8.5,11,93.5,Confirmed
+27/03/2023,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,IMRAN UMRAJ,08:30,18:00,9.5,11,104.5,Confirmed
+18/02/2023,APCOA Moreton In Marsh Car Park Station Rd Moreton In Marsh GL56 0AA,Securitas UK,TABISH SAEED,20:00,09:00,13,11,143,Confirmed
+19/02/2023,APCOA Moreton In Marsh Car Park Station Rd Moreton In Marsh GL56 0AA,Securitas UK,TABISH SAEED,20:00,08:00,12,11,132,Confirmed
+18/02/2023,APCOA Moreton In Marsh Car Park Station Rd Moreton In Marsh GL56 0AA,Securitas UK,ZAIN ABBAS,20:00,09:00,13,11,143,Confirmed
+19/02/2023,APCOA Moreton In Marsh Car Park Station Rd Moreton In Marsh GL56 0AA,Securitas UK,ZAIN ABBAS,20:00,12:08,16.14,11,177.54,Confirmed
+02/03/2023,CBRE 101 Cambridge Cambridge Science Park CB4 0FY,Galaxon Services Ltd,MUHAMMAD NIAZI,07:00,19:00,12,11,132,Confirmed
+03/03/2023,CBRE 101 Cambridge Cambridge Science Park CB4 0FY,Galaxon Services Ltd,MUHAMMAD NIAZI,07:00,19:00,12,11,132,Confirmed
+06/03/2023,CBRE 101 Cambridge Cambridge Science Park CB4 0FY,Galaxon Services Ltd,MUHAMMAD NIAZI,07:00,19:00,12,11,132,Confirmed
+12/03/2023,JS 25 29 Wheeler Gate Nottingham NG1 2NA,mitie services and security,AUN ABBAS,14:00,23:00,9,11,99,Confirmed
+15/03/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,RAZA SYED,06:00,19:00,13,11,143,Confirmed
+25/03/2023,Delphi Gillingham Courteney Road Gillingham ME8 0RU,Atlian Servest,RAZA SYED,06:00,18:00,12,11,132,Confirmed
+26/03/2023,Delphi Gillingham Courteney Road Gillingham ME8 0RU,Atlian Servest,RAZA SYED,06:00,18:00,12,11,132,Confirmed
+15/03/2023,The Meadows Shopping Centre Chelmsford Essex CM2 6FD,OCS Security,IRAM HUSSAIN,08:00,18:00,10,11,110,Confirmed
+20/03/2023,Yeovil Middle Street Boots Opticians Refit BA20 1LG TSS,SSGC,MUHAMMADHABIB HABIB,16:30,05:30,13,11,143,Confirmed
+21/03/2023,Redcar Hydrogen Hub Unit B Regents Walk Redcar TS10 3FB,Galaxon Services Ltd,TOQEER HUSSAIN,10:00,16:00,6,11,66,Confirmed
+22/03/2023,Redcar Hydrogen Hub Unit B Regents Walk Redcar TS10 3FB,Galaxon Services Ltd,TOQEER HUSSAIN,10:00,16:00,6,11,66,Confirmed
+23/03/2023,Redcar Hydrogen Hub Unit B Regents Walk Redcar TS10 3FB,Galaxon Services Ltd,TOQEER HUSSAIN,10:00,16:00,6,11,66,Confirmed
+21/03/2023,Taunton Crown Medical Boots TA2 8QY,SSGC,MUHAMMAD TALHA GORAYA,17:00,06:00,13,11,143,Confirmed
+26/03/2023,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,STEDMAN KUSI,11:00,21:10,10.17,11,111.87,Confirmed
+01/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+02/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+03/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+04/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+05/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+06/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+11/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+12/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+13/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+19/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+20/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+21/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+25/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+28/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+29/09/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,PAVAN SUNKARA,08:30,21:30,13,11,143,Confirmed
+03/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+10/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+15/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+18/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+19/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+23/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+27/10/2022,Norwich TribunalNR1 3PL,OCS Security,BILAD ALI,08:30,21:30,13,11,143,Confirmed
+26/02/2022,MappinWebb CambridgeCB2 3NR,UK PROTECTION LTD,HARPREET SINGH,08:30,17:05,8.59,11,94.49,Confirmed
+03/03/2022,Brotherhood retail park Brotherhood close Peterbrough Cambridgeshire PE4 6ZR,Atlian Servest,TALLAT SOHAIL ZADA,08:30,15:53,7.38,11,81.18,Confirmed
+25/03/2023,286236 Sainsburys Cambridge Station Road Local On The Square CB1 2JW,mitie services and security,SYED AQDAS,07:00,20:00,13,11,143,Confirmed
+26/07/2022,ACTC Hilton Hotel Bearsted Rd Maidstone ME14 5AA,OCS Security,BILAL ARSHAD,08:30,21:30,13,11,143,Confirmed
+09/01/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,PARWINDER SINGH,08:45,21:45,13,11,143,Confirmed
+22/01/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,PARWINDER SINGH,08:45,21:45,13,11,143,Confirmed
+26/01/2023,NHS Medway Hospital ME7 5NY,Atlian Servest,PARWINDER SINGH,08:45,15:52,7.11,11,78.21,Confirmed
+15/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,EVIJA VANAGA,08:00,21:00,13,11,143,Confirmed
+20/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,EVIJA VANAGA,08:00,21:00,13,11,143,Confirmed
+22/12/2022,276165 Sainsburys Rhyl Road LL18 2TJ,mitie services and security,EVIJA VANAGA,08:00,21:00,13,11,143,Confirmed

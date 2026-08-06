@@ -1,0 +1,619 @@
+import fs from "fs";
+import path from "path";
+import JSZip from "jszip";
+import type { Employee, Tenant, User } from "@shared/schema";
+import {
+  getVettingFormByCode,
+  LEGACY_TEMPLATE_COMPANY_NAME,
+  listVettingFormsForEmployee,
+  type VettingDocumentForm,
+} from "@shared/vettingDocumentForms";
+import { generateVettingCompletionCertPdf } from "./pdf-service";
+
+const VETTING_DOCS_DIR = path.join(process.cwd(), "docs", "8 - SCREENING & VETTING");
+const PARA_REGEX = /<w:p[^>]*>[\s\S]*?<\/w:p>/g;
+const WT_REGEX = /<w:t([^>]*)>([^<]*)<\/w:t>/g;
+const TABLE_REGEX = /<w:tbl>[\s\S]*?<\/w:tbl>/g;
+const ROW_REGEX = /<w:tr[^>]*>[\s\S]*?<\/w:tr>/g;
+const CELL_REGEX = /<w:tc>[\s\S]*?<\/w:tc>/g;
+
+function formatUkDate(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatUkLongDate(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function joinAddress(parts: Array<string | null | undefined>): string {
+  return parts.filter((p) => p && String(p).trim()).join(", ");
+}
+
+type VettingEmployeeSource = Employee & {
+  maritalStatus?: string | null;
+  emergencyContacts?: Array<{ name?: string | null; relationship?: string | null; phone?: string | null; address?: string | null; isPrimary?: boolean | null }>;
+  bankDetails?: { accountName?: string | null; bankName?: string | null; sortCode?: string | null; accountNumber?: string | null } | null;
+  employmentHistory?: Array<{
+    employerName?: string | null;
+    jobTitle?: string | null;
+    dateFrom?: string | Date | null;
+    dateTo?: string | Date | null;
+    reasonForLeaving?: string | null;
+    duties?: string | null;
+    refereePhone?: string | null;
+    refereeEmail?: string | null;
+    refereeAddress?: string | null;
+    requestedDate?: string | Date | null;
+    submittedDate?: string | Date | null;
+    verificationStatus?: string | null;
+    screeningComments?: string | null;
+  }>;
+  references?: Array<{
+    refereeName?: string | null;
+    relationship?: string | null;
+    howLongKnown?: string | null;
+    refereePhone?: string | null;
+    requestedDate?: string | Date | null;
+    responseDate?: string | Date | null;
+    verificationStatus?: string | null;
+    screeningComments?: string | null;
+    referenceKind?: string | null;
+  }>;
+};
+
+export type VettingMergeContext = Record<string, string>;
+
+function splitEmployeeName(fullName: string): { firstNames: string; surname: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstNames: "", surname: "" };
+  if (parts.length === 1) return { firstNames: parts[0], surname: "" };
+  return { surname: parts[parts.length - 1], firstNames: parts.slice(0, -1).join(" ") };
+}
+
+export function buildVettingMergeContext(
+  tenant: Tenant,
+  employee: VettingEmployeeSource,
+  empUser: User | null | undefined,
+): VettingMergeContext {
+  const companyName = tenant.name || LEGACY_TEMPLATE_COMPANY_NAME;
+  const tradingName = tenant.tradingName || companyName;
+  const companyAddress =
+    joinAddress([tenant.addressLine1, tenant.addressLine2, tenant.city, tenant.county, tenant.postcode]) ||
+    tenant.address ||
+    "";
+  const employeeName =
+    `${empUser?.firstName || ""} ${empUser?.lastName || ""}`.trim() ||
+    employee.employeeNumber ||
+    "Employee";
+  const { firstNames, surname } = splitEmployeeName(employeeName);
+  const employeeAddress = joinAddress([
+    employee.addressLine1,
+    employee.addressLine2,
+    employee.city,
+    employee.county,
+    employee.postcode,
+  ]);
+  const primaryEmergency =
+    employee.emergencyContacts?.find((c) => c.isPrimary) ||
+    employee.emergencyContacts?.[0];
+  const bankDetails = employee.bankDetails || null;
+  const history = employee.employmentHistory || [];
+  const firstHistory = history[0] || null;
+  const secondHistory = history[1] || null;
+  const today = formatUkLongDate(new Date());
+  const vettingFrom = formatUkDate(employee.vettingStartDate || employee.startDate);
+  const vettingFromParts = vettingFrom.split("/");
+
+  return {
+    COMPANY_NAME: companyName,
+    TRADING_NAME: tradingName,
+    COMPANY_ADDRESS: companyAddress,
+    COMPANY_REG: tenant.companyRegNumber || "",
+    VAT_NUMBER: tenant.vatNumber || "",
+    SIA_ACS: tenant.siaAcsNumber || "",
+    COMPANY_PHONE: tenant.phone || "",
+    COMPANY_EMAIL: tenant.email || "",
+    COMPANY_WEBSITE: tenant.website || "",
+    HR_SIGNATORY_NAME: tenant.hrSignatoryName || "",
+    HR_SIGNATORY_POSITION: tenant.hrSignatoryPosition || "Vetting Officer",
+    HR_SIGNATURE_DATE: tenant.hrSignatureDate ? formatUkLongDate(tenant.hrSignatureDate) : today,
+    EMPLOYEE_NAME: employeeName,
+    EMPLOYEE_FIRST_NAMES: firstNames,
+    EMPLOYEE_SURNAME: surname,
+    EMPLOYEE_NUMBER: employee.employeeNumber || "",
+    NI_NUMBER: employee.nationalInsurance || "",
+    MARITAL_STATUS: employee.maritalStatus || "",
+    DOB: formatUkDate(employee.dateOfBirth),
+    EMPLOYEE_ADDRESS: employeeAddress,
+    EMPLOYEE_PHONE: employee.phone || empUser?.phone || "",
+    EMPLOYEE_EMAIL: empUser?.email || employee.portalEmail || "",
+    SIA_LICENCE: employee.siaLicenseNumber || "",
+    SIA_EXPIRY: formatUkDate(employee.siaExpiryDate),
+    JOB_TITLE: employee.jobTitle || employee.officerType || "Security Operative",
+    OFFICER_TYPE: employee.officerType || "Security Operative",
+    START_DATE: formatUkDate(employee.startDate),
+    VETTING_START: vettingFrom,
+    VETTING_START_DAY: vettingFromParts[0] || "",
+    VETTING_START_MONTH: vettingFromParts[1] || "",
+    VETTING_START_YEAR: vettingFromParts[2] || "",
+    VETTING_COMPLETE: formatUkDate(employee.vettingCompleteAt),
+    APPOINTMENT_DATE: formatUkDate(employee.startDate || employee.vettingStartDate),
+    EMERGENCY_CONTACT_NAME: primaryEmergency?.name || "",
+    EMERGENCY_CONTACT_ADDRESS: primaryEmergency?.address || "",
+    EMERGENCY_CONTACT_RELATIONSHIP: primaryEmergency?.relationship || "",
+    EMERGENCY_CONTACT_PHONE: primaryEmergency?.phone || "",
+    BANK_ACCOUNT_NUMBER: bankDetails?.accountNumber || "",
+    BANK_SORT_CODE: bankDetails?.sortCode || "",
+    BANK_NAME: bankDetails?.bankName || "",
+    BANK_ACCOUNT_NAME: bankDetails?.accountName || "",
+    EMPLOYMENT_1_NAME: firstHistory?.employerName || "",
+    EMPLOYMENT_1_TITLE: firstHistory?.jobTitle || "",
+    EMPLOYMENT_1_START: formatUkDate(firstHistory?.dateFrom),
+    EMPLOYMENT_1_END: formatUkDate(firstHistory?.dateTo),
+    EMPLOYMENT_1_REASON: firstHistory?.reasonForLeaving || "",
+    EMPLOYMENT_1_PHONE: firstHistory?.refereePhone || "",
+    EMPLOYMENT_2_NAME: secondHistory?.employerName || "",
+    EMPLOYMENT_2_TITLE: secondHistory?.jobTitle || "",
+    EMPLOYMENT_2_START: formatUkDate(secondHistory?.dateFrom),
+    EMPLOYMENT_2_END: formatUkDate(secondHistory?.dateTo),
+    EMPLOYMENT_2_REASON: secondHistory?.reasonForLeaving || "",
+    EMPLOYMENT_2_PHONE: secondHistory?.refereePhone || "",
+    TODAY: today,
+    TODAY_SHORT: formatUkDate(new Date()),
+  };
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function getParagraphText(paragraphXml: string): string {
+  return [...paragraphXml.matchAll(WT_REGEX)].map((m) => m[2]).join("");
+}
+
+function setParagraphText(paragraphXml: string, newText: string): string {
+  if (!WT_REGEX.test(paragraphXml)) {
+    const run = `<w:r><w:t xml:space="preserve">${escapeXml(newText)}</w:t></w:r>`;
+    return paragraphXml.replace(/<\/w:p>\s*$/, `${run}</w:p>`);
+  }
+  WT_REGEX.lastIndex = 0;
+  let used = false;
+  return paragraphXml.replace(WT_REGEX, (_match, attrs: string) => {
+    if (!used) {
+      used = true;
+      return `<w:t${attrs}>${escapeXml(newText)}</w:t>`;
+    }
+    return `<w:t${attrs}></w:t>`;
+  });
+}
+
+function isBlankish(text: string, paragraphXml?: string): boolean {
+  if (paragraphXml && !WT_REGEX.test(paragraphXml)) {
+    WT_REGEX.lastIndex = 0;
+    return true;
+  }
+  WT_REGEX.lastIndex = 0;
+  const t = text.replace(/\u00a0/g, " ").trim();
+  return !t || /^[\s._?\uFFFD/-]+$/.test(t);
+}
+
+function fillNextBlankParagraph(paragraphs: string[], startIndex: number, value: string): number {
+  if (!value) return startIndex;
+  for (let i = startIndex + 1; i < Math.min(startIndex + 4, paragraphs.length); i++) {
+    const text = getParagraphText(paragraphs[i]).replace(/\u00a0/g, " ");
+    if (isBlankish(text, paragraphs[i])) {
+      paragraphs[i] = setParagraphText(paragraphs[i], value.toUpperCase());
+      return i;
+    }
+  }
+  return startIndex;
+}
+
+function fillSpecificBlankParagraph(paragraphs: string[], index: number, value: string): void {
+  if (!value || index < 0 || index >= paragraphs.length) return;
+  paragraphs[index] = setParagraphText(paragraphs[index], value.toUpperCase());
+}
+
+function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string {
+  const paragraphs = [...xml.matchAll(PARA_REGEX)].map((m) => m[0]);
+  if (paragraphs.length === 0) return xml;
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const text = getParagraphText(paragraphs[i]).replace(/\u00a0/g, " ").trim();
+    const upper = text.toUpperCase();
+
+    if (text === "Address" && ctx.COMPANY_ADDRESS) {
+      paragraphs[i] = setParagraphText(paragraphs[i], ctx.COMPANY_ADDRESS);
+      continue;
+    }
+    if (text === "Dear" && ctx.EMPLOYEE_NAME) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `Dear ${ctx.EMPLOYEE_NAME},`);
+      continue;
+    }
+    if (upper === "SURNAME:" || upper === "SURNAME") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_SURNAME || ctx.EMPLOYEE_NAME);
+      continue;
+    }
+    if (upper.startsWith("FIRST NAMES")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_FIRST_NAMES);
+      continue;
+    }
+    if (upper === "CURRENT" && i + 2 < paragraphs.length) {
+      const next = getParagraphText(paragraphs[i + 1]).toUpperCase();
+      if (next.startsWith("ADDRESS")) {
+        i = fillNextBlankParagraph(paragraphs, i + 1, ctx.EMPLOYEE_ADDRESS);
+        continue;
+      }
+    }
+    if (upper === "ADDRESS:" && i > 0) {
+      const prev = getParagraphText(paragraphs[i - 1]).toUpperCase();
+      if (prev.includes("CURRENT") || prev === "ADDRESS:") {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_ADDRESS);
+        continue;
+      }
+    }
+    if (upper === "TELEPHONE:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_PHONE);
+      continue;
+    }
+    if (upper.startsWith("MOBILE NO")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_PHONE);
+      continue;
+    }
+    if (upper.includes("NATIONAL") && i + 1 < paragraphs.length && getParagraphText(paragraphs[i + 1]).toUpperCase().includes("INSURANCE")) {
+      i = fillNextBlankParagraph(paragraphs, i + 1, ctx.NI_NUMBER);
+      continue;
+    }
+    if (upper === "STATUS:" && i > 0 && getParagraphText(paragraphs[i - 1]).toUpperCase() === "MARITAL") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.MARITAL_STATUS);
+      continue;
+    }
+    if (upper.includes("INSURANCE NO") || upper === "INSURANCE NO") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.NI_NUMBER);
+      continue;
+    }
+    if (upper.startsWith("BANK ACCOUNT NUMBER")) {
+      const account = ctx.BANK_ACCOUNT_NUMBER || "";
+      const sortCode = ctx.BANK_SORT_CODE || "";
+      const filled = `BANK ACCOUNT NUMBER. ${account}    SORT CODE ${sortCode}`;
+      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+      continue;
+    }
+    if (upper.startsWith("NAME OF BANK")) {
+      const filled = `NAME OF BANK ${ctx.BANK_NAME || ""}    NAME OF ACCOUNT HOLDER ${ctx.BANK_ACCOUNT_NAME || ""}`.trimEnd();
+      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+      continue;
+    }
+    if (upper.startsWith("VETTING FROM")) {
+      const filled = ctx.VETTING_START
+        ? `VETTING FROM: ${ctx.VETTING_START_DAY} / ${ctx.VETTING_START_MONTH} / ${ctx.VETTING_START_YEAR}`
+        : text;
+      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+      continue;
+    }
+    if (upper.startsWith("VETTED BY")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.HR_SIGNATORY_NAME);
+      continue;
+    }
+    if (upper.includes("S.I.A. LICENCE NUMBER") || upper.includes("SIA LICENCE NUMBER")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.SIA_LICENCE ? `S.I.A. LICENCE NUMBER: ${ctx.SIA_LICENCE}` : text,
+      );
+      continue;
+    }
+    if (upper.startsWith("EMPLOYMENT AS:")) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `EMPLOYMENT AS: ${(ctx.OFFICER_TYPE || ctx.JOB_TITLE).toUpperCase()}`);
+      continue;
+    }
+    if (upper.startsWith("3. PERSON/NEXT OF KIN TO BE CONTACTED IN ANY EMERGENCY:")) {
+      fillSpecificBlankParagraph(paragraphs, i + 2, ctx.EMERGENCY_CONTACT_NAME);
+      fillSpecificBlankParagraph(paragraphs, i + 4, ctx.EMERGENCY_CONTACT_ADDRESS);
+      fillSpecificBlankParagraph(paragraphs, i + 15, ctx.EMERGENCY_CONTACT_RELATIONSHIP);
+      fillSpecificBlankParagraph(paragraphs, i + 19, ctx.EMERGENCY_CONTACT_PHONE);
+      continue;
+    }
+    if (upper === "5.PERSONAL HISTORY (PART A)") {
+      fillSpecificBlankParagraph(paragraphs, i + 22, ctx.EMPLOYMENT_1_PHONE);
+      fillSpecificBlankParagraph(paragraphs, i + 23, ctx.EMPLOYMENT_1_NAME);
+      fillSpecificBlankParagraph(paragraphs, i + 24, ctx.EMPLOYMENT_1_TITLE);
+      fillSpecificBlankParagraph(paragraphs, i + 26, ctx.EMPLOYMENT_1_START);
+      fillSpecificBlankParagraph(paragraphs, i + 28, ctx.EMPLOYMENT_1_END);
+      fillSpecificBlankParagraph(paragraphs, i + 31, ctx.EMPLOYMENT_1_REASON);
+      fillSpecificBlankParagraph(paragraphs, i + 35, ctx.EMPLOYMENT_2_PHONE);
+      fillSpecificBlankParagraph(paragraphs, i + 36, ctx.EMPLOYMENT_2_NAME);
+      fillSpecificBlankParagraph(paragraphs, i + 37, ctx.EMPLOYMENT_2_TITLE);
+      fillSpecificBlankParagraph(paragraphs, i + 39, ctx.EMPLOYMENT_2_START);
+      fillSpecificBlankParagraph(paragraphs, i + 41, ctx.EMPLOYMENT_2_END);
+      fillSpecificBlankParagraph(paragraphs, i + 44, ctx.EMPLOYMENT_2_REASON);
+      continue;
+    }
+
+    if (/^Name:\s*\.{3,}/i.test(text)) {
+      let filled = text;
+      if (ctx.EMPLOYEE_NAME) filled = filled.replace(/Name:\s*\.+/i, `Name: ${ctx.EMPLOYEE_NAME}`);
+      if (ctx.DOB) filled = filled.replace(/D\.O\.B:\s*[\.\/]+/i, `D.O.B: ${ctx.DOB}`);
+      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+      continue;
+    }
+    if (/^Licence Number:\s*\.+/i.test(text)) {
+      let filled = text;
+      if (ctx.SIA_LICENCE) filled = filled.replace(/Licence Number:\s*\.+/i, `Licence Number: ${ctx.SIA_LICENCE}`);
+      if (ctx.SIA_EXPIRY) filled = filled.replace(/Expiry:\s*[\.\/]+/i, `Expiry: ${ctx.SIA_EXPIRY}`);
+      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+      continue;
+    }
+
+    if (/^NAME:\s*_+/i.test(text)) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `NAME: ${ctx.EMPLOYEE_NAME}`);
+      continue;
+    }
+    if (/^N\.I:\s*_+/i.test(text)) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `N.I: ${ctx.NI_NUMBER}`);
+      continue;
+    }
+    if (/^Date of Appointment:\s*_+/i.test(text)) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `Date of Appointment: ${ctx.APPOINTMENT_DATE}`);
+      continue;
+    }
+    if (/^Date Completed:\s*_+/i.test(text)) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `Date Completed: ${ctx.VETTING_COMPLETE || ctx.TODAY_SHORT}`);
+      continue;
+    }
+    if (text.startsWith("Position:") && text.toLowerCase().includes("vetting officer")) {
+      paragraphs[i] = setParagraphText(paragraphs[i], `Position: ${ctx.HR_SIGNATORY_POSITION}`);
+      continue;
+    }
+  }
+
+  let idx = 0;
+  return xml.replace(PARA_REGEX, () => paragraphs[idx++] ?? "");
+}
+
+function getCellText(cellXml: string): string {
+  return Array.from(cellXml.matchAll(WT_REGEX))
+    .map((m) => m[2])
+    .join("")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function setCellText(cellXml: string, value: string): string {
+  const paras = Array.from(cellXml.matchAll(PARA_REGEX)).map((m) => m[0]);
+  if (paras.length === 0) return cellXml;
+  const filled = setParagraphText(paras[0], value);
+  return cellXml.replace(paras[0], filled);
+}
+
+function getRowCells(rowXml: string): string[] {
+  return Array.from(rowXml.matchAll(CELL_REGEX)).map((m) => m[0]);
+}
+
+function getTableRows(tableXml: string): string[] {
+  return Array.from(tableXml.matchAll(ROW_REGEX)).map((m) => m[0]);
+}
+
+function fillReferenceTable(tableXml: string, records: Array<Array<string | null | undefined>>): string {
+  const rows = getTableRows(tableXml);
+  const dataRows = rows.slice(1);
+  let out = tableXml;
+  for (let i = 0; i < Math.min(records.length, dataRows.length); i++) {
+    const cells = getRowCells(dataRows[i]);
+    let filledRow = dataRows[i];
+    records[i].forEach((value, colIndex) => {
+      if (!value || colIndex >= cells.length) return;
+      filledRow = filledRow.replace(cells[colIndex], setCellText(cells[colIndex], value));
+    });
+    out = out.replace(dataRows[i], filledRow);
+  }
+  return out;
+}
+
+function extractRefereeNameFromDuties(duties?: string | null): string {
+  if (!duties) return "";
+  const m = duties.match(/reported\s+to:?\s*([^.\n]+)/i);
+  return m ? m[1].trim() : "";
+}
+
+function formatDateRange(from?: string | Date | null, to?: string | Date | null): string {
+  const f = formatUkDate(from);
+  const t = to ? formatUkDate(to) : from ? "Present" : "";
+  if (!f && !t) return "";
+  return `${f} - ${t}`;
+}
+
+function applyReferenceTrackerFills(
+  xml: string,
+  ctx: VettingMergeContext,
+  employmentHistory: VettingEmployeeSource["employmentHistory"],
+  references: VettingEmployeeSource["references"],
+): string {
+  const tables = Array.from(xml.matchAll(TABLE_REGEX)).map((m) => m[0]);
+  let out = xml;
+
+  for (const tableXml of tables) {
+    const rows = getTableRows(tableXml);
+    if (rows.length < 2) continue;
+    const headerText = getRowCells(rows[0]).map(getCellText).join(" ").toUpperCase();
+
+    if (headerText.startsWith("EMPLOYED")) {
+      const records = (employmentHistory || []).map((h) => [
+        formatDateRange(h.dateFrom, h.dateTo),
+        extractRefereeNameFromDuties(h.duties),
+        h.employerName || "",
+        h.refereePhone || "",
+        "",
+        "",
+        formatUkDate(h.requestedDate),
+        formatUkDate(h.submittedDate),
+        h.screeningComments || h.reasonForLeaving || "",
+        h.verificationStatus === "verified" ? ctx.HR_SIGNATORY_NAME : "",
+      ]);
+      out = out.replace(tableXml, fillReferenceTable(tableXml, records));
+      continue;
+    }
+
+    if (headerText.startsWith("YEARS KNOWN FOR")) {
+      const personalRefs = (references || []).filter(
+        (r) => !r.referenceKind || r.referenceKind === "personal",
+      );
+      const records = personalRefs.map((r) => [
+        r.howLongKnown || "",
+        r.refereeName || "",
+        r.relationship || "",
+        r.refereePhone || "",
+        "",
+        "",
+        formatUkDate(r.requestedDate),
+        formatUkDate(r.responseDate),
+        r.screeningComments || "",
+        r.verificationStatus === "verified" ? ctx.HR_SIGNATORY_NAME : "",
+      ]);
+      out = out.replace(tableXml, fillReferenceTable(tableXml, records));
+      continue;
+    }
+  }
+
+  return out;
+}
+
+function applyReplacements(xml: string, ctx: VettingMergeContext): string {
+  let out = xml;
+
+  out = out.split(LEGACY_TEMPLATE_COMPANY_NAME).join(escapeXml(ctx.COMPANY_NAME));
+  out = out.split(escapeXml(LEGACY_TEMPLATE_COMPANY_NAME)).join(escapeXml(ctx.COMPANY_NAME));
+  out = out.split("(ADDRESS)").join(escapeXml(ctx.COMPANY_ADDRESS));
+
+  for (const [key, value] of Object.entries(ctx)) {
+    out = out.split(`{{${key}}}`).join(escapeXml(value));
+  }
+
+  out = out.split("[Employee Name]").join(escapeXml(ctx.EMPLOYEE_NAME));
+  out = out.split("[Employee Address]").join(escapeXml(ctx.EMPLOYEE_ADDRESS));
+  out = out.split("[Name of Employee]").join(escapeXml(ctx.EMPLOYEE_NAME));
+  out = out.split("[Job Title]").join(escapeXml(ctx.JOB_TITLE));
+  out = out.split("[Start Date]").join(escapeXml(ctx.START_DATE));
+  out = out.split("[Date]").join(escapeXml(ctx.TODAY_SHORT));
+
+  if (ctx.COMPANY_REG) {
+    out = out.replace(/Company Registration No\.\s*[\u00a0\s\uFFFD.]+/gi, `Company Registration No. ${escapeXml(ctx.COMPANY_REG)}`);
+    out = out.replace(/Registration Number Company Registration No\.\s*[\u00a0\s\uFFFD.]+/gi, `Registration Number Company Registration No. ${escapeXml(ctx.COMPANY_REG)}`);
+  }
+  if (ctx.COMPANY_ADDRESS) {
+    out = out.replace(/registered office is at\s*[\u00a0\s\uFFFD.]+/gi, `registered office is at ${escapeXml(ctx.COMPANY_ADDRESS)}`);
+  }
+
+  out = applyParagraphFormFills(out, ctx);
+
+  return out;
+}
+
+async function mergeDocxTemplate(
+  templatePath: string,
+  ctx: VettingMergeContext,
+  postProcess?: (xml: string) => string,
+): Promise<Buffer> {
+  const fileData = fs.readFileSync(templatePath);
+  const zip = await JSZip.loadAsync(fileData);
+
+  const xmlPaths = Object.keys(zip.files).filter(
+    (name) => name.startsWith("word/") && name.endsWith(".xml") && !name.includes("_rels"),
+  );
+
+  for (const xmlPath of xmlPaths) {
+    const entry = zip.file(xmlPath);
+    if (!entry) continue;
+    const content = await entry.async("string");
+    let merged = applyReplacements(content, ctx);
+    if (postProcess) merged = postProcess(merged);
+    zip.file(xmlPath, merged);
+  }
+
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
+function resolveTemplatePath(form: VettingDocumentForm): string {
+  return path.join(VETTING_DOCS_DIR, ...form.filename.split("/"));
+}
+
+export function listAvailableVettingDocuments(officerType?: string | null) {
+  return listVettingFormsForEmployee(officerType).map((form) => ({
+    code: form.code,
+    label: form.label,
+    category: form.category,
+    format: form.format,
+    downloadable: form.format === "docx" && fs.existsSync(resolveTemplatePath(form)),
+  }));
+}
+
+export async function generateVettingDocument(
+  formCode: string,
+  tenant: Tenant,
+  employee: VettingEmployeeSource,
+  empUser: User | null | undefined,
+  options?: { asPdf?: boolean; screeningExceptions?: string },
+): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+  const form = getVettingFormByCode(formCode);
+  if (!form) {
+    throw new Error("Unknown vetting document form");
+  }
+
+  const ctx = buildVettingMergeContext(tenant, employee, empUser);
+
+  if (form.code === "sf17" && options?.asPdf) {
+    const pdf = await generateVettingCompletionCertPdf({
+      companyName: ctx.COMPANY_NAME,
+      companyAddress: ctx.COMPANY_ADDRESS,
+      employeeName: ctx.EMPLOYEE_NAME,
+      niNumber: ctx.NI_NUMBER,
+      appointmentDate: ctx.APPOINTMENT_DATE,
+      completedDate: ctx.VETTING_COMPLETE || ctx.TODAY_SHORT,
+      signatoryName: ctx.HR_SIGNATORY_NAME,
+      signatoryPosition: ctx.HR_SIGNATORY_POSITION,
+      signatureImage: tenant.hrSignatureData || undefined,
+      screeningExceptions: options.screeningExceptions,
+    });
+    const safeName = ctx.EMPLOYEE_NAME.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+    return {
+      buffer: pdf,
+      filename: `SF17-Completion-Cert-${safeName || employee.id}.pdf`,
+      contentType: "application/pdf",
+    };
+  }
+
+  if (form.format !== "docx") {
+    throw new Error(`${form.label} uses legacy .doc format — convert to .docx or open the template manually`);
+  }
+
+  const templatePath = resolveTemplatePath(form);
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template file not found: ${form.filename}`);
+  }
+
+  const postProcess =
+    form.code === "sf08"
+      ? (xml: string) => applyReferenceTrackerFills(xml, ctx, employee.employmentHistory, employee.references)
+      : undefined;
+  const buffer = await mergeDocxTemplate(templatePath, ctx, postProcess);
+  const safeName = ctx.EMPLOYEE_NAME.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+  const base = form.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return {
+    buffer,
+    filename: `${base}-${safeName || employee.id}.docx`,
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+}
+
+export function vettingDocsDirectoryExists(): boolean {
+  return fs.existsSync(VETTING_DOCS_DIR);
+}

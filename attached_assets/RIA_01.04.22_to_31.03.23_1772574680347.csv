@@ -1,0 +1,37 @@
+Date,Location,Customer,Officer,Start,Finish,Hours,Rate,Amount,Status
+01/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+02/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+03/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+06/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+22/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+23/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,TALIB HUSSAIN,06:00,18:00,12,12,144,Confirmed
+04/12/2022,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,QASIM ELAHI,07:00,19:00,12,10,120,Confirmed
+12/01/2023,Hovis Bradford Gain Lane Thornbury Bradford BD3 7DX,Atlian Servest,HASSAN HANIF,05:30,17:30,12,10,120,Confirmed
+13/01/2023,Hovis Bradford Gain Lane Thornbury Bradford BD3 7DX,Atlian Servest,HASSAN HANIF,05:30,17:30,12,10,120,Confirmed
+10/03/2023,Hovis Bradford Gain Lane Thornbury Bradford BD3 7DX,Atlian Servest,HASSAN HANIF,06:00,18:00,12,12,144,Confirmed
+06/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,ZULFIQAR MUHAMMAD BIBI,06:00,18:00,12,12,144,Confirmed
+20/02/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,CHOUDHRY TANVEER AHMED WARRAICH,06:00,18:01,12.01,12,144.12,Confirmed
+06/03/2023,Barclays Radbroke Hall Knutsford WA16 9EU,Securitas UK,MUHAMMAD IQBAL,06:00,18:00,12,12,144,Confirmed
+24/02/2023,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,GHULAM ABBAS,07:00,23:20,16.33,12,195.96,Confirmed
+04/03/2023,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,NAEEM AWAN,19:00,07:00,12,12,144,Confirmed
+08/03/2023,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,NAEEM AWAN,19:00,07:00,12,12,144,Confirmed
+11/03/2023,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,NAEEM AWAN,19:00,07:00,12,12,144,Confirmed
+26/03/2023,Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ,Galaxon Services Ltd,NAEEM AWAN,07:00,19:00,12,12,144,Confirmed
+07/03/2023,Q8 Quorum Business Park Benton Lane Newcastle NE12 8RU,Atlian Servest,SHAZLI MOHAMMED,07:00,15:30,8.5,12,102,Confirmed
+10/03/2023,Leeds Valley Park LS10 1AB,Atlian Servest,SARABJIT SINGH,07:00,19:00,12,12,144,Confirmed
+16/03/2023,British Broadcasting Corporation Barrack Road Newcastle upon Tyne Tyne and Wear England NE99 2NE,Key Holding,ABRAR KHAN,14:00,03:00,13,12,156,Confirmed
+22/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,SANDEEP KAUR,18:00,07:00,13,12,156,Confirmed
+01/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+02/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,18:13,12.22,12,146.64,Confirmed
+03/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+07/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+08/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+11/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+13/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+14/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+15/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+17/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+25/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+26/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+27/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed
+30/03/2023,UTC Aerospace Wolverhampton WV10 7EH,OCS Security,MANI THOTA,06:00,19:00,13,12,156,Confirmed

@@ -1,0 +1,46 @@
+Date,Location,Customer,Officer,Start,Finish,Hours,Rate,Amount,Status
+05/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+06/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+07/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+09/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+10/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+11/01/2023,Ocado CFC Erith,Atlian Servest, H Khan,06:00,18:00,12,10.5,126,Confirmed
+27/12/2022,Ocado CFC Erith,Atlian Servest,NABIL AKRAM,06:00,18:00,12,10.5,126,Confirmed
+08/01/2023,Ocado CFC Erith,Atlian Servest,NABIL AKRAM,06:00,18:00,12,10.5,126,Confirmed
+11/01/2023,Ocado CFC Erith,Atlian Servest,NABIL AKRAM,18:00,06:00,12,10.5,126,Confirmed
+12/01/2023,Ocado CFC Erith,Atlian Servest,NABIL AKRAM,18:00,06:00,12,10.5,126,Confirmed
+13/01/2023,Ocado CFC Erith,Atlian Servest,NABIL AKRAM,18:00,06:00,12,10.5,126,Confirmed
+09/12/2022,Fulham Broadway Retail Centre London SW6 1BW,OCS Security,YASHVIR YASHVIR,07:00,19:00,12,10.5,126,Confirmed
+28/12/2022,Ocado CFC Erith,Atlian Servest,IRFAN AHMAD,06:00,18:00,12,10.5,126,Confirmed
+29/12/2022,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,18:00,12,10.5,126,Confirmed
+30/12/2022,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,22:25,16.42,10.5,172.41,Confirmed
+01/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,18:00,12,10.5,126,Confirmed
+02/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,18:00,12,10.5,126,Confirmed
+03/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,18:00,12,10.5,126,Confirmed
+08/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,18:00,06:00,12,10.5,126,Confirmed
+09/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,18:00,06:00,12,10.5,126,Confirmed
+10/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,18:00,06:00,12,10.5,126,Confirmed
+12/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,06:00,18:00,12,10.5,126,Confirmed
+14/01/2023,Ocado CFC Erith,Atlian Servest,MINHAZ AHMED,18:00,06:00,12,10.5,126,Confirmed
+04/01/2023,Ocado CFC Erith,Atlian Servest,G Singh,06:00,18:00,12,10.5,126,Confirmed
+04/01/2023,JS Telford S 2002 TF3 4AG,mitie services and security,BABAR SIDDIQUE,12:00,21:00,9,10.5,94.5,Confirmed
+04/01/2023,Hartlebury Trading estate Walton Rd Kidderminster,Galaxon Services Ltd,Muhammad Shahid ,21:00,09:00,12,10.5,126,Confirmed
+05/01/2023,JS Telford S 2002 TF3 4AG,mitie services and security,EJAZ AHMED,11:00,21:00,10,10.5,105,Confirmed
+06/01/2023,JS Telford S 2002 TF3 4AG,mitie services and security,Muhammad Ismail,13:00,22:00,9,10.5,94.5,Confirmed
+06/01/2023,Ocado CFC Erith,Atlian Servest,W Murtaza,18:00,06:00,12,10.5,126,Confirmed
+07/01/2023,JS Telford S 2002 TF3 4AG,mitie services and security,Y Mahmood,13:00,22:00,9,10.5,94.5,Confirmed
+08/01/2023,JS Telford S 2002 TF3 4AG,mitie services and security,Y Mahmood,10:00,17:00,7,10.5,73.5,Confirmed
+15/01/2023,Ocado CFC Erith,Atlian Servest,KHUDA DAD,18:00,08:43,14.71,10.5,154.46,Confirmed
+01/02/2023,Kurt Geiger A2 North Street Brighton BN1 1EB,Servoca Secure Solutions,UMER RASOOL,20:00,04:34,8.57,10.5,89.98,Confirmed
+17/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,HARSH SANJAYKUMAR PATEL,08:00,14:00,6,10.5,63,Confirmed
+20/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,HARSH SANJAYKUMAR PATEL,07:30,18:00,10.5,10.5,110.25,Confirmed
+21/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,HARSH SANJAYKUMAR PATEL,07:30,18:00,10.5,10.5,110.25,Confirmed
+24/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,HARSH SANJAYKUMAR PATEL,07:30,18:00,10.5,10.5,110.25,Confirmed
+17/03/2023,Watches of Switzerland Brighton East Sussex BN1 1EB,UK PROTECTION LTD,MD HOQ,09:00,17:30,8.5,10.5,89.25,Confirmed
+18/03/2023,Aldi Herne Bay CT6 5RE,Amberstone Security Ltd,PRUTHVIRAJBHAI RATHOD,14:00,22:00,8,10.5,84,Confirmed
+22/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,18:00,12,10.5,126,Confirmed
+23/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,18:00,12,10.5,126,Confirmed
+27/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,18:00,12,10.5,126,Confirmed
+28/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,18:00,12,10.5,126,Confirmed
+29/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,18:00,12,10.5,126,Confirmed
+30/03/2023,Beaconsfield Road Hays UB4 0SL,Alandale Logistics UK,AFZAAL MAJEED,06:00,20:48,14.8,10.5,155.4,Confirmed

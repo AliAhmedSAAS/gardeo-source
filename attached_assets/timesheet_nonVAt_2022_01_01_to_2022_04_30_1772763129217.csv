@@ -1,0 +1,467 @@
+﻿shift_id,officer_id,officer_name,SupplierID,Supplier,shift_date,duty_start,duty_finish,LocationID,location,ClientID,Client,hours,rate,amount
+225476,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-01,2023-01-01 07:00:00,2023-01-01 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225850,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-01,2023-01-01 07:00:00,2023-01-01 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225863,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-01,2023-01-01 07:00:00,2023-01-01 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225875,22982,AHMED KHAN,1116,IMPRESSION,2023-01-01,2023-01-01 07:00:00,2023-01-01 19:00:00,6578,David Wilson Homes Ashridge Grange Warren House Road Wokingham Berkshire RG40 5QB,589,O Neil & Brennan,12,10.3,0
+223736,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-01,2023-01-01 11:00:00,2023-01-01 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+225627,26280,Haris Amin,4550,Iftekhar OCS,2023-01-01,2023-01-01 19:00:00,2023-01-02 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225640,27054,M Nasir,4550,Iftekhar OCS,2023-01-01,2023-01-01 19:00:00,2023-01-02 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225836,21008,ABDUL BASIT,4550,Iftekhar OCS,2023-01-01,2023-01-01 19:00:00,2023-01-02 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225876,27136,Usama Bin Yaqoob,1116,IMPRESSION,2023-01-01,2023-01-01 19:00:00,2023-01-02 07:00:00,6578,David Wilson Homes Ashridge Grange Warren House Road Wokingham Berkshire RG40 5QB,589,O Neil & Brennan,12,10.3,0
+225950,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-02,2023-01-02 06:30:00,2023-01-02 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+225477,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-02,2023-01-02 07:00:00,2023-01-02 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225851,27123,ABDUL WASEH,4550,Iftekhar OCS,2023-01-02,2023-01-02 07:00:00,2023-01-02 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225864,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-02,2023-01-02 07:00:00,2023-01-02 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226508,22982,AHMED KHAN,1116,IMPRESSION,2023-01-02,2023-01-02 07:00:00,2023-01-02 19:00:00,6578,David Wilson Homes Ashridge Grange Warren House Road Wokingham Berkshire RG40 5QB,589,O Neil & Brennan,12,10.3,0
+226334,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-02,2023-01-02 09:30:00,2023-01-02 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225628,26280,Haris Amin,4550,Iftekhar OCS,2023-01-02,2023-01-02 19:00:00,2023-01-03 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225641,27054,M Nasir,4550,Iftekhar OCS,2023-01-02,2023-01-02 19:00:00,2023-01-03 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226509,27136,Usama Bin Yaqoob,1116,IMPRESSION,2023-01-02,2023-01-02 19:00:00,2023-01-03 07:00:00,6578,David Wilson Homes Ashridge Grange Warren House Road Wokingham Berkshire RG40 5QB,589,O Neil & Brennan,12,10.3,0
+225951,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-03,2023-01-03 06:30:00,2023-01-03 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+225478,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-03,2023-01-03 07:00:00,2023-01-03 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225852,27123,ABDUL WASEH,4550,Iftekhar OCS,2023-01-03,2023-01-03 07:00:00,2023-01-03 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225865,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-03,2023-01-03 07:00:00,2023-01-03 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227301,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-03,2023-01-03 07:00:00,2023-01-03 16:00:00,6612,JS Chandos RoadC BUCKINGHAM MK18 1AL,612,mitie services and security,9,10.3,0
+226335,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-03,2023-01-03 09:30:00,2023-01-03 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+226502,24413,Muhammed Khaliq,1116,IMPRESSION,2023-01-03,2023-01-03 17:30:00,2023-01-04 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,6.5,10.3,0
+225629,26280,Haris Amin,4550,Iftekhar OCS,2023-01-03,2023-01-03 19:00:00,2023-01-04 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225642,27054,M Nasir,4550,Iftekhar OCS,2023-01-03,2023-01-03 19:00:00,2023-01-04 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225479,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-04,2023-01-04 07:00:00,2023-01-04 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227339,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-04,2023-01-04 07:00:00,2023-01-04 17:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,10,10.3,0
+226336,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-04,2023-01-04 09:30:00,2023-01-04 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225128,1123,H.Algabash ,1118,HATIAM,2023-01-04,2023-01-04 14:00:00,2023-01-04 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226503,24413,Muhammed Khaliq,1116,IMPRESSION,2023-01-04,2023-01-04 16:00:00,2023-01-05 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+225837,21008,ABDUL BASIT,4550,Iftekhar OCS,2023-01-04,2023-01-04 19:00:00,2023-01-05 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227420,27123,ABDUL WASEH,4550,Iftekhar OCS,2023-01-04,2023-01-04 19:00:00,2023-01-05 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225480,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-05,2023-01-05 07:00:00,2023-01-05 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226337,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-05,2023-01-05 09:30:00,2023-01-05 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225129,1123,H.Algabash ,1118,HATIAM,2023-01-05,2023-01-05 14:00:00,2023-01-05 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226504,27254,Idris Eliam,1116,IMPRESSION,2023-01-05,2023-01-05 16:00:00,2023-01-06 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+225838,21008,ABDUL BASIT,4550,Iftekhar OCS,2023-01-05,2023-01-05 19:00:00,2023-01-06 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227569,27123,ABDUL WASEH,4550,Iftekhar OCS,2023-01-05,2023-01-05 19:00:00,2023-01-06 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226338,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-06,2023-01-06 09:30:00,2023-01-06 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225130,1123,H.Algabash ,1118,HATIAM,2023-01-06,2023-01-06 14:00:00,2023-01-06 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226505,27254,Idris Eliam,1116,IMPRESSION,2023-01-06,2023-01-06 16:00:00,2023-01-07 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227402,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-06,2023-01-06 19:00:00,2023-01-07 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227435,27054,M Nasir,4550,Iftekhar OCS,2023-01-06,2023-01-06 19:00:00,2023-01-07 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225952,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-07,2023-01-07 06:30:00,2023-01-07 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227733,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-07,2023-01-07 07:00:00,2023-01-07 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226339,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-07,2023-01-07 09:30:00,2023-01-07 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225131,1123,H.Algabash ,1118,HATIAM,2023-01-07,2023-01-07 14:00:00,2023-01-07 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226506,27254,Idris Eliam,1116,IMPRESSION,2023-01-07,2023-01-07 16:00:00,2023-01-08 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227403,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-07,2023-01-07 19:00:00,2023-01-08 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227436,27054,M Nasir,4550,Iftekhar OCS,2023-01-07,2023-01-07 19:00:00,2023-01-08 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225953,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-08,2023-01-08 06:30:00,2023-01-08 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227450,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-08,2023-01-08 07:00:00,2023-01-08 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226340,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-08,2023-01-08 11:00:00,2023-01-08 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+227761,25983,SAAD KHAN,4550,Iftekhar OCS,2023-01-08,2023-01-08 12:00:00,2023-01-08 16:00:00,6616,Trimbridge House Trim House Bath BA1 1HB,547,Securitas UK,4,10.3,0
+225132,1123,H.Algabash ,1118,HATIAM,2023-01-08,2023-01-08 14:00:00,2023-01-08 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226507,27254,Idris Eliam,1116,IMPRESSION,2023-01-08,2023-01-08 16:00:00,2023-01-09 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227437,27054,M Nasir,4550,Iftekhar OCS,2023-01-08,2023-01-08 19:00:00,2023-01-09 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227688,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-09,2023-01-09 07:00:00,2023-01-09 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227692,27254,Idris Eliam,1116,IMPRESSION,2023-01-09,2023-01-09 07:00:00,2023-01-09 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+226752,21199,Amgad ELSAFI,1118,HATIAM,2023-01-09,2023-01-09 08:00:00,2023-01-09 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226550,26502,MUHAMMAD WAQAR,4550,Iftekhar OCS,2023-01-09,2023-01-09 09:30:00,2023-01-09 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227838,25299,Yousuf Hafiz,4550,Iftekhar OCS,2023-01-09,2023-01-09 19:00:00,2023-01-10 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227693,27254,Idris Eliam,1116,IMPRESSION,2023-01-10,2023-01-10 07:00:00,2023-01-10 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+226753,21199,Amgad ELSAFI,1118,HATIAM,2023-01-10,2023-01-10 08:00:00,2023-01-10 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226551,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-10,2023-01-10 09:30:00,2023-01-10 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227917,25299,Yousuf Hafiz,4550,Iftekhar OCS,2023-01-10,2023-01-10 19:00:00,2023-01-11 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225954,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-11,2023-01-11 06:30:00,2023-01-11 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226754,21199,Amgad ELSAFI,1118,HATIAM,2023-01-11,2023-01-11 08:00:00,2023-01-11 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226552,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-11,2023-01-11 09:30:00,2023-01-11 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225133,24494,OMER ABDELMONEM,1118,HATIAM,2023-01-11,2023-01-11 14:00:00,2023-01-11 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+225955,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-12,2023-01-12 06:30:00,2023-01-12 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226755,21199,Amgad ELSAFI,1118,HATIAM,2023-01-12,2023-01-12 08:00:00,2023-01-12 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226553,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-12,2023-01-12 09:30:00,2023-01-12 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225134,24494,OMER ABDELMONEM,1118,HATIAM,2023-01-12,2023-01-12 14:00:00,2023-01-12 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226303,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-12,2023-01-12 18:00:00,2023-01-13 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227404,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-12,2023-01-12 19:00:00,2023-01-13 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225956,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-13,2023-01-13 06:30:00,2023-01-13 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226756,21199,Amgad ELSAFI,1118,HATIAM,2023-01-13,2023-01-13 08:00:00,2023-01-13 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226554,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-13,2023-01-13 09:30:00,2023-01-13 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225135,24494,OMER ABDELMONEM,1118,HATIAM,2023-01-13,2023-01-13 14:00:00,2023-01-13 22:00:00,5711,Co op Howden West Livingstone Howden West Road Livingston EH54 6AA,612,mitie services and security,8,11,0
+226304,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-13,2023-01-13 18:00:00,2023-01-14 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227405,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-13,2023-01-13 19:00:00,2023-01-14 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228194,26560,MOHSAN RAZA,4550,Iftekhar OCS,2023-01-14,2023-01-14 07:00:00,2023-01-14 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226555,26502,MUHAMMAD WAQAR,4550,Iftekhar OCS,2023-01-14,2023-01-14 09:30:00,2023-01-14 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227697,27254,Idris Eliam,1116,IMPRESSION,2023-01-14,2023-01-14 16:00:00,2023-01-15 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+226305,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-14,2023-01-14 18:00:00,2023-01-15 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227438,27054,M Nasir,4550,Iftekhar OCS,2023-01-14,2023-01-14 19:00:00,2023-01-15 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228217,26466,Azeem Ali,4550,Iftekhar OCS,2023-01-15,2023-01-15 10:00:00,2023-01-15 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,9,10.3,0
+226570,26502,MUHAMMAD WAQAR,4550,Iftekhar OCS,2023-01-15,2023-01-15 11:00:00,2023-01-15 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+227698,27254,Idris Eliam,1116,IMPRESSION,2023-01-15,2023-01-15 16:00:00,2023-01-16 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227406,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-15,2023-01-15 19:00:00,2023-01-16 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225957,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-16,2023-01-16 06:30:00,2023-01-16 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226757,21199,Amgad ELSAFI,1118,HATIAM,2023-01-16,2023-01-16 08:00:00,2023-01-16 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226556,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-16,2023-01-16 09:30:00,2023-01-16 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227407,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-16,2023-01-16 19:00:00,2023-01-17 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227439,27054,M Nasir,4550,Iftekhar OCS,2023-01-16,2023-01-16 19:00:00,2023-01-17 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225958,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-17,2023-01-17 06:30:00,2023-01-17 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226758,21199,Amgad ELSAFI,1118,HATIAM,2023-01-17,2023-01-17 08:00:00,2023-01-17 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226557,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-17,2023-01-17 09:30:00,2023-01-17 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227408,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-17,2023-01-17 19:00:00,2023-01-18 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227440,27054,M Nasir,4550,Iftekhar OCS,2023-01-17,2023-01-17 19:00:00,2023-01-18 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228313,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-17,2023-01-17 19:00:00,2023-01-18 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+226759,21199,Amgad ELSAFI,1118,HATIAM,2023-01-18,2023-01-18 08:00:00,2023-01-18 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226558,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-18,2023-01-18 09:30:00,2023-01-18 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227409,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-18,2023-01-18 19:00:00,2023-01-19 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227441,27054,M Nasir,4550,Iftekhar OCS,2023-01-18,2023-01-18 19:00:00,2023-01-19 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228314,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-18,2023-01-18 19:00:00,2023-01-19 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+228480,26357,Amir Shahzad,4550,Iftekhar OCS,2023-01-19,2023-01-19 07:00:00,2023-01-19 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226760,21199,Amgad ELSAFI,1118,HATIAM,2023-01-19,2023-01-19 08:00:00,2023-01-19 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226559,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-19,2023-01-19 09:30:00,2023-01-19 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+226306,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-19,2023-01-19 18:00:00,2023-01-20 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227410,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-19,2023-01-19 19:00:00,2023-01-20 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228315,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-19,2023-01-19 19:00:00,2023-01-20 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+226761,21199,Amgad ELSAFI,1118,HATIAM,2023-01-20,2023-01-20 08:00:00,2023-01-20 17:00:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9,10.5,0
+226560,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-20,2023-01-20 09:30:00,2023-01-20 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+226307,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-20,2023-01-20 18:00:00,2023-01-21 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227442,27054,M Nasir,4550,Iftekhar OCS,2023-01-20,2023-01-20 19:00:00,2023-01-21 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228316,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-20,2023-01-20 19:00:00,2023-01-21 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+228639,26466,Azeem Ali,4550,Iftekhar OCS,2023-01-20,2023-01-20 19:00:00,2023-01-21 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225959,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-21,2023-01-21 06:30:00,2023-01-21 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+226561,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-21,2023-01-21 09:30:00,2023-01-21 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228098,27345,Tayyab Ramzan,1116,IMPRESSION,2023-01-21,2023-01-21 16:00:00,2023-01-22 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+226308,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-21,2023-01-21 18:00:00,2023-01-22 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227411,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-21,2023-01-21 19:00:00,2023-01-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228317,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-21,2023-01-21 19:00:00,2023-01-22 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+228673,26466,Azeem Ali,4550,Iftekhar OCS,2023-01-21,2023-01-21 19:00:00,2023-01-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225960,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-22,2023-01-22 06:30:00,2023-01-22 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+228671,27054,M Nasir,4550,Iftekhar OCS,2023-01-22,2023-01-22 07:00:00,2023-01-22 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226571,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-22,2023-01-22 11:00:00,2023-01-22 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+228099,27345,Tayyab Ramzan,1116,IMPRESSION,2023-01-22,2023-01-22 16:00:00,2023-01-23 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227412,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-22,2023-01-22 19:00:00,2023-01-23 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228318,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-22,2023-01-22 19:00:00,2023-01-23 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+228672,27054,M Nasir,4550,Iftekhar OCS,2023-01-23,2023-01-23 07:00:00,2023-01-23 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226762,21199,Amgad ELSAFI,1118,HATIAM,2023-01-23,2023-01-23 08:00:00,2023-01-23 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226562,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-23,2023-01-23 09:30:00,2023-01-23 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227413,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-23,2023-01-23 19:00:00,2023-01-24 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228429,15818,MOHAMEDFAZEEL MOHAMED ABDUL RASHEED,1116,IMPRESSION,2023-01-23,2023-01-23 19:00:00,2023-01-24 07:00:00,5357,The Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+228690,26357,Amir Shahzad,4550,Iftekhar OCS,2023-01-23,2023-01-23 19:00:00,2023-01-24 09:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,14,10.3,0
+226763,21199,Amgad ELSAFI,1118,HATIAM,2023-01-24,2023-01-24 08:00:00,2023-01-24 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+227451,27054,M Nasir,4550,Iftekhar OCS,2023-01-24,2023-01-24 09:00:00,2023-01-24 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,10,10.3,0
+226563,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-24,2023-01-24 09:30:00,2023-01-24 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+225961,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-25,2023-01-25 06:30:00,2023-01-25 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227452,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-25,2023-01-25 07:00:00,2023-01-25 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226764,21199,Amgad ELSAFI,1118,HATIAM,2023-01-25,2023-01-25 08:00:00,2023-01-25 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226564,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-25,2023-01-25 09:30:00,2023-01-25 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228814,27054,M Nasir,4550,Iftekhar OCS,2023-01-25,2023-01-25 19:00:00,2023-01-26 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225962,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-26,2023-01-26 06:30:00,2023-01-26 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227414,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-26,2023-01-26 07:00:00,2023-01-26 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226765,21199,Amgad ELSAFI,1118,HATIAM,2023-01-26,2023-01-26 08:00:00,2023-01-26 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226565,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-26,2023-01-26 09:30:00,2023-01-26 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+226309,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-26,2023-01-26 18:00:00,2023-01-27 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227444,27054,M Nasir,4550,Iftekhar OCS,2023-01-26,2023-01-26 19:00:00,2023-01-27 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+225963,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-27,2023-01-27 06:30:00,2023-01-27 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227415,27111,IZATULLAH MAZLOOMYAR,4550,Iftekhar OCS,2023-01-27,2023-01-27 07:00:00,2023-01-27 14:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,7,10.3,0
+226766,21199,Amgad ELSAFI,1118,HATIAM,2023-01-27,2023-01-27 08:00:00,2023-01-27 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226566,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-27,2023-01-27 09:30:00,2023-01-27 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+229803,26357,Amir Shahzad,4550,Iftekhar OCS,2023-01-27,2023-01-27 14:00:00,2023-01-28 04:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,14,10.3,0
+226310,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-27,2023-01-27 18:00:00,2023-01-28 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227445,27054,M Nasir,4550,Iftekhar OCS,2023-01-27,2023-01-27 22:00:00,2023-01-28 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,9,10.3,0
+227416,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-28,2023-01-28 07:00:00,2023-01-28 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226567,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-28,2023-01-28 09:30:00,2023-01-28 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228613,27345,Tayyab Ramzan,1116,IMPRESSION,2023-01-28,2023-01-28 16:00:00,2023-01-29 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+226311,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-01-28,2023-01-28 18:00:00,2023-01-29 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+227446,27054,M Nasir,4550,Iftekhar OCS,2023-01-28,2023-01-28 19:00:00,2023-01-29 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+227417,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-29,2023-01-29 07:00:00,2023-01-29 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226572,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-29,2023-01-29 11:00:00,2023-01-29 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+228614,27345,Tayyab Ramzan,1116,IMPRESSION,2023-01-29,2023-01-29 16:00:00,2023-01-30 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+227447,27054,M Nasir,4550,Iftekhar OCS,2023-01-29,2023-01-29 19:00:00,2023-01-30 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+228430,26627,MUHAMMAD ABSAM ISHAQ BUTT,1116,IMPRESSION,2023-01-29,2023-01-29 19:00:00,2023-01-30 07:00:00,5357,The Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+225964,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-30,2023-01-30 06:30:00,2023-01-30 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227418,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-01-30,2023-01-30 07:00:00,2023-01-30 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226767,21199,Amgad ELSAFI,1118,HATIAM,2023-01-30,2023-01-30 08:00:00,2023-01-30 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226568,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-30,2023-01-30 09:30:00,2023-01-30 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+229235,26627,MUHAMMAD ABSAM ISHAQ BUTT,1116,IMPRESSION,2023-01-30,2023-01-30 19:00:00,2023-01-31 07:00:00,5357,The Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+225965,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-01-31,2023-01-31 06:30:00,2023-01-31 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,10.3,0
+227419,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-01-31,2023-01-31 07:00:00,2023-01-31 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226768,21199,Amgad ELSAFI,1118,HATIAM,2023-01-31,2023-01-31 08:00:00,2023-01-31 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+226569,26488,Fawad ahmed,4550,Iftekhar OCS,2023-01-31,2023-01-31 09:30:00,2023-01-31 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+227449,27054,M Nasir,4550,Iftekhar OCS,2023-01-31,2023-01-31 19:00:00,2023-02-01 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226769,21199,Amgad ELSAFI,1118,HATIAM,2023-02-01,2023-02-01 08:00:00,2023-02-01 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+228809,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-01,2023-02-01 09:30:00,2023-02-01 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+226770,21199,Amgad ELSAFI,1118,HATIAM,2023-02-02,2023-02-02 08:00:00,2023-02-02 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+228810,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-02,2023-02-02 09:30:00,2023-02-02 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228346,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-02,2023-02-02 18:00:00,2023-02-03 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230063,27054,M Nasir,4550,Iftekhar OCS,2023-02-02,2023-02-02 19:00:00,2023-02-03 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+226771,21199,Amgad ELSAFI,1118,HATIAM,2023-02-03,2023-02-03 08:00:00,2023-02-03 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+228811,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-03,2023-02-03 09:30:00,2023-02-03 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230230,27054,M Nasir,4550,Iftekhar OCS,2023-02-03,2023-02-03 19:00:00,2023-02-04 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229082,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-04,2023-02-04 06:30:00,2023-02-04 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+228812,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-04,2023-02-04 09:00:00,2023-02-04 18:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+229203,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-04,2023-02-04 16:00:00,2023-02-05 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228348,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-02-04,2023-02-04 18:00:00,2023-02-05 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230231,27054,M Nasir,4550,Iftekhar OCS,2023-02-04,2023-02-04 19:00:00,2023-02-05 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230279,26502,MUHAMMAD WAQAR,4550,Iftekhar OCS,2023-02-04,2023-02-04 19:00:00,2023-02-05 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229083,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-05,2023-02-05 06:30:00,2023-02-05 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+228813,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-05,2023-02-05 11:00:00,2023-02-05 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+229204,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-05,2023-02-05 16:00:00,2023-02-06 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+229883,26627,MUHAMMAD ABSAM ISHAQ BUTT,1116,IMPRESSION,2023-02-05,2023-02-05 19:00:00,2023-02-06 07:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+230232,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-05,2023-02-05 19:00:00,2023-02-06 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230288,27054,M Nasir,4550,Iftekhar OCS,2023-02-05,2023-02-05 19:00:00,2023-02-06 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229002,21199,Amgad ELSAFI,1118,HATIAM,2023-02-06,2023-02-06 08:00:00,2023-02-06 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229482,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-06,2023-02-06 09:30:00,2023-02-06 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230314,27054,M Nasir,4550,Iftekhar OCS,2023-02-06,2023-02-06 19:00:00,2023-02-07 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229003,21199,Amgad ELSAFI,1118,HATIAM,2023-02-07,2023-02-07 08:00:00,2023-02-07 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229483,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-07,2023-02-07 09:30:00,2023-02-07 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230315,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-07,2023-02-07 19:00:00,2023-02-08 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229084,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-08,2023-02-08 06:30:00,2023-02-08 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230387,27423,WAJID SAEED,4550,Iftekhar OCS,2023-02-08,2023-02-08 07:00:00,2023-02-08 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229004,21199,Amgad ELSAFI,1118,HATIAM,2023-02-08,2023-02-08 08:00:00,2023-02-08 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229484,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-08,2023-02-08 09:30:00,2023-02-08 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230317,27054,M Nasir,4550,Iftekhar OCS,2023-02-08,2023-02-08 19:00:00,2023-02-09 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229085,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-09,2023-02-09 06:30:00,2023-02-09 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230388,27423,WAJID SAEED,4550,Iftekhar OCS,2023-02-09,2023-02-09 07:00:00,2023-02-09 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229005,21199,Amgad ELSAFI,1118,HATIAM,2023-02-09,2023-02-09 08:00:00,2023-02-09 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229485,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-09,2023-02-09 09:30:00,2023-02-09 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228349,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-02-09,2023-02-09 18:00:00,2023-02-10 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230316,27054,M Nasir,4550,Iftekhar OCS,2023-02-09,2023-02-09 19:00:00,2023-02-10 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229086,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-10,2023-02-10 06:30:00,2023-02-10 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230426,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-10,2023-02-10 07:00:00,2023-02-10 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229006,21199,Amgad ELSAFI,1118,HATIAM,2023-02-10,2023-02-10 08:00:00,2023-02-10 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229486,27441,SAAD ABBASI,4550,Iftekhar OCS,2023-02-10,2023-02-10 09:30:00,2023-02-10 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+228350,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-02-10,2023-02-10 18:00:00,2023-02-11 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230427,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-11,2023-02-11 07:00:00,2023-02-11 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229487,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-11,2023-02-11 09:00:00,2023-02-11 18:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230187,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-11,2023-02-11 16:00:00,2023-02-12 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228351,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-02-11,2023-02-11 18:00:00,2023-02-12 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230408,27054,M Nasir,4550,Iftekhar OCS,2023-02-11,2023-02-11 19:00:00,2023-02-12 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230761,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-12,2023-02-12 07:00:00,2023-02-12 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230798,27423,WAJID SAEED,4550,Iftekhar OCS,2023-02-12,2023-02-12 07:00:00,2023-02-12 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229502,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-12,2023-02-12 11:00:00,2023-02-12 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+230188,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-12,2023-02-12 16:00:00,2023-02-13 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230409,27054,M Nasir,4550,Iftekhar OCS,2023-02-12,2023-02-12 19:00:00,2023-02-13 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230766,25299,Yousuf Hafiz,4550,Iftekhar OCS,2023-02-12,2023-02-12 19:00:00,2023-02-13 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229087,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-13,2023-02-13 06:30:00,2023-02-13 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230762,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-13,2023-02-13 07:00:00,2023-02-13 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229007,21199,Amgad ELSAFI,1118,HATIAM,2023-02-13,2023-02-13 08:00:00,2023-02-13 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229488,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-13,2023-02-13 09:30:00,2023-02-13 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230729,27254,Idris Eliam,1116,IMPRESSION,2023-02-13,2023-02-13 16:00:00,2023-02-14 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230410,27054,M Nasir,4550,Iftekhar OCS,2023-02-13,2023-02-13 19:00:00,2023-02-14 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229088,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-14,2023-02-14 06:30:00,2023-02-14 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230763,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-14,2023-02-14 07:00:00,2023-02-14 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229008,21199,Amgad ELSAFI,1118,HATIAM,2023-02-14,2023-02-14 08:00:00,2023-02-14 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229489,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-14,2023-02-14 09:30:00,2023-02-14 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230730,27254,Idris Eliam,1116,IMPRESSION,2023-02-14,2023-02-14 16:00:00,2023-02-15 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230411,27054,M Nasir,4550,Iftekhar OCS,2023-02-14,2023-02-14 19:00:00,2023-02-15 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230764,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-15,2023-02-15 07:00:00,2023-02-15 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229009,21199,Amgad ELSAFI,1118,HATIAM,2023-02-15,2023-02-15 08:00:00,2023-02-15 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229490,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-15,2023-02-15 09:30:00,2023-02-15 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230731,27254,Idris Eliam,1116,IMPRESSION,2023-02-15,2023-02-15 16:00:00,2023-02-16 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230412,27054,M Nasir,4550,Iftekhar OCS,2023-02-15,2023-02-15 19:00:00,2023-02-16 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230765,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-16,2023-02-16 07:00:00,2023-02-16 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229010,21199,Amgad ELSAFI,1118,HATIAM,2023-02-16,2023-02-16 08:00:00,2023-02-16 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229491,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-16,2023-02-16 09:30:00,2023-02-16 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230732,27254,Idris Eliam,1116,IMPRESSION,2023-02-16,2023-02-16 16:00:00,2023-02-17 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228352,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-16,2023-02-16 18:00:00,2023-02-17 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230418,27054,M Nasir,4550,Iftekhar OCS,2023-02-16,2023-02-16 19:00:00,2023-02-17 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230848,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-17,2023-02-17 07:00:00,2023-02-17 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229011,21199,Amgad ELSAFI,1118,HATIAM,2023-02-17,2023-02-17 08:00:00,2023-02-17 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229492,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-17,2023-02-17 09:30:00,2023-02-17 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230733,27254,Idris Eliam,1116,IMPRESSION,2023-02-17,2023-02-17 16:00:00,2023-02-18 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228353,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-17,2023-02-17 18:00:00,2023-02-18 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+229089,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-18,2023-02-18 06:30:00,2023-02-18 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230736,27254,Idris Eliam,1116,IMPRESSION,2023-02-18,2023-02-18 07:00:00,2023-02-18 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+230849,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-18,2023-02-18 07:00:00,2023-02-18 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229493,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-18,2023-02-18 09:30:00,2023-02-18 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230734,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-18,2023-02-18 16:00:00,2023-02-19 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228354,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-18,2023-02-18 18:00:00,2023-02-19 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+229090,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-19,2023-02-19 06:30:00,2023-02-19 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230737,27254,Idris Eliam,1116,IMPRESSION,2023-02-19,2023-02-19 07:00:00,2023-02-19 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+230850,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-02-19,2023-02-19 07:00:00,2023-02-19 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229503,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-19,2023-02-19 11:00:00,2023-02-19 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+230735,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-19,2023-02-19 16:00:00,2023-02-20 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230416,27054,M Nasir,4550,Iftekhar OCS,2023-02-19,2023-02-19 19:00:00,2023-02-20 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+230428,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-20,2023-02-20 07:00:00,2023-02-20 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229012,21199,Amgad ELSAFI,1118,HATIAM,2023-02-20,2023-02-20 08:00:00,2023-02-20 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229494,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-20,2023-02-20 09:30:00,2023-02-20 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231124,27254,Idris Eliam,1116,IMPRESSION,2023-02-20,2023-02-20 16:00:00,2023-02-21 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230417,27054,M Nasir,4550,Iftekhar OCS,2023-02-20,2023-02-20 19:00:00,2023-02-21 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229013,21199,Amgad ELSAFI,1118,HATIAM,2023-02-21,2023-02-21 08:00:00,2023-02-21 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229495,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-21,2023-02-21 09:30:00,2023-02-21 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231125,27254,Idris Eliam,1116,IMPRESSION,2023-02-21,2023-02-21 16:00:00,2023-02-22 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+231287,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-21,2023-02-21 19:00:00,2023-02-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229091,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-22,2023-02-22 06:30:00,2023-02-22 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+229014,21199,Amgad ELSAFI,1118,HATIAM,2023-02-22,2023-02-22 08:00:00,2023-02-22 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229496,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-22,2023-02-22 09:30:00,2023-02-22 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231126,27254,Idris Eliam,1116,IMPRESSION,2023-02-22,2023-02-22 16:00:00,2023-02-23 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230419,27054,M Nasir,4550,Iftekhar OCS,2023-02-22,2023-02-22 19:00:00,2023-02-23 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229092,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-23,2023-02-23 06:30:00,2023-02-23 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+229015,21199,Amgad ELSAFI,1118,HATIAM,2023-02-23,2023-02-23 08:00:00,2023-02-23 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229497,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-23,2023-02-23 09:30:00,2023-02-23 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231127,27254,Idris Eliam,1116,IMPRESSION,2023-02-23,2023-02-23 16:00:00,2023-02-24 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228355,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-23,2023-02-23 18:00:00,2023-02-24 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230420,27054,M Nasir,4550,Iftekhar OCS,2023-02-23,2023-02-23 19:00:00,2023-02-24 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229093,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-24,2023-02-24 06:30:00,2023-02-24 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+229016,21199,Amgad ELSAFI,1118,HATIAM,2023-02-24,2023-02-24 08:00:00,2023-02-24 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229498,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-24,2023-02-24 09:30:00,2023-02-24 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231128,27254,Idris Eliam,1116,IMPRESSION,2023-02-24,2023-02-24 16:00:00,2023-02-25 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228356,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-24,2023-02-24 18:00:00,2023-02-25 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230421,25299,Yousuf Hafiz,4550,Iftekhar OCS,2023-02-24,2023-02-24 19:00:00,2023-02-25 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229094,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-25,2023-02-25 06:30:00,2023-02-25 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+231131,27254,Idris Eliam,1116,IMPRESSION,2023-02-25,2023-02-25 07:00:00,2023-02-25 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+229499,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-25,2023-02-25 09:00:00,2023-02-25 18:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+231129,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-25,2023-02-25 16:00:00,2023-02-26 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+228357,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-02-25,2023-02-25 18:00:00,2023-02-26 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+230422,27054,M Nasir,4550,Iftekhar OCS,2023-02-25,2023-02-25 19:00:00,2023-02-26 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229095,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-26,2023-02-26 06:30:00,2023-02-26 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+231132,27254,Idris Eliam,1116,IMPRESSION,2023-02-26,2023-02-26 07:00:00,2023-02-26 16:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,9,10.3,0
+229504,26560,MOHSAN RAZA,4550,Iftekhar OCS,2023-02-26,2023-02-26 11:00:00,2023-02-26 17:00:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,6,10.3,0
+231130,27345,Tayyab Ramzan,1116,IMPRESSION,2023-02-26,2023-02-26 16:00:00,2023-02-27 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+230423,27054,M Nasir,4550,Iftekhar OCS,2023-02-26,2023-02-26 19:00:00,2023-02-27 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+231815,27535,AMBAR KHALID,4550,Iftekhar OCS,2023-02-26,2023-02-26 19:00:00,2023-02-27 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229096,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-27,2023-02-27 06:30:00,2023-02-27 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+229017,21199,Amgad ELSAFI,1118,HATIAM,2023-02-27,2023-02-27 08:00:00,2023-02-27 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229500,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-27,2023-02-27 09:30:00,2023-02-27 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230424,27054,M Nasir,4550,Iftekhar OCS,2023-02-27,2023-02-27 19:00:00,2023-02-28 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229097,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-02-28,2023-02-28 06:30:00,2023-02-28 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+230429,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-02-28,2023-02-28 07:25:00,2023-02-28 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,11.58,10.3,0
+229018,21199,Amgad ELSAFI,1118,HATIAM,2023-02-28,2023-02-28 08:00:00,2023-02-28 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,10.5,0
+229501,26488,Fawad ahmed,4550,Iftekhar OCS,2023-02-28,2023-02-28 09:30:00,2023-02-28 18:30:00,6305,Cotswold Outdoor Bristol Unit 2 New Broadmead Union Street Bristol BS1 2DL,600,Amberstone Security Ltd,9,10.3,0
+230425,27054,M Nasir,4550,Iftekhar OCS,2023-02-28,2023-02-28 19:00:00,2023-03-01 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232182,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-03-01,2023-03-01 07:00:00,2023-03-01 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+229019,21199,Amgad ELSAFI,1118,HATIAM,2023-03-01,2023-03-01 08:00:00,2023-03-01 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232044,26177,MUHAMMAD YASIR,4550,Iftekhar OCS,2023-03-02,2023-03-02 06:30:00,2023-03-02 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+229020,21199,Amgad ELSAFI,1118,HATIAM,2023-03-02,2023-03-02 08:00:00,2023-03-02 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231067,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-02,2023-03-02 18:00:00,2023-03-03 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+229021,21199,Amgad ELSAFI,1118,HATIAM,2023-03-03,2023-03-03 08:00:00,2023-03-03 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231068,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-03,2023-03-03 18:00:00,2023-03-04 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232415,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-03-04,2023-03-04 07:00:00,2023-03-04 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+231416,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-04,2023-03-04 16:00:00,2023-03-05 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+231069,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-04,2023-03-04 18:00:00,2023-03-05 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+231417,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-05,2023-03-05 16:00:00,2023-03-06 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+232742,21199,Amgad ELSAFI,1118,HATIAM,2023-03-07,2023-03-07 08:00:00,2023-03-07 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232743,21199,Amgad ELSAFI,1118,HATIAM,2023-03-08,2023-03-08 08:00:00,2023-03-08 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232744,21199,Amgad ELSAFI,1118,HATIAM,2023-03-09,2023-03-09 08:00:00,2023-03-09 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231070,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-09,2023-03-09 18:00:00,2023-03-10 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232848,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-09,2023-03-09 20:00:00,2023-03-10 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,11,10.3,0
+232745,21199,Amgad ELSAFI,1118,HATIAM,2023-03-10,2023-03-10 08:00:00,2023-03-10 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232747,27593,WAIL SALIM,1118,HATIAM,2023-03-10,2023-03-10 08:00:00,2023-03-10 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231071,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-10,2023-03-10 18:00:00,2023-03-11 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232874,24799,AHSAN MAROOF,1116,IMPRESSION,2023-03-11,2023-03-11 07:00:00,2023-03-11 19:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+232561,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-11,2023-03-11 16:00:00,2023-03-12 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+231072,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-11,2023-03-11 18:00:00,2023-03-12 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232847,27423,WAJID SAEED,4550,Iftekhar OCS,2023-03-12,2023-03-12 07:00:00,2023-03-12 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232562,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-12,2023-03-12 16:00:00,2023-03-13 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+233229,27623,SAMEER ABBAS,4550,Iftekhar OCS,2023-03-14,2023-03-14 07:00:00,2023-03-14 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232750,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-14,2023-03-14 08:00:00,2023-03-14 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233268,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-15,2023-03-15 06:30:00,2023-03-15 12:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,6,11,0
+233269,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-15,2023-03-15 07:00:00,2023-03-15 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232751,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-15,2023-03-15 08:00:00,2023-03-15 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232046,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-16,2023-03-16 06:30:00,2023-03-16 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+233270,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-16,2023-03-16 07:00:00,2023-03-16 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232752,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-16,2023-03-16 08:00:00,2023-03-16 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232753,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-17,2023-03-17 08:00:00,2023-03-17 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231074,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-17,2023-03-17 18:00:00,2023-03-18 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+233617,27423,WAJID SAEED,4550,Iftekhar OCS,2023-03-17,2023-03-17 19:00:00,2023-03-18 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233620,27652,ALI SAJJAD,4550,Iftekhar OCS,2023-03-17,2023-03-17 19:00:00,2023-03-18 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233271,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-18,2023-03-18 07:00:00,2023-03-18 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233466,27651,MUHAMMAD SULTAN,1116,IMPRESSION,2023-03-18,2023-03-18 07:00:00,2023-03-18 19:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+233102,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-18,2023-03-18 16:00:00,2023-03-19 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+232849,25299,Yousuf Hafiz,4550,Iftekhar OCS,2023-03-18,2023-03-18 19:00:00,2023-03-19 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233640,27652,ALI SAJJAD,4550,Iftekhar OCS,2023-03-18,2023-03-18 19:00:00,2023-03-19 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233272,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-19,2023-03-19 07:00:00,2023-03-19 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233467,27651,MUHAMMAD SULTAN,1116,IMPRESSION,2023-03-19,2023-03-19 07:00:00,2023-03-19 19:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+233103,27345,Tayyab Ramzan,1116,IMPRESSION,2023-03-19,2023-03-19 16:00:00,2023-03-20 00:00:00,6255,Wates Carnival Place Wellington Road Wokingham Berkshire RG40 2A,589,O Neil & Brennan,8,10.3,0
+232756,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-20,2023-03-20 08:00:00,2023-03-20 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233544,27649,MOHAMMOUD ABUBAKER,1118,HATIAM,2023-03-20,2023-03-20 08:00:00,2023-03-20 17:30:00,6781,Homes For Students Firhill Mbus 150 Firhill Court Glasgow G20 7BB,612,mitie services and security,8,11,0
+232757,21199,Amgad ELSAFI,1118,HATIAM,2023-03-21,2023-03-21 08:00:00,2023-03-21 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233545,27649,MOHAMMOUD ABUBAKER,1118,HATIAM,2023-03-21,2023-03-21 08:00:00,2023-03-21 17:30:00,6781,Homes For Students Firhill Mbus 150 Firhill Court Glasgow G20 7BB,612,mitie services and security,8,11,0
+233273,27054,M Nasir,4550,Iftekhar OCS,2023-03-21,2023-03-21 19:00:00,2023-03-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233801,27652,ALI SAJJAD,4550,Iftekhar OCS,2023-03-22,2023-03-22 07:00:00,2023-03-22 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232758,21199,Amgad ELSAFI,1118,HATIAM,2023-03-22,2023-03-22 08:00:00,2023-03-22 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233546,27649,MOHAMMOUD ABUBAKER,1118,HATIAM,2023-03-22,2023-03-22 08:00:00,2023-03-22 17:30:00,6781,Homes For Students Firhill Mbus 150 Firhill Court Glasgow G20 7BB,612,mitie services and security,8,11,0
+233274,27054,M Nasir,4550,Iftekhar OCS,2023-03-22,2023-03-22 19:00:00,2023-03-23 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232047,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-23,2023-03-23 06:30:00,2023-03-23 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+232759,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-23,2023-03-23 08:00:00,2023-03-23 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233547,27649,MOHAMMOUD ABUBAKER,1118,HATIAM,2023-03-23,2023-03-23 08:00:00,2023-03-23 17:30:00,6781,Homes For Students Firhill Mbus 150 Firhill Court Glasgow G20 7BB,612,mitie services and security,8,11,0
+231076,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-23,2023-03-23 18:00:00,2023-03-24 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232048,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-24,2023-03-24 06:30:00,2023-03-24 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+232760,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-24,2023-03-24 08:00:00,2023-03-24 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231077,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-24,2023-03-24 18:00:00,2023-03-25 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+233967,27623,SAMEER ABBAS,4550,Iftekhar OCS,2023-03-24,2023-03-24 19:00:00,2023-03-25 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233720,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-25,2023-03-25 07:00:00,2023-03-25 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+231078,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-25,2023-03-25 18:00:00,2023-03-26 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,12,10.3,0
+234091,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-25,2023-03-25 18:00:00,2023-03-26 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,12,10.3,0
+233710,27651,MUHAMMAD SULTAN,1116,IMPRESSION,2023-03-26,2023-03-26 07:00:00,2023-03-26 19:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+233721,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-26,2023-03-26 07:00:00,2023-03-26 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232049,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-27,2023-03-27 06:30:00,2023-03-27 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+233711,27651,MUHAMMAD SULTAN,1116,IMPRESSION,2023-03-27,2023-03-27 07:00:00,2023-03-27 19:00:00,6057,Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,320,Galaxon Services Ltd,12,10.3,0
+233722,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-03-27,2023-03-27 07:00:00,2023-03-27 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232763,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-27,2023-03-27 08:00:00,2023-03-27 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+234668,27786,ADNAN RASHEED,1116,IMPRESSION,2023-03-28,2023-03-28 07:00:00,2023-03-28 19:00:00,5357,The Pinnacle Lower Third Street Midsummer Boulevard Milton Keynes MK9 1FF,613,Atlian Servest,12,10.3,0
+234698,27791,GHULAM SAFDAR CHAUDHRY BIBI,4550,Iftekhar OCS,2023-03-28,2023-03-28 07:00:00,2023-03-28 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234640,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-28,2023-03-28 08:00:00,2023-03-28 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232765,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-29,2023-03-29 08:00:00,2023-03-29 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+232050,27618,khurram shahzad,4550,Iftekhar OCS,2023-03-30,2023-03-30 06:30:00,2023-03-30 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+234963,27423,WAJID SAEED,4550,Iftekhar OCS,2023-03-30,2023-03-30 07:00:00,2023-03-30 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+232766,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-30,2023-03-30 08:00:00,2023-03-30 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231079,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-30,2023-03-30 18:00:00,2023-03-31 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232707,26319,EL BACHIR EL ASSRI,1116,IMPRESSION,2023-03-30,2023-03-30 18:00:00,2023-03-31 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+232767,21193,KHALID ELKAMALY,1118,HATIAM,2023-03-31,2023-03-31 08:00:00,2023-03-31 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+231080,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-03-31,2023-03-31 18:00:00,2023-04-01 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.3,0
+235160,27652,ALI SAJJAD,4550,Iftekhar OCS,2023-04-01,2023-04-01 07:00:00,2023-04-01 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234384,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-01,2023-04-01 18:00:00,2023-04-02 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235051,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-01,2023-04-01 19:00:00,2023-04-02 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235197,27423,WAJID SAEED,4550,Iftekhar OCS,2023-04-02,2023-04-02 07:00:00,2023-04-02 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235198,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-03,2023-04-03 07:00:00,2023-04-03 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234397,21193,KHALID ELKAMALY,1118,HATIAM,2023-04-03,2023-04-03 08:00:00,2023-04-03 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+235199,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-04,2023-04-04 07:00:00,2023-04-04 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234398,21193,KHALID ELKAMALY,1118,HATIAM,2023-04-04,2023-04-04 08:00:00,2023-04-04 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+235323,27200,Mohsin Iqbal,4550,Iftekhar OCS,2023-04-04,2023-04-04 19:00:00,2023-04-05 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234399,21193,KHALID ELKAMALY,1118,HATIAM,2023-04-05,2023-04-05 08:00:00,2023-04-05 17:30:00,6194,Homes For Students Beaverbank 10 Beaverbank Place Edinburgh Scotland EH7 4FB,612,mitie services and security,9.5,11,0
+233835,27618,khurram shahzad,4550,Iftekhar OCS,2023-04-06,2023-04-06 06:30:00,2023-04-06 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+234385,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-06,2023-04-06 18:00:00,2023-04-07 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235599,27535,AMBAR KHALID,4550,Iftekhar OCS,2023-04-06,2023-04-06 19:00:00,2023-04-07 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234386,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-07,2023-04-07 18:00:00,2023-04-08 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235598,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-07,2023-04-07 19:00:00,2023-04-08 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234387,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-08,2023-04-08 18:00:00,2023-04-09 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235478,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-08,2023-04-08 19:00:00,2023-04-09 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235479,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-09,2023-04-09 19:00:00,2023-04-10 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235480,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-10,2023-04-10 19:00:00,2023-04-11 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235475,26357,Amir Shahzad,4550,Iftekhar OCS,2023-04-11,2023-04-11 07:00:00,2023-04-11 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235481,27623,SAMEER ABBAS,4550,Iftekhar OCS,2023-04-11,2023-04-11 19:00:00,2023-04-12 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235476,26357,Amir Shahzad,4550,Iftekhar OCS,2023-04-12,2023-04-12 07:00:00,2023-04-12 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235482,27200,Mohsin Iqbal,4550,Iftekhar OCS,2023-04-12,2023-04-12 19:00:00,2023-04-13 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233836,27618,khurram shahzad,4550,Iftekhar OCS,2023-04-13,2023-04-13 06:30:00,2023-04-13 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+234388,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-13,2023-04-13 18:00:00,2023-04-14 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235483,27200,Mohsin Iqbal,4550,Iftekhar OCS,2023-04-13,2023-04-13 19:00:00,2023-04-14 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234389,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-14,2023-04-14 18:00:00,2023-04-15 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235779,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-14,2023-04-14 19:00:00,2023-04-15 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234390,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-15,2023-04-15 18:00:00,2023-04-16 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235780,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-15,2023-04-15 19:00:00,2023-04-16 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235782,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-16,2023-04-16 07:00:00,2023-04-16 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235781,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-16,2023-04-16 19:00:00,2023-04-17 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235783,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-17,2023-04-17 19:00:00,2023-04-18 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233837,27618,khurram shahzad,4550,Iftekhar OCS,2023-04-19,2023-04-19 06:30:00,2023-04-19 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+236191,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-19,2023-04-19 07:00:00,2023-04-19 19:00:00,6508,Halo 1 Temple Street Redcliffe Bristol BS1 6EU,547,Securitas UK,12,10.3,0
+235994,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-19,2023-04-19 19:00:00,2023-04-20 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233838,27618,khurram shahzad,4550,Iftekhar OCS,2023-04-20,2023-04-20 06:30:00,2023-04-20 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+236218,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-20,2023-04-20 07:00:00,2023-04-20 19:00:00,6508,Halo 1 Temple Street Redcliffe Bristol BS1 6EU,547,Securitas UK,12,10.3,0
+234391,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-20,2023-04-20 18:00:00,2023-04-21 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+236033,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-20,2023-04-20 19:00:00,2023-04-21 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236358,26466,Azeem Ali,4550,Iftekhar OCS,2023-04-20,2023-04-20 19:00:00,2023-04-21 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236219,26488,Fawad ahmed,4550,Iftekhar OCS,2023-04-21,2023-04-21 07:00:00,2023-04-21 19:00:00,6508,Halo 1 Temple Street Redcliffe Bristol BS1 6EU,547,Securitas UK,12,10.3,0
+234392,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-21,2023-04-21 18:00:00,2023-04-22 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235995,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-21,2023-04-21 19:00:00,2023-04-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236382,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-21,2023-04-21 19:00:00,2023-04-22 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234393,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-22,2023-04-22 18:00:00,2023-04-23 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+236034,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-22,2023-04-22 19:00:00,2023-04-23 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236381,23745,MASOOD AHMED,1116,IMPRESSION,2023-04-22,2023-04-22 22:00:00,2023-04-23 05:00:00,4510,GTR St Albans City Station Hertfordshire AL1 5HE,12,STM Security,7,10.75,0
+235996,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-23,2023-04-23 19:00:00,2023-04-24 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236035,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-24,2023-04-24 19:00:00,2023-04-25 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236449,25389,Shehroz Ahsan,4550,Iftekhar OCS,2023-04-25,2023-04-25 07:00:00,2023-04-25 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+235477,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-26,2023-04-26 19:00:00,2023-04-27 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+233839,27618,khurram shahzad,4550,Iftekhar OCS,2023-04-27,2023-04-27 06:30:00,2023-04-27 18:30:00,4034,GKN Western Approach BS35 4GG,11,OCS Security,12,11,0
+234394,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-27,2023-04-27 18:00:00,2023-04-28 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+236782,27054,M Nasir,4550,Iftekhar OCS,2023-04-27,2023-04-27 19:00:00,2023-04-28 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+237217,27200,Mohsin Iqbal,4550,Iftekhar OCS,2023-04-27,2023-04-27 19:00:00,2023-04-28 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+237240,28040,HAFIZ AKBAR,4550,Iftekhar OCS,2023-04-27,2023-04-27 19:00:00,2023-04-28 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234395,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-28,2023-04-28 18:00:00,2023-04-29 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+235589,27389,MUHAMMAD TARIQ,4550,Iftekhar OCS,2023-04-28,2023-04-28 19:00:00,2023-04-29 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+237338,27535,AMBAR KHALID,4550,Iftekhar OCS,2023-04-29,2023-04-29 07:00:00,2023-04-29 19:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+234396,26795,MAHMOOD ASIF,1116,IMPRESSION,2023-04-29,2023-04-29 18:00:00,2023-04-30 02:30:00,4911,GTR Stevenage Hertfordshire SG1 1XT,12,STM Security,8.5,10.75,0
+237528,28051,MUHAMMAD ARSLAN AMJAD AMJAD,4550,Iftekhar OCS,2023-04-29,2023-04-29 19:00:00,2023-04-30 07:00:00,4411,Southmead Hospital Bristol BS10 5NB,11,OCS Security,12,10.3,0
+236380,20120,Naveed Abbas,1116,IMPRESSION,2023-04-29,2023-04-29 22:00:00,2023-04-30 05:00:00,4510,GTR St Albans City Station Hertfordshire AL1 5HE,12,STM Security,7,10.75,0

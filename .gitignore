@@ -1,0 +1,16 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+.env
+.env.*
+uploads
+.config
+.pythonlibs
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/

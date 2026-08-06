@@ -1,0 +1,132 @@
+shift_id,officer_id,officer_name,SupplierID,Supplier,shift_date,duty_start,duty_finish,LocationID,location,ClientID,Client,hours,rate,amount
+184242,24086,"SARFRAZ AHMED BEGUM",4511,"RIA Security Ltd",2022-04-01,"2022-04-01 07:00:00","2022-04-01 19:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",12,12,144
+376485,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-01,"2022-04-01 07:00:00","2022-04-01 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376498,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-02,"2022-04-02 07:00:00","2022-04-02 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+184243,23967,"WALEED PALI",4511,"RIA Security Ltd",2022-04-03,"2022-04-03 07:00:00","2022-04-03 19:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",12,12,144
+376479,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-03,"2022-04-03 07:00:00","2022-04-03 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376500,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-03,"2022-04-03 07:00:00","2022-04-03 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376514,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-03,"2022-04-03 07:00:00","2022-04-03 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182440,23395,"AMEER AGHA ALI AKHTER",4511,"RIA Security Ltd",2022-04-04,"2022-04-04 07:00:00","2022-04-04 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376490,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-04,"2022-04-04 07:00:00","2022-04-04 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376491,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-04,"2022-04-04 07:00:00","2022-04-04 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376511,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-04,"2022-04-04 07:00:00","2022-04-04 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182441,24086,"SARFRAZ AHMED BEGUM",4511,"RIA Security Ltd",2022-04-05,"2022-04-05 07:00:00","2022-04-05 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376468,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-05,"2022-04-05 07:00:00","2022-04-05 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376488,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-05,"2022-04-05 07:00:00","2022-04-05 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182442,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-06,"2022-04-06 07:00:00","2022-04-06 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+184987,23967,"WALEED PALI",4511,"RIA Security Ltd",2022-04-06,"2022-04-06 07:00:00","2022-04-06 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376521,28638,"MAYANK THAKUR",4511,"RIA Security Ltd",2022-04-06,"2022-04-06 07:00:00","2022-04-06 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182443,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-07,"2022-04-07 07:00:00","2022-04-07 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+185050,23302,"SUNIA MAHMOOD",4511,"RIA Security Ltd",2022-04-07,"2022-04-07 07:00:00","2022-04-07 19:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",12,12,144
+376480,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-07,"2022-04-07 07:00:00","2022-04-07 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376509,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-07,"2022-04-07 07:00:00","2022-04-07 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182444,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-08,"2022-04-08 07:00:00","2022-04-08 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376472,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-08,"2022-04-08 07:00:00","2022-04-08 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376477,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-08,"2022-04-08 07:00:00","2022-04-08 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376463,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-09,"2022-04-09 07:00:00","2022-04-09 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376487,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-09,"2022-04-09 07:00:00","2022-04-09 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376502,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-09,"2022-04-09 07:00:00","2022-04-09 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376506,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-09,"2022-04-09 07:00:00","2022-04-09 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376466,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-10,"2022-04-10 07:00:00","2022-04-10 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376476,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-10,"2022-04-10 07:00:00","2022-04-10 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376494,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-10,"2022-04-10 07:00:00","2022-04-10 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376517,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-10,"2022-04-10 07:00:00","2022-04-10 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182445,23967,"WALEED PALI",4511,"RIA Security Ltd",2022-04-11,"2022-04-11 07:00:00","2022-04-11 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376461,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-11,"2022-04-11 07:00:00","2022-04-11 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182446,23967,"WALEED PALI",4511,"RIA Security Ltd",2022-04-12,"2022-04-12 07:00:00","2022-04-12 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376464,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-12,"2022-04-12 07:00:00","2022-04-12 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376501,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-12,"2022-04-12 07:00:00","2022-04-12 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182447,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-13,"2022-04-13 07:00:00","2022-04-13 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376465,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-13,"2022-04-13 07:00:00","2022-04-13 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376481,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-13,"2022-04-13 07:00:00","2022-04-13 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376512,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-13,"2022-04-13 07:00:00","2022-04-13 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376523,28638,"MAYANK THAKUR",4511,"RIA Security Ltd",2022-04-13,"2022-04-13 07:00:00","2022-04-13 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182448,23302,"SUNIA MAHMOOD",4511,"RIA Security Ltd",2022-04-14,"2022-04-14 07:00:00","2022-04-14 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376515,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-14,"2022-04-14 07:00:00","2022-04-14 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376462,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-15,"2022-04-15 07:00:00","2022-04-15 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376492,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-16,"2022-04-16 07:00:00","2022-04-16 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376518,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-16,"2022-04-16 07:00:00","2022-04-16 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376484,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-17,"2022-04-17 07:00:00","2022-04-17 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376474,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-18,"2022-04-18 07:00:00","2022-04-18 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376489,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-18,"2022-04-18 07:00:00","2022-04-18 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376497,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-18,"2022-04-18 07:00:00","2022-04-18 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182449,23967,"WALEED PALI",4511,"RIA Security Ltd",2022-04-19,"2022-04-19 07:00:00","2022-04-19 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376471,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-19,"2022-04-19 07:00:00","2022-04-19 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182450,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-20,"2022-04-20 07:00:00","2022-04-20 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376467,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-20,"2022-04-20 07:00:00","2022-04-20 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376478,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-20,"2022-04-20 07:00:00","2022-04-20 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376493,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-20,"2022-04-20 07:00:00","2022-04-20 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182451,23067,"CHRISTIAN MUSSE",4511,"RIA Security Ltd",2022-04-21,"2022-04-21 07:00:00","2022-04-21 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376470,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-21,"2022-04-21 07:00:00","2022-04-21 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376519,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-21,"2022-04-21 07:00:00","2022-04-21 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182452,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-22,"2022-04-22 07:00:00","2022-04-22 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376482,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-22,"2022-04-22 07:00:00","2022-04-22 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376504,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-22,"2022-04-22 07:00:00","2022-04-22 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376508,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-22,"2022-04-22 07:00:00","2022-04-22 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376483,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-23,"2022-04-23 07:00:00","2022-04-23 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376499,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-23,"2022-04-23 07:00:00","2022-04-23 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376516,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-23,"2022-04-23 07:00:00","2022-04-23 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376473,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-24,"2022-04-24 07:00:00","2022-04-24 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376496,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-24,"2022-04-24 07:00:00","2022-04-24 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376510,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-24,"2022-04-24 07:00:00","2022-04-24 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182453,23067,"CHRISTIAN MUSSE",4511,"RIA Security Ltd",2022-04-25,"2022-04-25 07:00:00","2022-04-25 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376525,28638,"MAYANK THAKUR",4511,"RIA Security Ltd",2022-04-25,"2022-04-25 07:00:00","2022-04-25 15:59:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",8.99,12,107.87999725342
+182454,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-26,"2022-04-26 07:00:00","2022-04-26 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376524,28638,"MAYANK THAKUR",4511,"RIA Security Ltd",2022-04-26,"2022-04-26 07:00:00","2022-04-26 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182455,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-27,"2022-04-27 07:00:00","2022-04-27 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376503,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-27,"2022-04-27 07:00:00","2022-04-27 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376513,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-27,"2022-04-27 07:00:00","2022-04-27 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376522,28638,"MAYANK THAKUR",4511,"RIA Security Ltd",2022-04-27,"2022-04-27 07:00:00","2022-04-27 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182456,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-28,"2022-04-28 07:00:00","2022-04-28 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376507,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-28,"2022-04-28 07:00:00","2022-04-28 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+182457,24165,"CHARANJEET SINGH",4511,"RIA Security Ltd",2022-04-29,"2022-04-29 07:00:00","2022-04-29 17:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",10,12,120
+376469,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-29,"2022-04-29 07:00:00","2022-04-29 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376495,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-29,"2022-04-29 07:00:00","2022-04-29 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376475,29669,"MUMTAZ ALI",4511,"RIA Security Ltd",2022-04-30,"2022-04-30 07:00:00","2022-04-30 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376486,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2022-04-30,"2022-04-30 07:00:00","2022-04-30 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376505,27530,"HASSAN JAN",4511,"RIA Security Ltd",2022-04-30,"2022-04-30 07:00:00","2022-04-30 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+376520,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2022-04-30,"2022-04-30 07:00:00","2022-04-30 20:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",13,12,156
+186835,24859,"ZURAIZ RASHEED",4511,"RIA Security Ltd",2022-05-01,"2022-05-01 14:00:00","2022-05-01 23:00:00",5798,"JS Leicester London Road 146 London Road Leicester LE2 1ED",612,"mitie services and security",9,12,108
+188523,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-02,"2022-05-02 14:00:00","2022-05-02 23:00:00",5763,"Clarendon Park Local 87 89 Queens Road LE2 1TT",612,"mitie services and security",9,12,108
+188453,24873,"MALAVIKA DASHRATH RAO SINDYE",4511,"RIA Security Ltd",2022-05-03,"2022-05-03 10:15:00","2022-05-03 23:15:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",13,12,156
+188454,24878,"SHAIKH IKRAM",4511,"RIA Security Ltd",2022-05-04,"2022-05-04 07:00:00","2022-05-04 23:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",16,12,192
+188455,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-07,"2022-05-07 07:00:00","2022-05-07 17:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",10,12,120
+190172,23067,"CHRISTIAN MUSSE",4511,"RIA Security Ltd",2022-05-16,"2022-05-16 07:00:00","2022-05-16 19:00:00",4450,"Central Square 29 Wellington Street Leeds LS1 4DL",11,"OCS Security",12,12,144
+190014,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-18,"2022-05-18 10:00:00","2022-05-18 19:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",9,12,108
+190015,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-19,"2022-05-19 10:00:00","2022-05-19 19:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",9,12,108
+190016,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-20,"2022-05-20 07:00:00","2022-05-20 16:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",9,12,108
+190017,24856,"MEHULKUMAR PATEL",4511,"RIA Security Ltd",2022-05-21,"2022-05-21 07:00:00","2022-05-21 16:00:00",5760,"Sainsburys Leicester 58 62 Humberstone Gate LE1 3PJ",612,"mitie services and security",9,12,108
+192828,24655,"YASIR HAMEED",4511,"RIA Security Ltd",2022-06-08,"2022-06-08 08:30:00","2022-06-08 17:00:00",5917,"BRADFORD COMBINED COURT CENTRE BD1 1JA",11,"OCS Security",8.5,12,102
+231173,27498,"CHOUDHRY TANVEER AHMED WARRAICH",4511,"RIA Security Ltd",2023-02-20,"2023-02-20 06:00:00","2023-02-20 18:01:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12.01,12,144.11999511719
+229164,27523,"GHULAM ABBAS",4511,"RIA Security Ltd",2023-02-24,"2023-02-24 07:00:00","2023-02-24 23:20:00",6211,"Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ",320,"Galaxon Services Ltd",16.33,12,195.96000671387
+231180,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-01,"2023-03-01 06:00:00","2023-03-01 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+376449,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-01,"2023-03-01 06:00:00","2023-03-01 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+231181,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-02,"2023-03-02 06:00:00","2023-03-02 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+376460,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-02,"2023-03-02 06:00:00","2023-03-02 18:13:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",12.22,12,146.63999938965
+231182,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-03,"2023-03-03 06:00:00","2023-03-03 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+376458,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-03,"2023-03-03 06:00:00","2023-03-03 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+231948,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2023-03-04,"2023-03-04 19:00:00","2023-03-05 07:00:00",6211,"Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ",320,"Galaxon Services Ltd",12,12,144
+232458,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-06,"2023-03-06 06:00:00","2023-03-06 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+232463,27515,"MUHAMMAD IQBAL",4511,"RIA Security Ltd",2023-03-06,"2023-03-06 06:00:00","2023-03-06 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+232661,27484,"ZULFIQAR MUHAMMAD BIBI",4511,"RIA Security Ltd",2023-03-06,"2023-03-06 06:00:00","2023-03-06 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+376454,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-07,"2023-03-07 06:00:00","2023-03-07 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+232746,27579,"SHAZLI MOHAMMED",4511,"RIA Security Ltd",2023-03-07,"2023-03-07 07:00:00","2023-03-07 15:30:00",6702,"Q8 Quorum Business Park Benton Lane Newcastle NE12 8RU",613,"Atlian Servest",8.5,12,102
+376455,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-08,"2023-03-08 06:00:00","2023-03-08 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+232776,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2023-03-08,"2023-03-08 19:00:00","2023-03-09 07:00:00",6211,"Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ",320,"Galaxon Services Ltd",12,12,144
+233096,27297,"HASSAN HANIF",4511,"RIA Security Ltd",2023-03-10,"2023-03-10 06:00:00","2023-03-10 18:00:00",6352,"Hovis Bradford Gain Lane Thornbury Bradford BD3 7DX",613,"Atlian Servest",12,12,144
+233099,27598,"SARABJIT SINGH",4511,"RIA Security Ltd",2023-03-10,"2023-03-10 07:00:00","2023-03-10 19:00:00",5528,"Leeds Valley Park LS10 1AB",613,"Atlian Servest",12,12,144
+376447,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-11,"2023-03-11 06:00:00","2023-03-11 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+231949,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2023-03-11,"2023-03-11 19:00:00","2023-03-12 07:00:00",6211,"Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ",320,"Galaxon Services Ltd",12,12,144
+376453,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-13,"2023-03-13 06:00:00","2023-03-13 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+376457,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-14,"2023-03-14 06:00:00","2023-03-14 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+376451,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-15,"2023-03-15 06:00:00","2023-03-15 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+233461,27644,"ABRAR KHAN",4511,"RIA Security Ltd",2023-03-16,"2023-03-16 14:00:00","2023-03-17 03:00:00",6732,"British Broadcasting Corporation Barrack Road Newcastle upon Tyne Tyne and Wear England NE99 2NE",635,"Key Holding",13,12,156
+376448,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-17,"2023-03-17 06:00:00","2023-03-17 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+233724,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-22,"2023-03-22 06:00:00","2023-03-22 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+232993,27740,"SANDEEP KAUR",4511,"RIA Security Ltd",2023-03-22,"2023-03-22 18:00:00","2023-03-23 07:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+233725,18400,"TALIB HUSSAIN",4511,"RIA Security Ltd",2023-03-23,"2023-03-23 06:00:00","2023-03-23 18:00:00",5988,"Barclays Radbroke Hall Knutsford WA16 9EU",547,"Securitas UK",12,12,144
+376450,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-25,"2023-03-25 06:00:00","2023-03-25 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+376452,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-26,"2023-03-26 06:00:00","2023-03-26 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+232656,27534,"NAEEM AWAN",4511,"RIA Security Ltd",2023-03-26,"2023-03-26 07:00:00","2023-03-26 19:00:00",6211,"Ferrero Alfreton Thorntons Park Somercotes Alfreton Derbyshire DE55 4XJ",320,"Galaxon Services Ltd",12,12,144
+376456,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-27,"2023-03-27 06:00:00","2023-03-27 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156
+376459,28470,"MANI THOTA",4511,"RIA Security Ltd",2023-03-30,"2023-03-30 06:00:00","2023-03-30 19:00:00",2723,"UTC Aerospace Wolverhampton WV10 7EH",11,"OCS Security",13,12,156

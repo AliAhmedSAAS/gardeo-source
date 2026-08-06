@@ -1,0 +1,65 @@
+My Documents: View uploaded documents, compliance status, expiry alerts
+My Profile: View/edit personal details, emergency contacts
+My Pay: View payslips, payment history
+Communications: In-app messaging with management
+Bottom Tab Navigation: Home, Shifts, Documents, Profile tabs
+Design: Navy Blue (#1F3A5F) primary color, Orange (#FF8C42) accent, Inter font, professional security industry styling. UK-focused (dates in DD/MM/YYYY, currency in GBP £).
+
+The app connects to an existing backend API - all API endpoints are already built. The backend URL will be configured via environment variable.
+The Gardeo Officer mobile app is now built and running. Here's what I've created:
+
+Authentication:
+
+Professional login screen with navy blue background, orange shield branding, and secure email/password form
+4-Tab Navigation:
+
+Home — Dashboard with greeting, today's shifts, quick actions (Book On/Off/Ops Check/Messages), compliance alerts for expiring SIA/DBS documents, and upcoming shifts
+Shifts — Filterable list (Upcoming/Past/All) with detailed shift cards showing site, client, times, role, and pay rate
+Documents — Compliance document viewer with status summary (Valid/Expiring/Expired) and document cards with expiry tracking
+Profile — Personal details, emergency contacts, SIA/DBS compliance info, and sign out
+Additional Screens:
+
+Shift Detail — Full shift information with Book On/Off actions
+Ops Check — 5-item pre-shift checklist (SIA licence, DBS, uniform, equipment, welfare) with progress tracking
+Book On — GPS location capture with geofence verification
+Book Off — GPS capture + mandatory handover notes
+My Pay — Payslip viewer with gross/net/deductions breakdown in GBP
+Messages — In-app messaging with unread indicators
+Edit Profile — Update phone, address, and emergency contacts
+Design: Navy Blue (#1F3A5F) primary, Orange (#FF8C42) accent, Inter font, UK date format (DD/MM/YYYY), GBP currency formatting.
+
+The app connects to your existing backend API — set the EXPO_PUBLIC_API_URL environment variable to point to your Gardeo backend URL. You can scan the QR code from the URL bar to test on your phone with Expo Go.
+The app is ready to publish when you're ready! Once published, it will be accessible as a web app, and officers can also scan the QR code to open it in Expo Go on their phones for the full native experience.
+Republish your app to the App Store to apply the latest changes.
+Give em user name and password to test
+How can I connect this to my exiting gardeo app
+Great question! Connecting this mobile app to your existing Gardeo backend is straightforward. Here's what you need to do:
+
+The one thing you need to set: an environment variable called EXPO_PUBLIC_API_URL with the base URL of your existing Gardeo backend API.
+
+For example, if your backend runs at https://api.gardeo.co.uk, you'd set:
+
+EXPO_PUBLIC_API_URL=https://api.gardeo.co.uk
+Once that's set, the app will automatically switch from demo mode to calling your real API.
+
+Your backend needs these API endpoints (the app expects them):
+
+Method	Endpoint	Purpose
+POST	/auth/login	Login (email + password), returns { token, user }
+GET	/officers/me	Get logged-in officer's profile
+PATCH	/officers/me	Update profile details
+GET	/officers/me/shifts	Get officer's shifts
+GET	/shifts/:id	Get single shift details
+POST	/shifts/:id/book-on	Book on to a shift
+POST	/shifts/:id/book-off	Book off from a shift
+POST	/shifts/:id/ops-check	Submit operational check
+GET	/officers/me/documents	Get compliance documents
+GET	/officers/me/payslips	Get payslips
+GET	/officers/me/messages	Get messages
+POST	/officers/me/messages	Send a message
+GET	/officers/me/notifications	Get notifications
+The app uses Bearer token authentication — after login, the token is sent in the Authorization header on every request.
+
+Would you like me to set the EXPO_PUBLIC_API_URL environment variable now? If so, just share your backend's URL and I'll configure it. If your backend endpoints use different paths or a different auth scheme, let me know and I can adjust the app to match.
+Yes set
+I need your backend API URL to set this up. What's the URL of your existing Gardeo backend? For example, something like https://api.gardeo.co.uk or https://your-server.com/api

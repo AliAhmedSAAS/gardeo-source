@@ -1,0 +1,280 @@
+# Gardeo Officer Mobile App — Backend API Requirements
+
+All endpoints require `Authorization: Bearer <JWT>` header.
+Base URL: `https://gardeo.co.uk/api`
+
+---
+
+## Endpoints That Already Work
+
+| Method | Endpoint | Status |
+|--------|----------|--------|
+| POST | `/auth/mobile/login` | Working |
+| GET | `/officers/me` | Working |
+| GET | `/officers/me/shifts` | Working |
+| GET | `/officers/me/notifications` | Working |
+| GET | `/officers/me/documents` | Working |
+| GET | `/officers/me/conversations` | Working |
+| GET | `/officers/me/payslips` | Working |
+
+---
+
+## Missing Endpoints
+
+The mobile app currently handles all missing endpoints gracefully (shows empty states instead of errors). Each endpoint can be added independently — the app will automatically start using it.
+
+---
+
+### 1. Shift Detail
+
+**`GET /officers/me/shifts/:id`**
+
+Returns detail for a single shift.
+
+Response `200 OK`:
+```json
+{
+  "id": 167894,
+  "title": "Day Security Shift",
+  "siteName": "Amazon Skewen CWL1",
+  "siteAddress": "Ffordd Amazon Skewen Swansea SA1 8QX",
+  "date": "2026-04-01",
+  "startTime": "07:00",
+  "endTime": "19:00",
+  "status": "scheduled",
+  "bookedOnAt": null,
+  "bookedOffAt": null,
+  "latitude": 51.6565,
+  "longitude": -3.9340,
+  "geofenceRadius": 200
+}
+```
+
+---
+
+### 2. Incidents
+
+**`GET /officers/me/incidents`**
+
+Returns all incidents reported by the officer.
+
+Response `200 OK`:
+```json
+[
+  {
+    "id": "string or number",
+    "title": "string",
+    "description": "string",
+    "type": "security | health_safety | maintenance | other",
+    "severity": "low | medium | high | critical",
+    "status": "submitted | under_review | resolved | closed",
+    "location": "string",
+    "shiftId": "string or number",
+    "createdAt": "2026-03-31T23:58:05.595Z",
+    "updatedAt": "2026-03-31T23:58:05.595Z"
+  }
+]
+```
+
+**`POST /officers/me/incidents`**
+
+Officer submits a new incident report.
+
+Request body:
+```json
+{
+  "title": "string",
+  "description": "string",
+  "type": "security | health_safety | maintenance | other",
+  "severity": "low | medium | high | critical",
+  "location": "string",
+  "shiftId": "string or number"
+}
+```
+
+Response `201 Created`: Returns the created incident object.
+
+---
+
+### 3. Time-Off / Leave Requests
+
+**`GET /officers/me/requests`**
+
+Returns officer's time-off and leave requests.
+
+Response `200 OK`:
+```json
+[
+  {
+    "id": "string or number",
+    "type": "annual_leave | sick_leave | unpaid_leave | other",
+    "startDate": "2026-04-10",
+    "endDate": "2026-04-12",
+    "reason": "Family holiday",
+    "status": "pending | approved | rejected",
+    "createdAt": "2026-03-31T23:58:05.595Z"
+  }
+]
+```
+
+**`POST /officers/me/requests`**
+
+Submit a new time-off request.
+
+Request body:
+```json
+{
+  "type": "annual_leave | sick_leave | unpaid_leave | other",
+  "startDate": "2026-04-10",
+  "endDate": "2026-04-12",
+  "reason": "Family holiday"
+}
+```
+
+Response `201 Created`: Returns the created request object.
+
+---
+
+### 4. Chat Messages
+
+**`GET /officers/me/conversations/:id/messages`**
+
+Returns all messages in a specific conversation.
+
+Response `200 OK`:
+```json
+[
+  {
+    "id": "string or number",
+    "conversationId": 2,
+    "senderId": "user-uuid",
+    "senderName": "Ali Ahmed",
+    "content": "Hello, how are you?",
+    "createdAt": "2026-03-31T23:58:05.595Z"
+  }
+]
+```
+
+**`POST /officers/me/conversations/:id/messages`**
+
+Send a new message in a conversation.
+
+Request body:
+```json
+{
+  "content": "Hello!"
+}
+```
+
+Response `201 Created`: Returns the created message object (same shape as above).
+
+**`POST /officers/me/conversations/:id/read`**
+
+Mark all messages in a conversation as read.
+
+Response `200 OK`:
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### 5. Broadcasts
+
+**`GET /officers/me/broadcasts`**
+
+Returns broadcast messages sent by management to officers (from the Communications > Broadcasts feature in the web portal).
+
+Response `200 OK`:
+```json
+[
+  {
+    "id": 1,
+    "title": "Hello",
+    "body": "Hello",
+    "senderName": "Ali Ahmed",
+    "createdAt": "2026-03-31T23:54:29.000Z",
+    "readAt": null
+  }
+]
+```
+
+---
+
+### 6. Book On / Book Off (Shift Attendance)
+
+**`POST /officers/me/shifts/:id/book-on`**
+
+Officer books on to a shift.
+
+Request body:
+```json
+{
+  "latitude": 51.6565,
+  "longitude": -3.9340,
+  "timestamp": "2026-04-01T07:00:00.000Z"
+}
+```
+
+Response `200 OK`:
+```json
+{
+  "success": true,
+  "bookedOnAt": "2026-04-01T07:00:00.000Z"
+}
+```
+
+**`POST /officers/me/shifts/:id/book-off`**
+
+Officer books off from a shift.
+
+Request body:
+```json
+{
+  "latitude": 51.6565,
+  "longitude": -3.9340,
+  "timestamp": "2026-04-01T19:00:00.000Z",
+  "notes": "Shift completed without issues"
+}
+```
+
+Response `200 OK`:
+```json
+{
+  "success": true,
+  "bookedOffAt": "2026-04-01T19:00:00.000Z"
+}
+```
+
+---
+
+### 7. Push Notifications
+
+**`POST /officers/me/push-token`**
+
+Register the officer's device push notification token.
+
+Request body:
+```json
+{
+  "token": "ExponentPushToken[xxxxxx]"
+}
+```
+
+Response `200 OK`:
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## Notes
+
+- All responses must return `Content-Type: application/json`
+- Non-existent endpoints currently return HTML (the web app's index.html) which causes errors — returning a proper `404 JSON` response would be better: `{ "error": "Not found" }`
+- The mobile app uses JWT tokens from `/auth/mobile/login` for all authenticated requests
+- Date formats: dates use `YYYY-MM-DD`, timestamps use ISO 8601 (`2026-04-01T07:00:00.000Z`)

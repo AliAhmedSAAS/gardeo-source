@@ -1,0 +1,9 @@
+Employee Name,Site Name,Supplier Name,Date,Start Time,End Time,Break (minutes),Shift Title,Notes
+John Smith,Canary Wharf Tower,Delta Force Group,2025-12-01,08:00,16:00,30,Day Shift,Regular cover via Delta Force
+Syed Ali,Manchester Arndale Centre,Shield Guard Services Ltd,2025-12-01,22:00,06:00,30,Night Shift,Night cover provided by Shield Guard
+Sarah Wilson,Birmingham NEC,,2025-12-02,07:00,15:00,30,Morning Shift,Direct employee - no supplier
+John Smith,Leeds Trinity Centre,Northern Watch Security,2025-12-02,14:00,22:00,30,Afternoon Shift,Supplied by Northern Watch
+Syed Ali,Canary Wharf Tower,Delta Force Group,2025-12-03,06:00,14:00,30,Early Shift,Delta Force supplied officer
+Sarah Wilson,Bristol Harbourside,SecureTech Systems,2025-12-03,08:00,16:00,30,Day Shift,Cover from SecureTech
+John Smith,Manchester Arndale Centre,,2025-12-04,08:00,16:00,30,Day Shift,Direct employee shift
+Syed Ali,Birmingham NEC,Shield Guard Services Ltd,2025-12-04,22:00,06:00,30,Night Shift,Shield Guard night cover

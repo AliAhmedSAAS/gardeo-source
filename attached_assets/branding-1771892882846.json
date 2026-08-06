@@ -1,0 +1,131 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "GDS Transport",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#1D70B8",
+    "accent": "#00703C",
+    "background": "#F4F8FB",
+    "textPrimary": "#0B0C0C",
+    "link": "#FFDD00"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "GDS Transport",
+      "heading": "GDS Transport"
+    },
+    "fontStacks": {
+      "heading": [
+        "GDS Transport",
+        "arial",
+        "sans-serif"
+      ],
+      "body": [
+        "GDS Transport",
+        "arial",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "GDS Transport",
+        "arial",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "36px",
+      "h2": "24px",
+      "body": "19px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "0px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#00703C",
+      "textColor": "#FFFFFF",
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "rgb(0, 45, 24) 0px 2px 0px 0px"
+    },
+    "buttonSecondary": {
+      "background": "transparent",
+      "textColor": "#1D70B8",
+      "borderColor": "#505A5F",
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.ico",
+    "ogImage": "File saved at: attached_assets/ogImage.png",
+    "logoHref": "File saved at: attached_assets/logoHref.html",
+    "logoAlt": "GOV.UK"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it is visible, located in the header, and links to the homepage, matching the brand 'GOV.UK'.",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 3,
+      "text": "Accept additional cookies",
+      "reasoning": "Button #3 has a vibrant green background (#00703C), which is a strong indicator of a primary call-to-action, especially with action-oriented text like 'Accept additional cookies'."
+    },
+    "secondary": {
+      "index": 0,
+      "text": "Get emails about this page",
+      "reasoning": "Button #0 has a transparent background and is less prominent, making it suitable as a secondary action compared to the vibrant primary button."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "professional",
+    "energy": "low",
+    "targetAudience": "UK citizens and businesses"
+  },
+  "designSystem": {
+    "framework": "custom",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it is visible, located in the header, and links to the homepage, matching the brand 'GOV.UK'.",
+        "confidence": 0.95
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}

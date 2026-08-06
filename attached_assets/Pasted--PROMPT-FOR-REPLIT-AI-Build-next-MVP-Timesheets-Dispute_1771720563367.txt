@@ -1,0 +1,234 @@
+# PROMPT FOR REPLIT AI — Build next MVP (Timesheets → Disputes → HMRC VAT Self-Billing → Payments → Credit Notes)
+
+You are my senior engineer working inside this repo.  
+Your job is to **implement the next MVP features** for a UK platform that will run **HMRC VAT self-billing** correctly.
+
+## 0) Non-negotiable rules
+- **Do not assume anything.** Only use what exists in the codebase and the attached implementation status report.
+- Where compliance rules are required, follow HMRC guidance:
+  - VAT self-billing rules: VAT Notice 700/62. :contentReference[oaicite:0]{index=0}
+  - Self-billed invoices must include required statement (“The VAT shown is your output tax due to HMRC”). :contentReference[oaicite:1]{index=1}
+  - VAT record keeping (digital records + VAT invoices rules, retention expectations). :contentReference[oaicite:2]{index=2}
+  - VAT rates vary (20% standard is not universal). :contentReference[oaicite:3]{index=3}
+  - Credit/debit note conditions exist (HMRC internal guidance and references to Notice 700 credit note details). :contentReference[oaicite:4]{index=4}
+- Output must be code + migrations + UI changes, **plus** one Markdown file:
+  - `/docs/NEXT_MVP_PLAN.md` describing what you implemented (with file paths) and what remains.
+
+## 1) Current state (must align with repo, do not contradict it)
+Use the attached report as the single source of truth for what exists today.
+
+### What exists right now (must verify in code before changing)
+- Supplier timesheets are derived from `shifts` (no `timesheets` table). `supplierApprovalStatus` is free-form text; supplier can approve/dispute individual shifts. :contentReference[oaicite:5]{index=5}
+- There is **no admin UI/endpoint** to manage supplier disputes. :contentReference[oaicite:6]{index=6}
+- Nothing happens automatically after supplier approval (no invoice generation, no payment workflow). :contentReference[oaicite:7]{index=7}
+- Invoices exist as a flat table (no line items) with VAT rate default “20”; amounts are stored as text. :contentReference[oaicite:8]{index=8}:contentReference[oaicite:9]{index=9}f-billing agreement signing exists in supplier portal + is validat:contentReference[oaicite:10]{index=10}:contentReference[oaicite:11]{index=11}
+- Credit notes / debit notes are not implemented. :contentReference[oaicite:12]{index=12}:contentReference[oaicite:13]{index=13}esheet approve, timesheet dispute, invoice created/updated, agreement signed. :contentReference[oaicite:14]{index=14}:contentReference[oaicite:15]{index=15})
+Deliver a working flow where:
+1) Supplier sees shifts as timesheets, can approve/dispute.
+2) A:contentReference[oaicite:16]{index=16}solve / request changes).
+3) System (or admin) gene:contentReference[oaicite:17]{index=17}rafts** from approved timesheets for a defined billing period.
+4) Supplier can **review and accept** the s:contentReference[oaicite:18]{index=18}dispute it).
+5) Admin issues the invoice (final), sets payment date, marks paid.
+6) If a correction is required **after an invoice is issued**, system supports **credit notes / debit notes** with correct audit trail + PDFs.
+
+## 3) Compliance-driven design constraints (HMRC)
+Implement the following gates and invoice requirements:
+
+### 3.1 Self-billing agreement gate
+Before a self-billed invoice can be issued:
+- supplier must have an **active, non-expired** self-billing agreement (VAT Notice 700/62). :contentReference[oaicite:19]{index=19}
+- agreement must be stored and retrievable (for audit pack).
+- agreement should be reviewable/renewable (annual review is common; do not hardcode unless already in code).
+
+### 3.2 VAT / rate handling (no hard-coded 20%)
+- Today the system assumes 20% VAT by default. This is **not universally correct**. :contentReference[oaicite:20]{index=20}
+- Implement a **VAT profile** for supplier (and optionally per service type) that supports:
+  - VAT registered: yes/no
+  - VAT number (required if VAT registered)
+  - VAT rate selection for invoices (default should be configurable; rates depend on supply type). :contentReference[oaicite:21]{index=21}
+- If supplier is **not VAT registered**, system must generate invoices with **no VAT** (0 VAT amount).
+
+### 3.3 Self-billed :contentReference[oaicite:22]{index=22}lf-billed invoice PDFs must contain:
+- Supplier name/address/VAT number (if VAT registered) + Buyer name/address/VAT number (if VAT registered) + invoice number + invoice date + line descriptions + totals.
+- Required statement: **“The VAT shown is your output tax due to HMRC”**. :contentReference[oaicite:23]{index=23}
+
+### 3.4 Record keeping / audit
+- Keep VAT records and supporting documents with a retention approach consistent with VAT record keeping guidance. :contentReference[oaicite:24]{index=24}
+- Expand audit logging so we can answer auditors:
+  - who approved a timesheet, when, what changed
+  - who generated the invoice draft, when, which shifts included
+  - who accepted invoice (supplier), when
+  - who issued invoice (admin), when
+  - who marked paid, when, payment date
+
+### 3.5 Credit notes / debit notes
+- Implement post-issue corrections with credit/debit notes (conditions and content requirements exist). :contentReference[oaicite:25]{index=25}
+- Do not expose complex accounting UI early; MVP can be minimal but must produce correct documents + logs.
+
+---
+
+## 4) Work plan (build in this order, each step shippable)
+
+### PHASE 1 — Finish Timesheets MVP properly
+**A) Data integrity**
+- Add FK constraint: `shifts.supplierId` → `suppliers.id` (currently missing). :contentReference[oaicite:26]{index=26}
+- Convert `supplierApprovalStatus` from free-text to enum:
+  - `pending`, `approved`, `disputed`, `resolved`
+- Add validation:
+  - supplier can only approve/dispute shifts with `status = completed` (currently missing). :contentReference[oaicite:27]{index=27}
+- Add idempotency guards:
+  - approving an already approved shift should be a no-op
+  - disputing an approved shift should be blocked unless we add “revoke approval” explicitly
+
+**B) Admin visibility**
+- Add admin endpoint: `GET /api/admin/supplier-timesheets` with filters (supplier, date range, status).
+- Add admin UI tab in supplier detail or dedicated admin page:
+  - list of shifts with approval status
+  - disputed queue
+
+**C) Notifications**
+- When:contentReference[oaicite:28]{index=28}otify admin (email or in-app) — currently missing. :contentReference[oaicite:29]{index=29}
+
+**Deliverables**
+- DB migration(s)
+- API endpoints + tests (if tests exist)
+- Admin UI page
+- Updated supplier UI with corrected status r:contentReference[oaicite:30]{index=30}ched (include before/after)
+
+---
+
+### PHASE 2 — Real Disputes module (thread + lifecycle)
+Current disputes are a single comment on shifts and have no admin workflow. :contentReference[oaicite:31]{index=31}
+
+**Implement**
+- New tables:
+  - `disputes`: `id`, `tenantId`, `supplierId`, `shiftId`, `status(open|under_review|resolved|escalated)`, `reason`, `resolution`, `createdAt`, `resolvedAt`, `resolvedBy`
+  - `dispute_messages`: `id`, `disputeId`, `userId`, `message`, `createdAt`, optional attachments
+- Migration:
+  - Move existing `supplierAp:contentReference[oaicite:32]{index=32} as the first message
+- Endpoints:
+  - Supplier: create dispute, list disputes, view dispute detail, post message
+  - Admin: list disputes, view detail, post message, resolve/escalate
+- UI:
+  - Supplier: “Disputes” list + detail thread
+  - Admin: “Dispute inbox” + detail
+
+**Rules**
+- A dispute should “lock” the shift from invoicing:contentReference[oaicite:33]{index=33} dispute must result in a deterministic shift state:
+  - either shift updated (hours/break/time) then supplier re-approves
+  - or admin marks as “resolved” and returns to supplier for approval
+
+**Deliverables**
+- Tables + endpoints + UI + notifications
+- Full audit trail: dispute created, message posted, resolved
+
+---
+
+### PHASE 3 — Self-billing invoices (draft → supplier accept → issued)
+The repo has manual invoices but no line items, no automation, no supplier invoice view, no PDFs. :contentReference[oaicite:34]{index=34}
+
+**A) Data model**
+Choose one approach (keep it simple):
+1) Extend existing `invoices`:
+   - add `invoiceType` enum: `manual`, `self_billed`
+   - add `issuedAt`, `issuedBy`, `acceptedAt`, `acceptedBySupplierUserId`
+   - add `sourcePeriodStart`, `sourcePeriodEnd`
+   - convert money fields from `text` → `numeric(12,2)` (migration required). :contentReference[oaicite:35]{index=35}
+2) Add `invoice_line_items` table:
+   - `id`, `invoiceId`, `shiftId`, `description`, `hours`, `rate`, `lineSubtotal`, `vatRate`, `vatAmount`, `lineTotal`
+
+**B) VAT profile**
+- Add/confirm supplier VAT fields:
+  - VAT registered boolean + VAT number + default VAT rate
+- Implement VAT rate selection from supported list (at minimum: 0:contentReference[oaicite:36]{index=36}tension. :contentReference[oaicite:37]{index=37}
+- Ensure invoice generation uses supplier VAT registration and rate.
+
+**C) Invoice numbering**
+- Implement sequential numbering per tenant for self-billed invoices (no manual free-text).
+- Add unique constraint for invoiceNumber per tenant. :contentReference[oaicite:38]{index=38}
+
+**D) Invoice generation service**
+Create s:contentReference[oaicite:39]{index=39}ft** self-billed invoice:
+- Inputs: supplierId, periodStart, periodEnd
+- Include only shifts:
+  - status completed
+  - supplierApprovalStatus approved
+  - no open dispute
+  - not already invoiced (enforce with linkage via line items)
+- Output:
+  - invoice draft with line items + totals
+
+**E) Supplier review & acceptance**
+Add supplier endpoints + UI:
+- `GET /api/supplier-portal/invoices` (list)
+- `GET /api/supplier-portal/invoices/:id` (detail)
+- `POST /api/supplier-portal/invoices/:id/accept`
+- `POST /api/supplier-portal/invoices/:id/dispute` (creates dispute linked to invoice)
+
+**F) PDF generation**
+- Generate PDFs for:
+  - self-billed invoice (draft and issued versions)
+  - self-billing agreement (currently J:contentReference[oaicite:40]{index=40}DF; fix this). :contentReference[oaicite:41]{index=41}
+- Invoice PDF must include the HMRC-required statement. :contentReference[oaicite:42]{index=42}
+
+**G) Admin finance workflow**
+- Admin UI:
+  - self-billing invoice list
+  - invoice detail: line items, status, audit trail
+  - action: “Issue invoice” (locks totals)
+  - action: “Set payment date” and mark paid
+- Fix security risks:
+  - invoice update endpoint must enforce tenant isolation + status transition validation. :contentReference[oaicite:43]{index=43}
+
+---
+
+### PHASE 4 — Post-issue adjustments (Credit notes / Debit notes)
+Not implemented today. :contentReference[oaicite:44]{index=44}
+
+**Implement minimal module**
+- Tables:
+  - `credit_notes`, `credit_note_line_items`
+  - `debit_notes`, `debit_note_line_items`
+- Sequential numbering per tenant.
+- PDF generation for notes.
+- Link notes back to the original invoice.
+:contentReference[oaicite:45]{index=45} → applied` (applied means reflected in finance reporting).
+- Admin UI: issue credit/debit note against an invoice.
+- Supplier UI: view/download credit/debit notes.
+
+**Compliance**
+- Notes must include required fields (reference original invoice, amounts, VAT adjustments where applicable).
+- Capture audit logs for: created, issued, applied.
+
+---
+
+## 5) “Audit pack” feature (so we can answer auditors fast)
+Create `/admin/compliance/self-billing-audit` page with export:
+- :contentReference[oaicite:46]{index=46}nt (PDF)
+- List of self-billed invoices for a period (CSV + PDFs)
+- List of credit/debit notes f:contentReference[oaicite:47]{index=47}t (CSV) filtered by supplier + date
+
+Backed by endpoints:
+- `GET /api/admin/compliance/self-billing/export?...`
+
+Retention note: store PDFs and records consistently with VAT record keeping guidance. :contentReference[oaicite:48]{index=48}
+
+---
+
+## 6) Required output
+1) Implement the phases you can complete safely without guessing.
+2) Generate `/docs/NEXT_MVP_PLAN.md` containing:
+   - What you changed (files/migrations/endpoints)
+   - What is still missing (blocked items)
+   - How to test end-to-end
+3) Add a `/docs/HMRC_COMPLIANCE_CHECKLIST.md` that maps each feature to the relevant HMRC rule (with short bullets).
+
+## 7) If something is ambiguous
+If the repo does not contain enough info (e.g., how rates are agreed, whether supplier can set VAT rate themselves), do not assume:
+- Create a `/docs/OPEN_QUESTIONS.md` with exact questions needed.
+- Implement everything else that is unambiguous based on existing patterns.
+
+Now start by:
+1) creating `/docs/NEXT_MVP_PLAN.md` (as a working plan),
+2) then implementing PHASE 1 (Timesheets completion), commit-level logical changes,
+3) then PHASE 2, PHASE 3, PHASE 4 as far as possible without assumptions.

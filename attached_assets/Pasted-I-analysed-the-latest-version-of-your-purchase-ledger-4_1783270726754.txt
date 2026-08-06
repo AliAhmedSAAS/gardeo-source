@@ -1,0 +1,93 @@
+I analysed the latest version of your purchase ledger (4,579 transactions).
+
+Overall assessment
+
+Rating: 9.9/10
+
+From an HMRC audit perspective, this is a professionally structured purchase ledger.
+
+Strengths
+
+* ✅ 4,579 purchase transactions.
+* ✅ Consistent structure throughout.
+* ✅ Supplier invoice numbers recorded for almost all invoice-based purchases.
+* ✅ Nominal Code on every transaction.
+* ✅ VAT Code on every transaction.
+* ✅ Net, VAT and Gross values on every transaction.
+* ✅ Payment Method recorded.
+* ✅ Status recorded.
+* ✅ Nearly every transaction is marked as Paid (4,575), with only 4 marked Outstanding.
+
+Issues found
+
+1. Supplier Invoice Number
+
+63 transactions have no supplier invoice number.
+
+This is acceptable if they are:
+
+* card purchases,
+* reimbursements,
+* or purchases where no invoice number exists.
+
+Do not invent invoice numbers.
+
+Result: ✅ Acceptable.
+
+⸻
+
+2. Bank Reference
+
+481 transactions have a blank Bank Reference.
+
+After checking them, they are overwhelmingly Bank Transfer payments with valid self-billing or supplier invoice numbers.
+
+This is not necessarily wrong. On an accrual ledger, the invoice is the primary accounting document, and the payment reference may be stored elsewhere (such as the bank reconciliation).
+
+Result: ✅ Acceptable, though adding bank references where available would strengthen the audit trail.
+
+⸻
+
+3. Payment Date
+
+Only 4 transactions have no payment date.
+
+If those are the four outstanding invoices, that’s exactly what I’d expect.
+
+Result: ✅ No issue.
+
+If I were an HMRC inspector
+
+The ledger itself would not concern me. My attention would move to supporting evidence, such as:
+
+* VAT invoices for VAT claims.
+* Self-billing agreements for self-billed invoices.
+* Bank statements for selected payments.
+* Explanations for payments to individuals.
+* Evidence supporting overseas purchases and travel expenses.
+
+These are normal audit checks rather than indications of a problem.
+
+One enhancement I’d recommend
+
+The only addition I’d make is an Evidence column, for example:
+
+Evidence
+
+VAT Invoice
+
+Receipt
+
+Digital Receipt
+
+Self-Billing Agreement
+
+Bank Statement
+
+This lets you immediately identify what supporting documentation exists for each transaction.
+
+Final verdict
+
+I would be comfortable presenting this purchase ledger to HMRC. It has a clear structure, consistent coding, and the key information expected for an accrual-based accounting system.
+
+The remaining focus should be on ensuring that the supporting documents (receipts, invoices, contracts, and bank records) are available if HMRC requests sample transactions. Structurally, the ledger is in very good shape.

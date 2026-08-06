@@ -1,0 +1,74 @@
+You are my senior engineer. Audit my current codebase and generate ONE Markdown file named:
+
+/docs/IMPLEMENTATION_STATUS.md
+
+Goal: produce a factual, code-backed “what’s done vs not done” report for my Timesheet + Supplier Portal workflow. Do NOT invent anything — only report what you can prove from the code, DB migrations/schema, routes, UI components, and API handlers.
+
+## Context
+- We currently have a partially working Timesheet approval feature for suppliers.
+- We do NOT have any self-billing module yet.
+- I want this report so I can share it with another architect (ChatGPT) to map the next MVP: completing timesheets, supplier disputes, self-billing (VAT self-billed invoices), and post-issue adjustments (credit/debit notes if needed).
+
+## Instructions
+1) Read the entire repo structure (routes/pages, components, API endpoints, DB schema/migrations, services, utilities).
+2) Identify every feature that exists related to:
+   - Timesheets (creation, viewing, approval, rejection)
+   - Supplier portal access (auth, roles, permissions)
+   - Disputes (any models/tables, UI, messages, status fields)
+   - Invoicing or “bills” (even if generic — search for invoice/bill/payment keywords)
+   - Audit logs / activity logs
+   - PDF generation / exports
+   - Notifications (email/in-app)
+3) For each item, provide:
+   - STATUS: ✅ Done / 🟡 Partial / ❌ Not implemented
+   - Evidence: file paths + function/component names + route names
+   - How it works today (1–3 bullets)
+   - Gaps / edge cases (bullets)
+4) Include screenshots only if the repo contains them; otherwise ignore.
+
+## REQUIRED CONTENT OF /docs/IMPLEMENTATION_STATUS.md
+### A) System overview (1 page max)
+- Tech stack (frameworks, DB, ORM, auth, hosting assumptions inferred from code)
+- How supplier portal is structured (URLs/routes, layouts)
+- High-level current flow (as implemented)
+
+### B) Current Timesheet Feature (DETAILED)
+- Data model: tables/collections + key fields + relationships
+- API endpoints: list each one (method + path + handler file)
+- UI pages: list each one (route + main components)
+- Status model: what statuses exist in code (e.g., pending/approved/rejected) and where transitions happen
+- Supplier actions supported now (approve/reject/comment/upload)
+- Admin/internal actions supported now
+- What happens after approval today (if anything)
+
+### C) Dispute Capability (if any exists)
+- Any dispute models, fields, UI, endpoints
+- If not implemented, explicitly say “Not implemented” and show search evidence (no files found)
+
+### D) Invoicing / Billing / Payments (even if unrelated)
+- Any invoice/bill/payment models or pages found in code
+- If not found, explicitly say so
+
+### E) Missing Self-billing Module (expected)
+- Confirm it’s not implemented (based on code search)
+- List what would be needed in this codebase to add it (only structural: new tables/routes/services, not the full design yet)
+
+### F) Quality & Risk Notes
+- Any hardcoded assumptions
+- Any permission/security risks around supplier access
+- Any missing validation (e.g., approving someone else’s timesheet)
+- Any missing audit trail for approvals
+- Any missing data integrity constraints
+
+### G) Recommended Next Steps (ONLY based on what you found)
+- “To complete Timesheets MVP”: a checklist ordered by dependency
+- “To add Disputes MVP”: checklist
+- “To add Self-billing MVP”: checklist (still high-level; do not write the full module yet)
+- “To support post-issue corrections”: checklist (credit/debit note/adjustment note capability)
+
+## Output rules
+- Output must be a clean Markdown file with headings, bullet points, and code references.
+- No speculation. If you can’t find evidence, label as unknown/not implemented.
+- Keep it practical: focus on what’s truly in the repo.
+
+Now generate /docs/IMPLEMENTATION_STATUS.md.

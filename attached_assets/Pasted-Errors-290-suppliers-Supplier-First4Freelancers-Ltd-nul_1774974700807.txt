@@ -1,0 +1,41 @@
+Errors (290):
+
+[suppliers] Supplier First4Freelancers Ltd: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier SILICON MANAGEMENT CONSULTANTS LTD: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Radleigh Security & FM Limited: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Capital Protection: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier ALLIANCE FACILITIES MANAGEMENT LIMITED: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier PPE Security: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Refine Security: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier TARIQ contractor: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier XTREME PROFESSIONAL CLEANING: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Red Apple Branding and Marketing Consultancy Ltd: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier O Neill and Brennan: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Peace UK Security Ltd: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Secure First FM: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Moxie Security: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Roxen Security Limited: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier AA Guarding LTD: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Origin Security Limited: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier IMPRESSION: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier Compliance Security Services: null value in column "contact_name" of relation "suppliers" violates not-null constraint
+
+[suppliers] Supplier FAB 4 Security

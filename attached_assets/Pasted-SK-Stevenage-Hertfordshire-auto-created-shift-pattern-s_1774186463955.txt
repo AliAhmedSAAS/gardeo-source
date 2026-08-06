@@ -1,0 +1,435 @@
+SK Stevenage Hertfordshire: auto-created shift pattern(s) — day 8hr
+Hotel Novotel Heathrow Airport T1 Harlington Hayes Greater London: auto-created shift pattern(s) — day 12hr
+West Midlands Employment Tribunal Birmingham: auto-created shift pattern(s) — day 8hr
+WORCESTER COMBINED COURT: auto-created shift pattern(s) — day 8hr, night 12hr
+Birmingham Crown Court: auto-created shift pattern(s) — day 8hr, night 12hr
+Cardiff County Court: auto-created shift pattern(s) — day 8hr
+Walsall County And Family Court Bridge Street Walsall: auto-created shift pattern(s) — day 8hr, night 12hr
+O2 Islington London: auto-created shift pattern(s) — day 8hr
+Aberafan shopping centre: auto-created shift pattern(s) — day 8hr
+Park Grand Hotel Hounslow Greater London: auto-created shift pattern(s) — day 12hr
+101 Embankment Manchester: auto-created shift pattern(s) — day 12hr
+Holiday Inn Express Edinburgh City West: auto-created shift pattern(s) — day 12hr
+Bedfont Lakes TMC Feltham Middlesex Greater London: auto-created shift pattern(s) — day 12hr
+1 Portland St Manchester: auto-created shift pattern(s) — day 12hr
+UTC Aerospace Wolverhampton: auto-created shift pattern(s) — day 12hr
+Ipswich County Suffolk: auto-created shift pattern(s) — day 8hr
+Cardiff Magistrates Court: auto-created shift pattern(s) — day 8hr
+Newport Magistrates Court: auto-created shift pattern(s) — day 8hr
+Wembley National Stadium Greater London: auto-created shift pattern(s) — day 12hr
+Merthyr Tydfil Combined Court Centre: auto-created shift pattern(s) — day 8hr
+Ipswich Magistrates Suffolk: auto-created shift pattern(s) — day 8hr
+The Lincoln Brazennose Street Manchester: auto-created shift pattern(s) — day 12hr
+Gracechurch Shopping Centre Sutton Cottfield West Midlands: auto-created shift pattern(s) — day 8hr
+Cheltenham Job Centre Gloucestershire: auto-created shift pattern(s) — day 8hr
+Marie Curie Hospice Solihull: auto-created shift pattern(s) — day 8hr, night 12hr
+Two Snowhill Birmingham Queensway: auto-created shift pattern(s) — day 12hr
+Roehampton University London: auto-created shift pattern(s) — day 8hr
+Birmingham Magistrates Court: auto-created shift pattern(s) — day 8hr
+CARDIFF TRIBUNAL NEWPORT ROAD: auto-created shift pattern(s) — day 8hr
+Guildford Magistrates Surrey: auto-created shift pattern(s) — day 10hr
+S Gatwick Airport station South Terminal Gatwick Airport West Sussex: auto-created shift pattern(s) — day 12hr
+Atrium Feltham Greater London: auto-created shift pattern(s) — day 12hr
+Birmingham Civil and Family Justice Centre: auto-created shift pattern(s) — day 8hr, night 12hr
+Cardiff Crown Courts: auto-created shift pattern(s) — day 10hr
+Coventry Magistrates Court: auto-created shift pattern(s) — day 10hr, night 12hr
+Royal College of General Practictioners London: auto-created shift pattern(s) — day 12hr
+Newport Civil Court: auto-created shift pattern(s) — day 10hr
+Nova Victoria Bressenden Victoria: auto-created shift pattern(s) — day 12hr
+Newport Crown Court: auto-created shift pattern(s) — day 8hr, night 12hr
+Renaissance Heathrow Bath Road Hounslow Middlesex United Kingdom: auto-created shift pattern(s) — day 10hr
+Gloucester And Cheltenham County Court: auto-created shift pattern(s) — day 8hr
+Hobbycraft Crawley: auto-created shift pattern(s) — day 8hr
+Cardiff Civil Justice Centre South Glamorgan: auto-created shift pattern(s) — day 8hr
+Odeon Guildford: auto-created shift pattern(s) — day 8hr
+Huddersfield Football stadium: auto-created shift pattern(s) — night 10hr
+The Friary Guildford Surrey: auto-created shift pattern(s) — day 12hr, night 10hr
+Swansea County Court West Glamorgan: auto-created shift pattern(s) — day 8hr
+Odeon Hatfield: auto-created shift pattern(s) — day 10hr
+The Shard London: auto-created shift pattern(s) — day 10hr
+Guildford Crown Court Surrey: auto-created shift pattern(s) — day 8hr
+Next Glen House Glen House 200 208 Tottenham Court Road: auto-created shift pattern(s) — day 8hr
+GSK Ware Hertfordshire: auto-created shift pattern(s) — day 12hr
+Birmingham Crown Court 1 Newton Street: auto-created shift pattern(s) — day 8hr
+Barclays Kingsbury Rd London: auto-created shift pattern(s) — day 8hr
+Apex City of Edinburgh Hotel Grassmarket Midlothian: auto-created shift pattern(s) — day 12hr
+101 Cleveland St: auto-created shift pattern(s) — day 12hr
+Watford Project 50 Clarendon Road Watford: auto-created shift pattern(s) — day 10hr
+Sevenoaks Magistrates Kent: auto-created shift pattern(s) — day 8hr
+Barclays Woolwich Greenwich London: auto-created shift pattern(s) — day 12hr
+Barclays Walworth: auto-created shift pattern(s) — day 8hr
+Barclays Norbury London: auto-created shift pattern(s) — day 8hr
+Fulham Broadway Retail Centre London: auto-created shift pattern(s) — day 12hr
+Apex Hotel 90 Haymarket Terrace Edinburgh: auto-created shift pattern(s) — day 12hr
+Newport Civil and Family Court: auto-created shift pattern(s) — day 10hr
+TSB 61 Market Place Swaffham: auto-created shift pattern(s) — day 12hr
+Edinburgh Airport Ingliston EH12 9FS United Kingdom: auto-created shift pattern(s) — day 12hr
+Whitgift Shopping Centre Croydon Surrey: auto-created shift pattern(s) — day 8hr, night 12hr
+barclays 137 Ladbroke Grove Notting Hill London: auto-created shift pattern(s) — day 10hr
+Berkeley St Edward Eden Grove 15 51 London Road Staines Upon Thames: auto-created shift pattern(s) — day 12hr
+O2 BLUEWATER Greenhithe Kent: auto-created shift pattern(s) — day 12hr
+DWP MANCHESTER STRETFORD Chester RoadOld Trafford: auto-created shift pattern(s) — day 8hr
+Homebase Gloucester: auto-created shift pattern(s) — day 12hr
+Apex Hotel 90 Haymarket Terrace Edinburgh EH12 5LQ Mitie: auto-created shift pattern(s) — day 12hr
+Holiday Inn Express Edinburgh City West EH4 3HL Mitie: auto-created shift pattern(s) — day 12hr
+Apex City of Edinburgh Hotel Grassmarket Midlothian EH1 2HJMitie: auto-created shift pattern(s) — day 12hr
+1 West Regent Street Glasgow: auto-created shift pattern(s) — day 10hr
+Barclays Barking Essex: auto-created shift pattern(s) — day 8hr
+Pets at Home Walsall Broadwalk Retail park: auto-created shift pattern(s) — day 8hr
+Wilko Harrow Wilko Harrow: auto-created shift pattern(s) — day 8hr
+Cop 26 Glasgow Science Centre 50 Pacific Quay Glasgow: auto-created shift pattern(s) — day 12hr
+Wilko Tottenham Hale London: auto-created shift pattern(s) — day 10hr
+Lloyds TSB Edinburgh Waverley: auto-created shift pattern(s) — day 8hr
+Hampton by Hilton Hotel 111 Uxbridge Road Ealing London: auto-created shift pattern(s) — day 12hr
+Wilko Walsall UNIT B QUASAR CENTRE TOWNSEND SQUARE: auto-created shift pattern(s) — day 8hr
+Swansea Crown Court: auto-created shift pattern(s) — day 10hr
+Royal Mail 226 HIGH STREET EPPING: auto-created shift pattern(s) — day 10hr, night 12hr
+TK Maxx Oxford Clarendon Unit 20 Clarendon Center Cornmarket St Oxford: auto-created shift pattern(s) — day 8hr
+Cleveland Clinic 33 Grosvenor Place Belgravia London: auto-created shift pattern(s) — day 12hr
+Brighton Magistrates Court: auto-created shift pattern(s) — day 10hr, night 12hr
+Barbican Center Silk Street London: auto-created shift pattern(s) — day 10hr
+EB EllisBriSW: auto-created shift pattern(s) — day 8hr
+Swansea Civil Justice Centre: auto-created shift pattern(s) — day 8hr
+Tate Modern Bankside London: auto-created shift pattern(s) — day 10hr
+Nike Town Oxford Circus 236 Oxford St Marylebone London: auto-created shift pattern(s) — day 12hr
+O2 Hampstead London: auto-created shift pattern(s) — day 8hr
+O2 CAMDEN LONDON: auto-created shift pattern(s) — day 10hr
+Colchester Magistrates Essex: auto-created shift pattern(s) — day 10hr
+Coventry Mags: auto-created shift pattern(s) — day 10hr, night 12hr
+Birmingham Magistrates Court B4 6QA: auto-created shift pattern(s) — day 12hr
+O2 Islington London: auto-created shift pattern(s) — day 12hr
+Royal Mail RHC Highland Hall Central Hall Car Park: auto-created shift pattern(s) — day 12hr
+Cleveland Clinic 33 Grosvenor Place Belgravia London: auto-created shift pattern(s) — day 12hr
+Walsall County & Family Ct: auto-created shift pattern(s) — day 8hr
+Nike Town Oxford Circus 236 Oxford St Marylebone London: auto-created shift pattern(s) — day 10hr
+Earl Grey Street Edinburgh: auto-created shift pattern(s) — day 8hr
+Aberafan shopping centre: auto-created shift pattern(s) — day 8hr
+25 Churchill Place Canary Wharf London: auto-created shift pattern(s) — day 12hr
+Fulham Broadway Retail Centre London: auto-created shift pattern(s) — day 8hr, night 12hr
+Wilko Walsall UNIT B QUASAR CENTRE TOWNSEND SQUARE: auto-created shift pattern(s) — day 8hr
+Co Op Ladywell EH54 6AB: auto-created shift pattern(s) — day 8hr
+Barclays 1 Clyde Place Lane Glasgow: auto-created shift pattern(s) — day 12hr
+Northampton Combined Ct: auto-created shift pattern(s) — day 12hr
+Port Talbot JC: auto-created shift pattern(s) — day 8hr
+West Midlands Emp Tribunal: auto-created shift pattern(s) — day 8hr
+Swansea Civic Centre: auto-created shift pattern(s) — day 8hr
+Cardiff Mags: auto-created shift pattern(s) — day 8hr
+Birmingham Crown Ct: auto-created shift pattern(s) — day 8hr
+Coventry Combined Ct: auto-created shift pattern(s) — day 12hr
+Guildford Crown Ct: auto-created shift pattern(s) — day 10hr, night 12hr
+Parc Trostre Retail Park Llanelli Carmarthenshire SA14 9UY: auto-created shift pattern(s) — day 8hr
+ARRIVA Maidstone ME15 6TX: auto-created shift pattern(s) — night 8hr
+BROADWAY SHOPPING CENTRE HAMMERSMITH: auto-created shift pattern(s) — day 12hr, night 8hr
+Cardiff Civil Justice Ct: auto-created shift pattern(s) — day 8hr
+Llanelli Mags: auto-created shift pattern(s) — day 12hr
+Ipswich Mags: auto-created shift pattern(s) — day 8hr
+Aberystwyth Justice Centre SY23 1AS: auto-created shift pattern(s) — day 8hr
+Birmingham Civil & Family Ct: auto-created shift pattern(s) — day 8hr
+Co Op Edinburgh Dalry Road: auto-created shift pattern(s) — day 8hr
+The Friary Guildford: auto-created shift pattern(s) — day 10hr, night 12hr
+Swansea Crown Ct: auto-created shift pattern(s) — day 10hr
+barclays 137 Ladbroke Grove Notting Hill London: auto-created shift pattern(s) — day 12hr
+Worcester Combined Ct: auto-created shift pattern(s) — day 10hr
+Co Op Edinburgh McDonald Road: auto-created shift pattern(s) — day 8hr
+Pets at Home Walsall Broadwalk Retail park WS1 4SB: auto-created shift pattern(s) — day 10hr
+Superdry Northampton Grosvenor: auto-created shift pattern(s) — day 8hr
+Crawley Magistrates Wext Sussex RH10 8BF: auto-created shift pattern(s) — day 8hr
+KPMG 1 Snowhill Queens Way Birmingham B4 6GH: auto-created shift pattern(s) — day 12hr
+Swansea Mags: auto-created shift pattern(s) — day 8hr
+Royal Mail Dunlwich 76 Alleyn Park London SE21 8SG: auto-created shift pattern(s) — day 12hr
+Brighton Mags: auto-created shift pattern(s) — day 10hr
+Staines Mags: auto-created shift pattern(s) — day 8hr
+Sevenoaks Mags: auto-created shift pattern(s) — day 8hr
+TSB Inverness: auto-created shift pattern(s) — day 12hr
+Walsall Mags: auto-created shift pattern(s) — day 8hr
+DHL Prudhoe Mill Princess Way Prudhoe: auto-created shift pattern(s) — day 10hr
+Lochside View, Edinburgh , EH12 9DH: auto-created shift pattern(s) — day 8hr
+Norwich Tribunal: auto-created shift pattern(s) — night 10hr
+Norwich Mags: auto-created shift pattern(s) — day 8hr
+TSB Birmingham B2 4NS: auto-created shift pattern(s) — day 8hr
+Guildford Mags Surrey: auto-created shift pattern(s) — day 8hr, night 12hr
+Pets at Home Wimbledon: auto-created shift pattern(s) — day 8hr
+Unit U135 Bluewater Shopping Centre Greenhithe DA9 9ST: auto-created shift pattern(s) — night 8hr
+ATOS Appleton Pl Livingston: auto-created shift pattern(s) — day 12hr
+Taunton Technology park TA1 2LB: auto-created shift pattern(s) — day 12hr
+Technip FMC: auto-created shift pattern(s) — day 12hr
+DUDLEY County & Family Ct: auto-created shift pattern(s) — day 10hr
+BQ Swansea Morfa Retail Park Landore Swansea SA1 7DF: auto-created shift pattern(s) — day 10hr
+Baytree Centre Brentwood: auto-created shift pattern(s) — day 12hr
+Essity Main: auto-created shift pattern(s) — day 12hr
+Exchange Plaza Edinburgh: auto-created shift pattern(s) — day 12hr
+Swansea Civil Justice Ct: auto-created shift pattern(s) — day 8hr
+Agreeko Uk ltd Stirling Rd: auto-created shift pattern(s) — day 12hr
+Superdry Northampton Grosvenor Shopping Centre: auto-created shift pattern(s) — day 8hr, night 12hr
+Compass Centre Greater London Heathrow: auto-created shift pattern(s) — day 12hr
+Margate Magistrates Kent: auto-created shift pattern(s) — night 10hr
+Southend Crown Essex: auto-created shift pattern(s) — day 10hr
+CNWL Westminister London: auto-created shift pattern(s) — day 12hr
+Lincoln Building Square Manchester: auto-created shift pattern(s) — day 12hr
+Space NK London: auto-created shift pattern(s) — day 8hr
+HMLR Seaton Court: auto-created shift pattern(s) — day 10hr
+ATOS Appleton Pl Livingston: auto-created shift pattern(s) — day 10hr
+EE Shop Birmingham The Fort: auto-created shift pattern(s) — day 10hr
+Parc Trostre Retail Park Llanelli: auto-created shift pattern(s) — day 8hr
+Twickenham Stadium 200 Whitton Rd Twickenham: auto-created shift pattern(s) — day 10hr
+Superdry Brighton North Street Quadrant: auto-created shift pattern(s) — day 10hr
+Royal Mail RHC Highland Hall Central Hall Car Park: auto-created shift pattern(s) — day 10hr
+NORTHAMPTON CROWN COURT: auto-created shift pattern(s) — day 10hr
+Barclays EDF on Barnett Way Green Fence: auto-created shift pattern(s) — day 10hr
+Asda Heath Town Supermarket Wolverhampton Rd Heath Town Wolverhampton WV10 0QB United Kingdom: auto-created shift pattern(s) — day 10hr
+Primark DC Kettering Rd Islip Kettering: auto-created shift pattern(s) — day 10hr
+Parc Trostre Retail Park Llanelli Carmarthenshire: auto-created shift pattern(s) — day 10hr
+Bristol Magistrates Court: auto-created shift pattern(s) — day 10hr
+Swansea Magistrates Courthouse: auto-created shift pattern(s) — day 8hr
+287989 Ikea braehead Glasgow: auto-created shift pattern(s) — day 10hr
+EY 1 MLP 1 more london place: auto-created shift pattern(s) — day 10hr
+Broad St Birmingham: auto-created shift pattern(s) — day 10hr
+BROADWAY SHOPPING CENTRE HAMMERSMITH: auto-created shift pattern(s) — day 10hr, night 12hr
+Harman Close Avondale Square Estate London: auto-created shift pattern(s) — day 10hr
+The Orchards Shopping Centre: auto-created shift pattern(s) — day 10hr
+Co Op Edinburgh McDonald Road: auto-created shift pattern(s) — day 10hr
+Matalan Rose Kiln Ln Reading: auto-created shift pattern(s) — day 12hr
+BQ Twickenham50 South Rd London: auto-created shift pattern(s) — day 10hr
+S-Bedford Jowit: auto-created shift pattern(s) — day 10hr
+Boxing Event Epsom: auto-created shift pattern(s) — day 10hr
+Barclays 1 Clyde Place Lane Glasgow: auto-created shift pattern(s) — day 12hr
+Dunelm Easlea Rd Bury Saint Edmunds: auto-created shift pattern(s) — day 8hr
+Northampton Combined Court: auto-created shift pattern(s) — day 12hr
+Alliance Healthcare CO Hovis 1 Thames Gateway Park Cheats Road Dagenham London: auto-created shift pattern(s) — day 12hr
+Port Talbot JC: auto-created shift pattern(s) — day 8hr
+25 Churchill Place Canary Wharf London: auto-created shift pattern(s) — day 8hr
+Haverfordwest Court: auto-created shift pattern(s) — day 8hr
+BT Adastral Park Advance Comms Tech Centre Martlesham Heath Ipswich Suffolk: auto-created shift pattern(s) — day 12hr
+Matalan croydon purley way 271 66 purley way croydon surrey: auto-created shift pattern(s) — day 12hr
+Aberystwyth Justice Centre: auto-created shift pattern(s) — day 8hr
+Llanelli Magistrates Court: auto-created shift pattern(s) — day 8hr
+Barclays HAMMERSMITH Securitas: auto-created shift pattern(s) — day 12hr
+Coventry Combined Court West Midlands: auto-created shift pattern(s) — day 10hr
+Babbage Road Stevenage: auto-created shift pattern(s) — night 10hr
+Earl Grey Street Edinburgh: auto-created shift pattern(s) — day 12hr
+Barclays 1 Clyde Place Lane Glasgow: auto-created shift pattern(s) — day 12hr
+Cleveland Clinic 33 Grosvenor Place Belgravia London: auto-created shift pattern(s) — day 12hr
+Twickenham Stadium 200 Whitton Rd Twickenham: auto-created shift pattern(s) — day 12hr
+Docklands Light Railway castor lane: auto-created shift pattern(s) — day 12hr
+Coventry Magistrates Court: auto-created shift pattern(s) — day 8hr, night 12hr
+West Midlands Employment Tribunal Birmingham: auto-created shift pattern(s) — day 12hr
+Essity Main: auto-created shift pattern(s) — day 8hr, night 12hr
+Taunton Technology park: auto-created shift pattern(s) — day 12hr
+Rolex Buchanan Street Glasgow: auto-created shift pattern(s) — day 12hr
+Swansea Crown Court: auto-created shift pattern(s) — day 10hr
+Birmingham Civil and Family Justice Centre: auto-created shift pattern(s) — day 8hr
+Aberystwyth Justice Centre: auto-created shift pattern(s) — day 8hr, night 12hr
+The Friary Guildford Surrey: auto-created shift pattern(s) — day 10hr, night 12hr
+TK Maxx Staines: auto-created shift pattern(s) — day 8hr
+DHL Prudhoe Mill Princess Way Prudhoe: auto-created shift pattern(s) — day 12hr
+Exchange Plaza Edinburgh: auto-created shift pattern(s) — day 12hr
+NORTHAMPTON CROWN COURT: auto-created shift pattern(s) — day 12hr
+Wembley Stadium London UK: auto-created shift pattern(s) — day 12hr
+Swansea Civic Centre West Glamorgan: auto-created shift pattern(s) — day 8hr
+Ipswich Magistrates Suffolk: auto-created shift pattern(s) — day 8hr
+Guildford Crown Court Surrey: auto-created shift pattern(s) — day 12hr
+Birmingham Crown Court: auto-created shift pattern(s) — day 8hr
+Aberafan shopping centre: auto-created shift pattern(s) — day 8hr
+Royal Mail Dunlwich 76 Alleyn Park London: auto-created shift pattern(s) — day 12hr
+92 Heath Park Way Cardiff: auto-created shift pattern(s) — day 12hr
+Brighton County and Family court: auto-created shift pattern(s) — day 10hr
+TSB Henry Duncan House: auto-created shift pattern(s) — day 8hr, night 12hr
+Crawley Magistrates Wext Sussex: auto-created shift pattern(s) — day 8hr
+The North Face London: auto-created shift pattern(s) — day 8hr
+O2 CAMDEN LONDON: auto-created shift pattern(s) — day 8hr
+The Cyder House Stowmarket: auto-created shift pattern(s) — day 12hr
+Co Op Edinburgh McDonald Road: auto-created shift pattern(s) — day 8hr
+Guildford Magistrates: auto-created shift pattern(s) — day 12hr
+Walsall County And Family Court Bridge Street Walsall: auto-created shift pattern(s) — day 12hr
+134 138 Edmund Street Birmingham: auto-created shift pattern(s) — day 12hr
+Baytree Centre Brentwood Essex: auto-created shift pattern(s) — day 12hr
+ACTC Rochester Chatham Kent: auto-created shift pattern(s) — day 8hr
+Sevenoaks Magistrates Kent: auto-created shift pattern(s) — day 12hr
+Royal Mail Solihull West Mids: auto-created shift pattern(s) — day 12hr, night 10hr
+Portsmouth Combined: auto-created shift pattern(s) — day 8hr, night 12hr
+Cardiff Magistrates Court: auto-created shift pattern(s) — day 8hr, night 12hr
+Guildford Magistrates Surrey: auto-created shift pattern(s) — day 8hr
+Co Op Edinburgh South Clerk Street: auto-created shift pattern(s) — day 8hr
+Lloyds Tsb Bank Nottingham: auto-created shift pattern(s) — day 8hr
+Port Talbot JC: auto-created shift pattern(s) — day 8hr
+UTC Aerospace Wolverhampton: auto-created shift pattern(s) — day 10hr, night 12hr
+Swansea Magistrates Courthouse: auto-created shift pattern(s) — day 8hr
+O2 Oxford London: auto-created shift pattern(s) — day 12hr
+Cardiff Crown Courts: auto-created shift pattern(s) — day 8hr, night 12hr
+Newport Immigration: auto-created shift pattern(s) — day 10hr
+Weymouth Combined Court: auto-created shift pattern(s) — day 8hr
+The Shard London: auto-created shift pattern(s) — day 12hr
+queens drive industrial estate Notthingham: auto-created shift pattern(s) — day 8hr
+Technip FMC: auto-created shift pattern(s) — day 12hr
+Medway Magistrates: auto-created shift pattern(s) — day 8hr
+Merthyr Tydfil Combined Court Centre: auto-created shift pattern(s) — day 8hr
+Haverfordwest: auto-created shift pattern(s) — day 8hr
+BROADWAY SHOPPING CENTRE HAMMERSMITH: auto-created shift pattern(s) — day 12hr
+ACTC Norwich Whitefriars: auto-created shift pattern(s) — day 8hr
+Chichester Combined Court: auto-created shift pattern(s) — day 10hr, night 12hr
+Brandpath Edison Road Hams Hall: auto-created shift pattern(s) — day 8hr, night 12hr
+Earl Grey Street Edinburgh: auto-created shift pattern(s) — day 8hr
+Great Danes Hotel Court: auto-created shift pattern(s) — day 10hr
+Brighton Magistrates Court: auto-created shift pattern(s) — day 10hr
+O2 Islington London: auto-created shift pattern(s) — day 10hr
+Cardiff Metropolitan University Cyncoed: auto-created shift pattern(s) — day 12hr
+ATOS Appleton Pl Livingston: auto-created shift pattern(s) — day 12hr
+WORCESTER COMBINED COURT: auto-created shift pattern(s) — day 12hr
+Castle Vale Retail Park Birmingham: auto-created shift pattern(s) — day 8hr
+Maidstone Combined: auto-created shift pattern(s) — night 8hr
+1 West Regent Street Glasgow: auto-created shift pattern(s) — day 8hr, night 12hr
+Fulham Broadway Retail Centre London: auto-created shift pattern(s) — day 12hr
+Pontypridd Civil Justice: auto-created shift pattern(s) — day 8hr
+Beaverbank Office Park Logie Green Road Edinburgh: auto-created shift pattern(s) — day 12hr
+Sentinel Glasgow: auto-created shift pattern(s) — day 12hr
+Odeon Guildford: auto-created shift pattern(s) — day 8hr
+Northampton Combined Court: auto-created shift pattern(s) — day 12hr
+Norwich Tribunal: auto-created shift pattern(s) — day 8hr
+Cardiff Civil Justice Centre South Glamorgan: auto-created shift pattern(s) — day 8hr
+St andrews lane: auto-created shift pattern(s) — day 12hr
+Marie Curie Hospice Solihull: auto-created shift pattern(s) — day 8hr, night 12hr
+CARDIFF TRIBUNAL NEWPORT ROAD: auto-created shift pattern(s) — day 12hr
+Miller Homes Lochside View Edinburgh: auto-created shift pattern(s) — day 8hr
+Wembley National Stadium Greater London: auto-created shift pattern(s) — day 8hr
+Cardiff University ASSL Library Colum Road: auto-created shift pattern(s) — day 12hr
+Ipswich County Suffolk: auto-created shift pattern(s) — day 8hr
+Parc Trostre Retail Park Llanelli: auto-created shift pattern(s) — day 8hr
+Stafford Combined Court: auto-created shift pattern(s) — day 12hr
+Walsall Magistrates West Mids: auto-created shift pattern(s) — day 8hr
+249888 SQA Scottish Qualifications Auth 24 Wester Shawfair Dalkeith: auto-created shift pattern(s) — day 12hr
+Swansea Civil Justice Centre: auto-created shift pattern(s) — day 10hr
+Mayfair Bond Street: auto-created shift pattern(s) — day 12hr
+university of cardiff plas gwyn: auto-created shift pattern(s) — day 12hr
+Halfords Old Kent road Cantium RP: auto-created shift pattern(s) — day 8hr
+Lewes Combined Court: auto-created shift pattern(s) — day 8hr
+Brighton Tribunal Center: auto-created shift pattern(s) — day 10hr
+Portsmouth Magistrates Hampshire: auto-created shift pattern(s) — day 8hr, night 12hr
+Poundland 142 146 Lothian Road Edinburgh: auto-created shift pattern(s) — day 8hr
+Poundland Unit 9 167201 Argyle Street Glasgow: auto-created shift pattern(s) — day 8hr
+Wilko Northampton: auto-created shift pattern(s) — day 12hr
+Royal Derby Epsom: auto-created shift pattern(s) — day 12hr
+Poundland Unit 4B Newkirkgate Centre Leith: auto-created shift pattern(s) — day 8hr
+Avenuehead Road Moodiesburn: auto-created shift pattern(s) — day 12hr
+Poundland 120A Princes Street Edinburgh: auto-created shift pattern(s) — day 8hr
+Llandaff CampusWestern AveCardiff: auto-created shift pattern(s) — day 12hr
+St Andrews Lane 28 St Andrews Square Edinburgh: auto-created shift pattern(s) — day 8hr
+Poundland 72 74 Sauchiehall Street Glasgow: auto-created shift pattern(s) — day 8hr
+Glasgow PFW Outhouse Unit 2 20 Napier Place Cumbernauld: auto-created shift pattern(s) — night 10hr
+MS Edinburgh 54 Princes Street Edinburgh: auto-created shift pattern(s) — day 10hr
+UTC Aerospace Systems: auto-created shift pattern(s) — day 12hr
+EE Greenock Contact Centre 4 Main Street Greenock: auto-created shift pattern(s) — day 12hr
+Port of Dover United Kingdom: auto-created shift pattern(s) — day 12hr
+Glasgow City Centre Barclays 1 Clyde Place Lane Glasgow: auto-created shift pattern(s) — day 8hr
+Dior Selfridges The building upper mall East Birmingham: auto-created shift pattern(s) — day 12hr
+296341 Savills Hermiston Gait Hermiston Gait Edinburgh: auto-created shift pattern(s) — day 8hr
+Shepherd White Street Low Yard Walker Newcastle: auto-created shift pattern(s) — night 10hr
+Poundland 187 Trongate Glasgow: auto-created shift pattern(s) — day 8hr
+Samsung Yateley Saxon Way Blashbushe Business Park Yateley: auto-created shift pattern(s) — day 12hr
+Salt Meadows: auto-created shift pattern(s) — day 12hr
+Mar Mall Garden Pavilion Earl of Mar Estate Bishopton: auto-created shift pattern(s) — day 8hr
+Hove Crown East Sussex: auto-created shift pattern(s) — day 8hr
+Royal Highland Show Ingliston Newbridge: auto-created shift pattern(s) — day 12hr
+Homebase Hanworth Twickenham RdTwickenhamFeltham: auto-created shift pattern(s) — day 8hr
+TSB Dumfries Ruthwell Museum 2 Thwaite Cottages Ruthwell Dumfries: auto-created shift pattern(s) — day 8hr
+Kettering 1 3 Rockingham Road: auto-created shift pattern(s) — day 8hr
+DUDLEY COUNTY AND FAMILY COURT: auto-created shift pattern(s) — day 8hr, night 12hr
+Carmarthen County Court Family Court Picton Terrace Carmarthen: auto-created shift pattern(s) — day 10hr
+Matalan Waterloovilee: auto-created shift pattern(s) — day 8hr
+Wilko Portsmouth: auto-created shift pattern(s) — day 8hr
+Aldi Cardiff City Link Retail Park: auto-created shift pattern(s) — day 8hr
+Horsham County Court West Sussex: auto-created shift pattern(s) — day 8hr
+Aspall Stowmarket: auto-created shift pattern(s) — day 12hr
+23 Friary Street Guildford: auto-created shift pattern(s) — day 8hr
+UTC Marston Green: auto-created shift pattern(s) — day 12hr
+Barclays Argle Street Glasgow: auto-created shift pattern(s) — day 10hr
+Parc Trostre Retail Park Llanelli: auto-created shift pattern(s) — day 8hr
+Royal Quays Outlet North Sheilds: auto-created shift pattern(s) — day 8hr
+Hedonism Wines London: auto-created shift pattern(s) — day 8hr
+Kurt Geiger Liverpool Church Street 27 31 Church Street Liverpool: auto-created shift pattern(s) — night 10hr
+UTC Shirley Aerospace Systems Birmingham: auto-created shift pattern(s) — day 12hr
+Nixon Construction 20 Bridge Street Paisley: auto-created shift pattern(s) — day 12hr
+Muir Construction Glenmorangie Alba Campus Livingston: auto-created shift pattern(s) — day 12hr
+Llanelli Magistrates Court: auto-created shift pattern(s) — day 8hr
+University of Warwick UOW: auto-created shift pattern(s) — day 12hr
+University of Birmingham UOB: auto-created shift pattern(s) — day 12hr
+Goldsmith s Canterbury 11 Gravel Walk Canterbury: auto-created shift pattern(s) — day 10hr
+Heywood Distribution Park Heywood Greater Manchester: auto-created shift pattern(s) — day 12hr
+Balfour Beatty Godiva Site Office Godiva Carpets Spon End Coventry: auto-created shift pattern(s) — day 12hr
+Orchard Shopping Center Taunton Somerset: auto-created shift pattern(s) — day 10hr
+Newport Crown Court: auto-created shift pattern(s) — day 8hr, night 12hr
+Cwmbran Magistrates Court: auto-created shift pattern(s) — day 8hr
+5 Cardowan Park Tannochside Park Uddingston Glasgow: auto-created shift pattern(s) — day 12hr
+One Thames CityVauxhall Nine Elms: auto-created shift pattern(s) — day 12hr
+JLT Lochside House Lochside Avenue Edinburgh Park: auto-created shift pattern(s) — day 12hr
+St Joseph Snow Hill Wharf Shadwell Street Birmingham: auto-created shift pattern(s) — day 12hr
+Newport Civil and Family Court: auto-created shift pattern(s) — day 10hr
+O2 Birmingham West Midlands: auto-created shift pattern(s) — day 8hr
+Partnership House Regent Farm Road Newcastle Upon Tyne: auto-created shift pattern(s) — day 10hr, night 8hr
+Royal Mail DO Falkirk Stirlingshire: auto-created shift pattern(s) — day 8hr
+Odeon Brighton Kingswest West St Brighton BN1 2RE UK: auto-created shift pattern(s) — day 8hr
+Skyline Plaza Alenon Link Basingstoke: auto-created shift pattern(s) — day 8hr
+Co op Edinburgh Frederick Street: auto-created shift pattern(s) — day 8hr
+507210 waitrose 145 Morningside Rd Edinburgh: auto-created shift pattern(s) — day 8hr
+Celsa Steel Tremorfa works Seawall road Cardiff: auto-created shift pattern(s) — day 12hr
+Beaconsfield Road Hays: auto-created shift pattern(s) — day 12hr
+ISG Oak Cancer Centre Cotswold Road Sutton: auto-created shift pattern(s) — day 10hr
+AY Partnership House Gosforth Newcastle Upon Tyne: auto-created shift pattern(s) — night 8hr
+Barclays Edinburgh: auto-created shift pattern(s) — day 8hr
+Ab Inbev Magor Brewery: auto-created shift pattern(s) — day 12hr
+Tesco Enfield CFC: auto-created shift pattern(s) — day 12hr
+Ellis Brigham Towerhouse Covent Garden: auto-created shift pattern(s) — day 8hr
+Kings Court: auto-created shift pattern(s) — day 12hr
+Beaconsfield Road Hays: auto-created shift pattern(s) — day 12hr
+One Thames CityVauxhall Nine Elms: auto-created shift pattern(s) — day 12hr
+Brentford FC Osterley: auto-created shift pattern(s) — day 12hr
+Tesco Enfield CFC: auto-created shift pattern(s) — day 12hr
+ISG Oak Cancer Centre Cotswold Road Sutton: auto-created shift pattern(s) — day 10hr
+Co Op Edinburgh McDonald Road: auto-created shift pattern(s) — day 8hr
+Celsa Steel Tremorfa works Seawall road Cardiff: auto-created shift pattern(s) — day 12hr
+Fulham Broadway Retail Centre London: auto-created shift pattern(s) — day 8hr, night 12hr
+Earl Grey Street Edinburgh: auto-created shift pattern(s) — day 8hr
+UTC Aerospace Wolverhampton: auto-created shift pattern(s) — night 10hr
+O2 CAMDEN LONDON: auto-created shift pattern(s) — day 12hr
+BROADWAY SHOPPING CENTRE HAMMERSMITH: auto-created shift pattern(s) — day 10hr, night 12hr
+Barclays Doxford Sunderland: auto-created shift pattern(s) — day 8hr
+Balfour beatty Edinburgh road: auto-created shift pattern(s) — day 12hr
+Cardiff Metropolitan University Cyncoed: auto-created shift pattern(s) — day 12hr
+The North Face London: auto-created shift pattern(s) — day 12hr
+The Friary Guildford Surrey: auto-created shift pattern(s) — day 10hr
+Beaverbank Office Park Logie Green Road Edinburgh: auto-created shift pattern(s) — day 12hr
+university of cardiff plas gwyn: auto-created shift pattern(s) — day 12hr
+Valneva Brucefield 1B Young Square Brucefield Industrial Estate Livingston West Lothian: auto-created shift pattern(s) — day 12hr, night 8hr
+Collins Aerospace The Radleys Birmingham: auto-created shift pattern(s) — day 12hr
+The Meadows Shopping Centre Chelmsford Essex: auto-created shift pattern(s) — day 10hr, night 12hr
+Twickenham Stadium 200 Whitton Rd Twickenham: auto-created shift pattern(s) — day 10hr
+O2 Oxford London: auto-created shift pattern(s) — day 12hr
+aldi gosport mumby road 55: auto-created shift pattern(s) — day 10hr
+Cardiff University ASSL Library Colum Road: auto-created shift pattern(s) — night 10hr
+Llandaff CampusWestern AveCardiff: auto-created shift pattern(s) — day 8hr
+Palace Gardens Shopping Centre: auto-created shift pattern(s) — day 8hr
+Park Inn Hotel Walsall: auto-created shift pattern(s) — day 8hr
+Southwark Bridge Rd London EC4R 3TE: auto-created shift pattern(s) — day 12hr
+NHS Medway Hospital: auto-created shift pattern(s) — day 12hr
+SBI-GUA-202104-0229: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202105-0231: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202106-0236: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202107-0240: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202108-0244: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202109-0248: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202110-0252: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202111-0256: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202112-0260: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202201-0264: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202203-0276: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202204-0283: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202205-0291: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202206-0296: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202207-0303: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202208-0310: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202209-0320: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202210-0329: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202211-0338: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202212-0346: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202301-0357: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202302-0369: Transaction failed — inconsistent types deduced for parameter $1
+SBI-GUA-202303-0382: Transaction failed — inconsistent types deduced for parameter $1

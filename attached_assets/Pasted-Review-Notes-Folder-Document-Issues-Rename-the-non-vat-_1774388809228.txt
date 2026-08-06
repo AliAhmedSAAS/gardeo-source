@@ -1,0 +1,52 @@
+Review Notes:
+Folder & Document Issues
+• Rename the non-vat folder (currently empty) to All Suppliers or reorganise
+the folder structure to correctly separate VAT and non-VAT registered
+subcontractors before submission.
+• Retrieve all nine missing SBI invoices for Principal Protection & Events Ltd
+from the Guardian platform (covering Sep 2021 – Dec 2022) and add them to
+the folder
+• Obtain the empty SBI file (SBI-GUA-202301-0362, January 2023) for Capital
+Protections Ltd from the Guardian platform and replace the blank file
+• Add missing SBA and SBI documents for AAAS Security Company Ltd,
+Compliance Security, Principal Protection and Events Limited, and Services
+Ltd — contextual evidence is present but the core documents are absent
+HMRC Errors to Challenge Formally
+• Xtreme Professional Cleaning (Sch 1.2, Row 70): HMRC excluded an invoice
+of £70,833.34 net from their own total. It shall formally raise (cover note) this
+as a potential reduction of £14,166.66 in assessed VAT
+• Secure FirstFM (Sch 1.2, Row 45): HMRC recorded VAT as £20,572.99 when
+the correct figure is £2,572.99 — raise this digit transposition immediately as it
+overstates the assessment by £18,000
+• RKFM Ltd (Sch 1.2, Row 49): HMRC recorded the invoice date as July 2024
+instead of July 2022 — raise this with the Review Officer to confirm the
+correct assessment period
+Self-Billing Agreement (SBA) Timing Risks
+• Security Smart (Sch 1.1, Row 74): The SBA was signed in October 2023 but the
+invoice is dated April 2023 — the agreement post-dates the supply by over six
+months, which weakens the self-billing defence for that line; investigate
+whether any prior written arrangement exists, otherwise consider conceding
+the line (approximately £5,000 VAT at risk)
+• Capital Protections Ltd (Sch 1.2, Row 108): The SBA was signed eight days
+after the first invoice — obtain evidence of any prior oral or written
+arrangement (emails, platform logs, board minutes) to support the self-billing
+position
+VAT Status Misclassifications to Investigate
+• Radleigh Security & FM Limited: HMRC placed Radleigh in Schedule 1.2 as
+VAT-registered, but internal records show they were not VAT-registered —
+verify against Companies House and HMRC records urgently as this could
+reduce the disputed amount by approximately £16,583
+• Taurus Investigation & Protection Services Ltd: Same issue as Radleigh —
+verify VAT status; if confirmed non-VAT-registered, raise as a formal
+misclassification dispute point (approximately £3,374 at stake)
+Amount Variances to Resolve
+• Silicon Management Consultants (Sch 1.1, Rows 3–4): There is a 65.8% variance
+on the May 2021 lines — SBI net is £314,958.30 against HMRC's figure of
+£522,100.51, a gap of over £207,000; this is the largest single discrepancy and
+must be investigated and reconciled before submission
+• 22 further variance lines exist across both schedules, with the most affected
+suppliers being First4Freelancers Ltd (6 lines), Alliance Facilities Management
+(3 lines), Red Apple Branding & Marketing (3 lines), Secure FirstFM Ltd (2
+lines), and Delta Force Group Ltd (2 lines), each should be checked against
+earlier CSV batches and any unresolvable variances explained in the covering
+letter

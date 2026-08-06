@@ -1,0 +1,131 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "GDS Transport",
+      "role": "body"
+    },
+    {
+      "family": "nta",
+      "role": "unknown"
+    }
+  ],
+  "colors": {
+    "primary": "#1D70B8",
+    "accent": "#00703C",
+    "background": "#F4F8FB",
+    "textPrimary": "#0B0C0C",
+    "link": "#FFDD00"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "GDS Transport",
+      "heading": "GDS Transport"
+    },
+    "fontStacks": {
+      "heading": [
+        "GDS Transport",
+        "arial",
+        "sans-serif"
+      ],
+      "body": [
+        "Times New Roman"
+      ],
+      "paragraph": [
+        "GDS Transport",
+        "nta",
+        "arial",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "36px",
+      "h2": "24px",
+      "body": "19px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "0px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#00703C",
+      "textColor": "#FFFFFF",
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "rgb(0, 45, 24) 0px 2px 0px 0px"
+    },
+    "buttonSecondary": {
+      "background": "#F4F8FB",
+      "textColor": "#000000",
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "favicon": "https://developer.service.hmrc.gov.uk/api-documentation/hmrc-frontend/assets/govuk/rebrand/images/favicon.ico",
+    "ogImage": "/api-documentation/hmrc-frontend/assets/govuk/rebrand/images/govuk-opengraph-image.png"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": -1,
+    "reasoning": "No suitable brand logo was found in the provided candidates. The candidate is small and not prominently placed in the header area, which is typical for a main brand logo.",
+    "confidence": 0.3,
+    "rejected": true,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "Accept additional cookies",
+      "reasoning": "Button #0 'Accept additional cookies' uses a vibrant green color (#00703C), which is typically used for primary actions. It stands out as the main call-to-action."
+    },
+    "secondary": {
+      "index": 2,
+      "text": "Accept additional cookies\n      \n      \n        Reject additional cookies\n      \n      View cookie p",
+      "reasoning": "Button #2 has a different background color (#F4F8FB) and groups both 'Accept' and 'Reject' actions, making it suitable as a secondary option."
+    },
+    "confidence": 0.9
+  },
+  "personality": {
+    "tone": "professional",
+    "energy": "low",
+    "targetAudience": "developers and businesses"
+  },
+  "designSystem": {
+    "framework": "custom",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.9,
+    "colors": 0.9,
+    "overall": 0.9
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": -1,
+        "selectedLogoReasoning": "No suitable brand logo was found in the provided candidates. The candidate is small and not prominently placed in the header area, which is typical for a main brand logo.",
+        "confidence": 0.3
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}

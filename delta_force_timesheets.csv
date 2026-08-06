@@ -1,0 +1,51 @@
+Supplier,Officer Name,SIA Licence,Site Name,Date,Start Time,End Time,Break (mins),Hours Worked,Hourly Rate,Total,Status,Notes
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-02,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift - no incidents
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-03,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-04,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,John Mitchell,1234567890123456,Canary Wharf Tower,2026-02-05,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,John Mitchell,1234567890123456,Canary Wharf Tower,2026-02-06,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-09,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-10,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,John Mitchell,1234567890123456,Canary Wharf Tower,2026-02-11,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift - alarm activation handled
+Delta Force,John Mitchell,1234567890123456,Canary Wharf Tower,2026-02-12,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,John Mitchell,1234567890123456,Westfield Shopping Centre,2026-02-13,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-02,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-03,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-04,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,Kings Cross Station,2026-02-05,22:00,06:00,30,7.5,17.50,131.25,completed,Night shift - station patrol
+Delta Force,Sarah Thompson,2345678901234567,Kings Cross Station,2026-02-06,22:00,06:00,30,7.5,17.50,131.25,completed,Night shift
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-09,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift - VIP event
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-10,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,Kings Cross Station,2026-02-11,22:00,06:00,30,7.5,17.50,131.25,completed,Night shift
+Delta Force,Sarah Thompson,2345678901234567,The Shard Observation Deck,2026-02-12,07:00,19:00,30,11.5,15.00,172.50,completed,Day shift
+Delta Force,Sarah Thompson,2345678901234567,Kings Cross Station,2026-02-13,22:00,06:00,30,7.5,17.50,131.25,completed,Night shift
+Delta Force,Marcus Williams,3456789012345678,O2 Arena,2026-02-02,14:00,02:00,30,11.5,15.50,178.25,completed,Event security
+Delta Force,Marcus Williams,3456789012345678,O2 Arena,2026-02-03,14:00,02:00,30,11.5,15.50,178.25,completed,Event security
+Delta Force,Marcus Williams,3456789012345678,Heathrow Terminal 5,2026-02-04,06:00,18:00,30,11.5,16.50,189.75,completed,Terminal patrol
+Delta Force,Marcus Williams,3456789012345678,Heathrow Terminal 5,2026-02-05,06:00,18:00,30,11.5,16.50,189.75,completed,Terminal patrol
+Delta Force,Marcus Williams,3456789012345678,Heathrow Terminal 5,2026-02-06,06:00,18:00,30,11.5,16.50,189.75,completed,Terminal patrol
+Delta Force,Marcus Williams,3456789012345678,O2 Arena,2026-02-09,14:00,02:00,30,11.5,15.50,178.25,completed,Concert event
+Delta Force,Marcus Williams,3456789012345678,O2 Arena,2026-02-10,14:00,02:00,30,11.5,15.50,178.25,completed,Concert event
+Delta Force,Marcus Williams,3456789012345678,Heathrow Terminal 5,2026-02-11,06:00,18:00,30,11.5,16.50,189.75,completed,Terminal patrol - suspicious package drill
+Delta Force,Marcus Williams,3456789012345678,Heathrow Terminal 5,2026-02-12,06:00,18:00,30,11.5,16.50,189.75,completed,Terminal patrol
+Delta Force,Marcus Williams,3456789012345678,O2 Arena,2026-02-13,14:00,02:00,30,11.5,15.50,178.25,completed,Boxing event security
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-02,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-03,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-04,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,David Clarke,4567890123456789,Liverpool Street Station,2026-02-05,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,David Clarke,4567890123456789,Liverpool Street Station,2026-02-06,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-09,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift - contractor escort
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-10,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,David Clarke,4567890123456789,Liverpool Street Station,2026-02-11,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift - trespasser removed
+Delta Force,David Clarke,4567890123456789,Liverpool Street Station,2026-02-12,18:00,06:00,30,11.5,16.00,184.00,completed,Night shift
+Delta Force,David Clarke,4567890123456789,Battersea Power Station,2026-02-13,06:00,18:00,30,11.5,14.50,166.75,completed,Day shift
+Delta Force,Rachel Adams,5678901234567890,Wembley Stadium,2026-02-02,08:00,20:00,60,11.0,15.00,165.00,completed,Match day security
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-03,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-04,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-05,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol
+Delta Force,Rachel Adams,5678901234567890,Wembley Stadium,2026-02-06,08:00,20:00,60,11.0,15.00,165.00,completed,Match day security
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-09,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-10,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol - shoplifter detained
+Delta Force,Rachel Adams,5678901234567890,Wembley Stadium,2026-02-11,08:00,20:00,60,11.0,15.00,165.00,completed,Concert security
+Delta Force,Rachel Adams,5678901234567890,Regent Street Retail,2026-02-12,07:00,19:00,30,11.5,14.00,161.00,completed,Retail patrol
+Delta Force,Rachel Adams,5678901234567890,Wembley Stadium,2026-02-13,08:00,20:00,60,11.0,15.00,165.00,completed,Match day security

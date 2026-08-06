@@ -1,0 +1,334 @@
+contractor_id,contractor,Date,Location,Customer,Officer,Start,Finish,Hours,Rate,Amount,Status
+4542,AA Guard Ltd,16/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,RAJA Arslan Mushtaq,12:00,20:00,8,10.5,84,Confirmed
+4543,AA Guard Ltd,12/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,23:00,12,10.5,126,Confirmed
+4544,AA Guard Ltd,13/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4545,AA Guard Ltd,18/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4546,AA Guard Ltd,25/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4547,AA Guard Ltd,26/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4548,AA Guard Ltd,27/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4549,AA Guard Ltd,28/11/2022,Brighton Magistrates East Sussex BN2 0LG,OCS Security,MUHAMMAD AFTAB,08:00,16:00,8,10.5,84,Confirmed
+4550,AA Guard Ltd,03/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4551,AA Guard Ltd,04/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4552,AA Guard Ltd,23/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4553,AA Guard Ltd,31/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,08:00,18:00,10,10.5,105,Confirmed
+4554,AA Guard Ltd,07/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4555,AA Guard Ltd,14/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4556,AA Guard Ltd,15/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,MUHAMMAD AFTAB,10:00,16:00,6,10.5,63,Confirmed
+4557,AA Guard Ltd,20/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMAD AFTAB,10:00,20:00,10,10.5,105,Confirmed
+4558,AA Guard Ltd,21/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4559,AA Guard Ltd,22/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4560,AA Guard Ltd,28/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4561,AA Guard Ltd,29/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4562,AA Guard Ltd,03/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4563,AA Guard Ltd,04/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4564,AA Guard Ltd,10/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4565,AA Guard Ltd,11/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4566,AA Guard Ltd,12/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4567,AA Guard Ltd,18/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4568,AA Guard Ltd,19/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4569,AA Guard Ltd,26/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4570,AA Guard Ltd,10/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4571,AA Guard Ltd,11/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4572,AA Guard Ltd,12/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,10:00,17:00,7,10.5,73.5,Confirmed
+4573,AA Guard Ltd,17/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD AFTAB,11:00,22:00,11,10.5,115.5,Confirmed
+4574,AA Guard Ltd,27/03/2023,Zynga Brighton QRQ Building Queens Road Brighton,Securitas UK,MUHAMMAD AFTAB,19:00,07:00,12,10.5,126,Confirmed
+4575,AA Guard Ltd,28/03/2023,Zynga Brighton QRQ Building Queens Road Brighton,Securitas UK,MUHAMMAD AFTAB,19:00,07:00,12,10.5,126,Confirmed
+4576,AA Guard Ltd,31/03/2023,Zynga Brighton QRQ Building Queens Road Brighton,Securitas UK,MUHAMMAD AFTAB,19:00,07:00,12,10.5,126,Confirmed
+4577,AA Guard Ltd,11/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMED KOROTH KOVAL,18:00,07:00,13,10.5,136.5,Confirmed
+4578,AA Guard Ltd,12/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMED KOROTH KOVAL,18:00,07:00,13,10.5,136.5,Confirmed
+4579,AA Guard Ltd,13/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMED KOROTH KOVAL,18:00,07:00,13,10.5,136.5,Confirmed
+4580,AA Guard Ltd,15/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMED KOROTH KOVAL,18:00,02:35,8.58,10.5,90.09,Confirmed
+4581,AA Guard Ltd,11/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,11:00,20:00,9,10.5,94.5,Confirmed
+4582,AA Guard Ltd,14/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,10:00,20:00,10,10.5,105,Confirmed
+4583,AA Guard Ltd,15/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,10:00,16:00,6,10.5,63,Confirmed
+4584,AA Guard Ltd,16/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,11:00,20:00,9,10.5,94.5,Confirmed
+4585,AA Guard Ltd,18/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,11:00,20:00,9,10.5,94.5,Confirmed
+4586,AA Guard Ltd,19/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,10:00,20:00,10,10.5,105,Confirmed
+4587,AA Guard Ltd,26/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,MUHAMMED KOROTH KOVAL,10:00,20:00,10,10.5,105,Confirmed
+4588,AA Guard Ltd,16/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4589,AA Guard Ltd,17/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4590,AA Guard Ltd,18/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4591,AA Guard Ltd,19/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4592,AA Guard Ltd,21/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4593,AA Guard Ltd,22/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,ABDUL HANAN,07:00,19:00,12,10.5,126,Confirmed
+4594,AA Guard Ltd,04/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ABDUL HANAN,11:00,22:00,11,10.5,115.5,Confirmed
+4595,AA Guard Ltd,06/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ABDUL HANAN,11:00,22:00,11,10.5,115.5,Confirmed
+4596,AA Guard Ltd,11/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ABDUL HANAN,11:00,21:31,10.52,10.5,110.46,Confirmed
+4597,AA Guard Ltd,01/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,07:00,20:00,13,10.5,136.5,Confirmed
+4598,AA Guard Ltd,10/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4599,AA Guard Ltd,11/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4600,AA Guard Ltd,16/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4601,AA Guard Ltd,17/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4602,AA Guard Ltd,18/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4603,AA Guard Ltd,23/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4604,AA Guard Ltd,25/09/2022,"Homebse Horsham Broadbridge Heath Ret Pk, Broadbridge Heath RH12 3TQ",Brooknight Security Ltd,A Ainine,10:00,16:00,6,10.5,63,Confirmed
+4605,AA Guard Ltd,26/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4606,AA Guard Ltd,27/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4607,AA Guard Ltd,28/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4608,AA Guard Ltd,29/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,00:00,13,10.5,136.5,Confirmed
+4609,AA Guard Ltd,01/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4610,AA Guard Ltd,02/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4611,AA Guard Ltd,07/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4612,AA Guard Ltd,08/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4613,AA Guard Ltd,09/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4614,AA Guard Ltd,10/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4615,AA Guard Ltd,11/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4616,AA Guard Ltd,12/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4617,AA Guard Ltd,13/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4618,AA Guard Ltd,14/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4619,AA Guard Ltd,15/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4620,AA Guard Ltd,16/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4621,AA Guard Ltd,17/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4622,AA Guard Ltd,18/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4623,AA Guard Ltd,21/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4624,AA Guard Ltd,22/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4625,AA Guard Ltd,23/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4626,AA Guard Ltd,28/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4627,AA Guard Ltd,29/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4628,AA Guard Ltd,30/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4629,AA Guard Ltd,05/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4630,AA Guard Ltd,06/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4631,AA Guard Ltd,11/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,23:00,12,10.5,126,Confirmed
+4632,AA Guard Ltd,20/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,10:00,17:00,7,10.5,73.5,Confirmed
+4633,AA Guard Ltd,02/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,A Ainine,11:00,22:00,11,10.5,115.5,Confirmed
+4634,AA Guard Ltd,25/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,S Tariq,10:00,17:00,7,10.5,73.5,Confirmed
+4635,AA Guard Ltd,30/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,S Tariq,11:00,00:00,13,10.5,136.5,Confirmed
+4636,AA Guard Ltd,16/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,M Abdullah,07:00,19:00,12,10.5,126,Confirmed
+4637,AA Guard Ltd,17/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,M Abdullah,07:00,19:00,12,10.5,126,Confirmed
+4638,AA Guard Ltd,20/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,M Abdullah,07:00,19:00,12,10.5,126,Confirmed
+4639,AA Guard Ltd,22/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,M Abdullah,07:00,19:00,12,10.5,126,Confirmed
+4640,AA Guard Ltd,24/09/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,M Abdullah,11:00,22:00,11,10.5,115.5,Confirmed
+4641,AA Guard Ltd,05/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,M Abdullah,11:00,22:00,11,10.5,115.5,Confirmed
+4642,AA Guard Ltd,06/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,M Abdullah,11:00,22:00,11,10.5,115.5,Confirmed
+4643,AA Guard Ltd,14/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4644,AA Guard Ltd,15/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4645,AA Guard Ltd,16/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4646,AA Guard Ltd,17/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4647,AA Guard Ltd,18/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4648,AA Guard Ltd,24/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,12:00,00:00,12,10.5,126,Confirmed
+4649,AA Guard Ltd,25/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4650,AA Guard Ltd,26/09/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4651,AA Guard Ltd,01/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4652,AA Guard Ltd,02/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4653,AA Guard Ltd,03/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4654,AA Guard Ltd,04/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4655,AA Guard Ltd,10/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4656,AA Guard Ltd,11/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4657,AA Guard Ltd,12/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4658,AA Guard Ltd,18/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4659,AA Guard Ltd,19/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4660,AA Guard Ltd,20/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4661,AA Guard Ltd,26/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4662,AA Guard Ltd,27/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4663,AA Guard Ltd,28/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4664,AA Guard Ltd,04/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4665,AA Guard Ltd,11/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4666,AA Guard Ltd,12/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4667,AA Guard Ltd,13/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4668,AA Guard Ltd,18/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4669,AA Guard Ltd,19/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4670,AA Guard Ltd,20/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4671,AA Guard Ltd,21/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4672,AA Guard Ltd,25/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4673,AA Guard Ltd,26/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4674,AA Guard Ltd,27/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4675,AA Guard Ltd,29/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4676,AA Guard Ltd,05/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,F Rasheed,18:00,06:00,12,10.5,126,Confirmed
+4677,AA Guard Ltd,18/09/2022,"Homebse Horsham Broadbridge Heath Ret Pk, Broadbridge Heath RH12 3TQ",Brooknight Security Ltd,AQIB ALI,10:00,18:00,8,10.5,84,Confirmed
+4678,AA Guard Ltd,18/10/2022,Sovereign House BN1 1RA,Securitas UK,AQIB ALI,07:00,19:00,12,10.5,126,Confirmed
+4679,AA Guard Ltd,19/10/2022,Sovereign House BN1 1RA,Securitas UK,AQIB ALI,07:00,19:00,12,10.5,126,Confirmed
+4680,AA Guard Ltd,20/10/2022,Sovereign House BN1 1RA,Securitas UK,AQIB ALI,07:00,19:00,12,10.5,126,Confirmed
+4681,AA Guard Ltd,21/10/2022,Sovereign House BN1 1RA,Securitas UK,AQIB ALI,07:00,19:00,12,10.5,126,Confirmed
+4682,AA Guard Ltd,24/11/2022,Waitrose 110 Crowborough TN6 1DL,mitie services and security,AQIB ALI,11:00,19:00,8,10.5,84,Confirmed
+4683,AA Guard Ltd,25/11/2022,Waitrose 110 Crowborough TN6 1DL,mitie services and security,AQIB ALI,11:00,19:00,8,10.5,84,Confirmed
+4684,AA Guard Ltd,01/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,12:00,22:00,10,10.5,105,Confirmed
+4685,AA Guard Ltd,03/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,18:00,06:00,12,10.5,126,Confirmed
+4686,AA Guard Ltd,09/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,06:00,18:00,12,10.5,126,Confirmed
+4687,AA Guard Ltd,10/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,06:00,18:00,12,10.5,126,Confirmed
+4688,AA Guard Ltd,11/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,18:00,06:00,12,10.5,126,Confirmed
+4689,AA Guard Ltd,17/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,06:00,18:00,12,10.5,126,Confirmed
+4690,AA Guard Ltd,18/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,AQIB ALI,06:00,18:00,12,10.5,126,Confirmed
+4691,AA Guard Ltd,13/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AQIB ALI,10:00,20:00,10,10.5,105,Confirmed
+4692,AA Guard Ltd,03/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AQIB ALI,10:00,20:00,10,10.5,105,Confirmed
+4693,AA Guard Ltd,04/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4694,AA Guard Ltd,09/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4695,AA Guard Ltd,10/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4696,AA Guard Ltd,11/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,10:00,17:00,7,10.5,73.5,Confirmed
+4697,AA Guard Ltd,16/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4698,AA Guard Ltd,17/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4699,AA Guard Ltd,18/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,09:30,16:00,6.5,10.5,68.25,Confirmed
+4700,AA Guard Ltd,24/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,07:00,18:00,11,10.5,115.5,Confirmed
+4701,AA Guard Ltd,30/12/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,09:00,20:00,11,10.5,115.5,Confirmed
+4702,AA Guard Ltd,08/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,10:00,17:00,7,10.5,73.5,Confirmed
+4703,AA Guard Ltd,13/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4704,AA Guard Ltd,15/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,10:00,17:00,7,10.5,73.5,Confirmed
+4705,AA Guard Ltd,20/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4706,AA Guard Ltd,27/01/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4707,AA Guard Ltd,05/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,10:00,17:00,7,10.5,73.5,Confirmed
+4708,AA Guard Ltd,17/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4709,AA Guard Ltd,24/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4710,AA Guard Ltd,03/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4711,AA Guard Ltd,04/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4712,AA Guard Ltd,05/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,10:00,17:00,7,10.5,73.5,Confirmed
+4713,AA Guard Ltd,09/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,15:00,22:00,7,10.5,73.5,Confirmed
+4714,AA Guard Ltd,12/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,17:00,6,10.5,63,Confirmed
+4715,AA Guard Ltd,21/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4716,AA Guard Ltd,22/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4717,AA Guard Ltd,28/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4718,AA Guard Ltd,30/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,MUHAMMAD HAMAD LATIF,11:00,22:00,11,10.5,115.5,Confirmed
+4719,AA Guard Ltd,18/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,UMER MASOOD,07:00,19:00,12,10.5,126,Confirmed
+4720,AA Guard Ltd,19/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,UMER MASOOD,07:00,19:00,12,10.5,126,Confirmed
+4721,AA Guard Ltd,20/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,UMER MASOOD,07:00,19:00,12,10.5,126,Confirmed
+4722,AA Guard Ltd,03/10/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,UMER MASOOD,11:00,22:00,11,10.5,115.5,Confirmed
+4723,AA Guard Ltd,17/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,UMER MASOOD,12:00,20:00,8,10.5,84,Confirmed
+4724,AA Guard Ltd,18/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,UMER MASOOD,12:00,20:00,8,10.5,84,Confirmed
+4725,AA Guard Ltd,19/10/2022,Thorpe Park Resort Chertsey KT16 8PN,Paratus Limited,UMER MASOOD,12:00,20:00,8,10.5,84,Confirmed
+4726,AA Guard Ltd,21/09/2022,Brighton Brighton Railway Station Address Queens Road Brighton BN1 3XP,Servo Group,usama abbasi,07:00,20:00,13,10.5,136.5,Confirmed
+4727,AA Guard Ltd,20/10/2022,WoS Brighton 21 22 North Street Brighton Brighton and Hove BN1 1EB,UK PROTECTION LTD,ANEES WAJID,09:00,18:00,9,10.5,94.5,Confirmed
+4728,AA Guard Ltd,19/11/2022,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ANEES WAJID,11:00,22:00,11,10.5,115.5,Confirmed
+4729,AA Guard Ltd,25/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,ANEES WAJID,11:00,20:00,9,10.5,94.5,Confirmed
+4730,AA Guard Ltd,26/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,ANEES WAJID,12:00,20:00,8,10.5,84,Confirmed
+4731,AA Guard Ltd,27/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,ANEES WAJID,14:00,20:00,6,10.5,63,Confirmed
+4732,AA Guard Ltd,01/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,ANEES WAJID,11:00,20:00,9,10.5,94.5,Confirmed
+4733,AA Guard Ltd,02/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,ANEES WAJID,10:00,20:00,10,10.5,105,Confirmed
+4734,AA Guard Ltd,25/02/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ANEES WAJID,11:00,22:00,11,10.5,115.5,Confirmed
+4735,AA Guard Ltd,30/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,12:00,01:00,13,10.5,136.5,Confirmed
+4736,AA Guard Ltd,23/11/2022,Waitrose 110 Crowborough TN6 1DL,mitie services and security,ARSLAAN MOHAMMAD,10:00,18:00,8,10.5,84,Confirmed
+4737,AA Guard Ltd,26/11/2022,Waitrose 110 Crowborough TN6 1DL,mitie services and security,ARSLAAN MOHAMMAD,11:00,19:00,8,10.5,84,Confirmed
+4738,AA Guard Ltd,27/11/2022,Waitrose 110 Crowborough TN6 1DL,mitie services and security,ARSLAAN MOHAMMAD,10:00,16:00,6,10.5,63,Confirmed
+4739,AA Guard Ltd,28/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4740,AA Guard Ltd,02/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4741,AA Guard Ltd,04/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4742,AA Guard Ltd,06/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4743,AA Guard Ltd,07/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4744,AA Guard Ltd,08/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4745,AA Guard Ltd,09/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4746,AA Guard Ltd,10/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4747,AA Guard Ltd,12/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4748,AA Guard Ltd,13/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4749,AA Guard Ltd,14/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4750,AA Guard Ltd,15/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4751,AA Guard Ltd,16/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,ARSLAAN MOHAMMAD,18:00,06:00,12,10.5,126,Confirmed
+4752,AA Guard Ltd,12/01/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,ARSLAAN MOHAMMAD,10:00,20:00,10,10.5,105,Confirmed
+4753,AA Guard Ltd,02/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4754,AA Guard Ltd,04/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4755,AA Guard Ltd,08/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4756,AA Guard Ltd,10/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4757,AA Guard Ltd,12/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4758,AA Guard Ltd,13/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4759,AA Guard Ltd,14/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4760,AA Guard Ltd,17/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4761,AA Guard Ltd,18/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4762,AA Guard Ltd,19/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4763,AA Guard Ltd,22/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4764,AA Guard Ltd,23/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4765,AA Guard Ltd,24/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4766,AA Guard Ltd,25/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4767,AA Guard Ltd,26/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,ARSLAAN MOHAMMAD,11:00,00:00,13,10.5,136.5,Confirmed
+4768,AA Guard Ltd,31/10/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,12:00,02:07,14.11,10.5,148.16,Confirmed
+4769,AA Guard Ltd,02/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,18:00,07:00,13,10.5,136.5,Confirmed
+4770,AA Guard Ltd,03/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,18:00,06:00,12,10.5,126,Confirmed
+4771,AA Guard Ltd,05/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,18:00,07:00,13,10.5,136.5,Confirmed
+4772,AA Guard Ltd,17/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,18:00,06:00,12,10.5,126,Confirmed
+4773,AA Guard Ltd,18/12/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,MUHAMMAD FARHAN,18:00,06:00,12,10.5,126,Confirmed
+4774,AA Guard Ltd,23/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TASNEEM KAUSER,11:00,20:00,9,10.5,94.5,Confirmed
+4775,AA Guard Ltd,24/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TASNEEM KAUSER,10:00,20:00,10,10.5,105,Confirmed
+4776,AA Guard Ltd,25/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TASNEEM KAUSER,10:00,23:00,13,10.5,136.5,Confirmed
+4777,AA Guard Ltd,26/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TASNEEM KAUSER,10:00,00:17,14.29,10.5,150.04,Confirmed
+4778,AA Guard Ltd,01/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4779,AA Guard Ltd,02/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4780,AA Guard Ltd,03/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4781,AA Guard Ltd,04/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4782,AA Guard Ltd,05/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4783,AA Guard Ltd,06/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4784,AA Guard Ltd,07/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4785,AA Guard Ltd,08/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4786,AA Guard Ltd,09/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4787,AA Guard Ltd,10/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4788,AA Guard Ltd,11/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4789,AA Guard Ltd,12/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4790,AA Guard Ltd,13/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4791,AA Guard Ltd,14/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4792,AA Guard Ltd,15/11/2022,Wiston House BN44 3DZ,Galaxon Services Ltd,Muhammad Zameer ul haq,18:00,07:00,13,10.5,136.5,Confirmed
+4793,AA Guard Ltd,09/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4794,AA Guard Ltd,14/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4795,AA Guard Ltd,15/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,10:00,16:00,6,10.5,63,Confirmed
+4796,AA Guard Ltd,16/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4797,AA Guard Ltd,21/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4798,AA Guard Ltd,23/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4799,AA Guard Ltd,28/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4800,AA Guard Ltd,30/01/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4801,AA Guard Ltd,04/02/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4802,AA Guard Ltd,06/02/2023,Waitrose 240 Biggin Hill TN16 3BB,mitie services and security,Muhammad Zameer ul haq,12:00,20:00,8,10.5,84,Confirmed
+4803,AA Guard Ltd,11/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,12:00,20:00,8,10.5,84,Confirmed
+4804,AA Guard Ltd,12/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,12:00,20:00,8,10.5,84,Confirmed
+4805,AA Guard Ltd,13/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4806,AA Guard Ltd,14/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4807,AA Guard Ltd,18/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,12:00,20:00,8,10.5,84,Confirmed
+4808,AA Guard Ltd,19/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,12:00,20:00,8,10.5,84,Confirmed
+4809,AA Guard Ltd,20/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4810,AA Guard Ltd,21/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4811,AA Guard Ltd,22/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,10:00,16:00,6,10.5,63,Confirmed
+4812,AA Guard Ltd,25/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,12:00,20:00,8,10.5,84,Confirmed
+4813,AA Guard Ltd,27/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4814,AA Guard Ltd,28/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,11:00,20:00,9,10.5,94.5,Confirmed
+4815,AA Guard Ltd,29/01/2023,Waitrose 653 Hailsham BN27 1BE,mitie services and security,KAMALDEEP SINGH,10:00,20:00,10,10.5,105,Confirmed
+4816,AA Guard Ltd,01/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,AHMER MAHMOOD,18:30,07:30,13,10.5,136.5,Confirmed
+4817,AA Guard Ltd,08/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4818,AA Guard Ltd,09/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4819,AA Guard Ltd,10/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4820,AA Guard Ltd,15/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4821,AA Guard Ltd,16/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4822,AA Guard Ltd,17/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4823,AA Guard Ltd,22/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4824,AA Guard Ltd,23/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4825,AA Guard Ltd,24/02/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,23:00,13,10.5,136.5,Confirmed
+4826,AA Guard Ltd,01/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4827,AA Guard Ltd,02/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4828,AA Guard Ltd,03/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4829,AA Guard Ltd,08/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4830,AA Guard Ltd,09/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4831,AA Guard Ltd,10/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4832,AA Guard Ltd,15/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,AHMER MAHMOOD,08:00,21:00,13,10.5,136.5,Confirmed
+4833,AA Guard Ltd,22/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,11:00,20:00,9,10.5,94.5,Confirmed
+4834,AA Guard Ltd,24/03/2023,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,AHMER MAHMOOD,10:00,20:00,10,10.5,105,Confirmed
+4835,AA Guard Ltd,10/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,ATIQ RAHMAN,08:00,21:00,13,10.5,136.5,Confirmed
+4836,AA Guard Ltd,11/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,ATIQ RAHMAN,08:00,21:00,13,10.5,136.5,Confirmed
+4837,AA Guard Ltd,13/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,ATIQ RAHMAN,08:00,21:00,13,10.5,136.5,Confirmed
+4838,AA Guard Ltd,14/03/2023,Aldi London Road Brighton BN1 4JA,Amberstone Security Ltd,ATIQ RAHMAN,08:00,21:00,13,10.5,136.5,Confirmed
+4839,AA Guard Ltd,18/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4840,AA Guard Ltd,19/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,10:00,17:00,7,10.5,73.5,Confirmed
+4841,AA Guard Ltd,20/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4842,AA Guard Ltd,23/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4843,AA Guard Ltd,24/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4844,AA Guard Ltd,25/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4845,AA Guard Ltd,26/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,10:00,17:00,7,10.5,73.5,Confirmed
+4846,AA Guard Ltd,27/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4847,AA Guard Ltd,29/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,22:00,11,10.5,115.5,Confirmed
+4848,AA Guard Ltd,31/03/2023,Aldi Lewes Road Brighton 40 BN2 3QA,Amberstone Security Ltd,ATIQ RAHMAN,11:00,21:11,10.19,10.5,106.99,Confirmed
+4849,AA Guard Ltd,04/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4850,AA Guard Ltd,05/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4851,AA Guard Ltd,06/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4852,AA Guard Ltd,07/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4853,AA Guard Ltd,08/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4854,AA Guard Ltd,11/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4855,AA Guard Ltd,12/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4856,AA Guard Ltd,13/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4857,AA Guard Ltd,16/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4858,AA Guard Ltd,17/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4859,AA Guard Ltd,20/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4860,AA Guard Ltd,22/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4861,AA Guard Ltd,23/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4862,AA Guard Ltd,24/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4863,AA Guard Ltd,25/02/2023,Delphi Stonehouse Brunel Way Stonehouse GL10 3SX,Atlian Servest,MUHAMMAD ZAYED AMEEN,11:00,00:00,13,10.5,136.5,Confirmed
+4864,AA Guard Ltd,16/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4865,AA Guard Ltd,17/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4866,AA Guard Ltd,18/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4867,AA Guard Ltd,21/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4868,AA Guard Ltd,22/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4869,AA Guard Ltd,23/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4870,AA Guard Ltd,24/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4871,AA Guard Ltd,25/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4872,AA Guard Ltd,26/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4873,AA Guard Ltd,29/11/2022,507260 Waitrose 556 Edenbridge TN8 5LN,mitie services and security,TARIQ MUGHAL,18:00,07:00,13,10.5,136.5,Confirmed
+4874,AA Guard Ltd,28/03/2023,Zynga Brighton QRQ Building Queens Road Brighton,Securitas UK,TARIQ MUGHAL,07:00,00:00,17,10.5,178.5,Confirmed

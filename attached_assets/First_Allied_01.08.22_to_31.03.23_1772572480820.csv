@@ -1,0 +1,201 @@
+Date,Location,Customer,Officer,Start,Finish,Hours,Rate,Amount,Status
+01/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+06/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+07/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+08/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+09/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+10/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+11/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+12/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+13/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+14/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+15/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+17/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,23:00,13,10,130,Confirmed
+18/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+19/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+20/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+21/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,12:00,04:00,16,10,160,Confirmed
+22/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+24/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+25/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+26/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+27/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+28/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+29/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,18:00,8,10,80,Confirmed
+30/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+31/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,23:00,13,10,130,Confirmed
+06/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+07/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+08/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+09/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+12/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+13/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+14/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+15/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+16/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+17/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+19/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+20/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+21/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+23/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+26/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+27/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+28/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,22:00,12,10,120,Confirmed
+29/09/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,TERRY ATSERUNBOMA,10:00,01:30,15.5,10,155,Confirmed
+01/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+03/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+05/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,20:25,10.42,10,104.2,Confirmed
+06/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+08/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+09/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+11/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+12/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+13/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+14/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+15/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+17/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+18/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+20/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+21/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+22/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+24/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+26/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+28/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,21:00,9,10,90,Confirmed
+29/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,21:00,9,10,90,Confirmed
+30/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+31/10/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+01/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+06/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+07/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+08/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+09/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+10/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+11/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+12/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+13/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+14/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+15/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+17/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,22:25,12.42,10,124.2,Confirmed
+18/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+20/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+23/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+25/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+26/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+27/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+28/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+29/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+30/11/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+01/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,23:13,13.21,10,132.1,Confirmed
+04/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+05/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+06/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+07/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+08/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+09/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+13/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+14/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+15/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,21:00,9,10,90,Confirmed
+16/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,15:15,21:15,6,10,60,Confirmed
+19/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+20/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+21/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+22/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+27/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,19:00,9,10,90,Confirmed
+28/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+29/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,23:00,13,10,130,Confirmed
+31/12/2022,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,19:00,9,10,90,Confirmed
+01/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+04/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+05/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+06/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+07/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+10/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+11/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+13/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+14/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,20:43,10.71,10,107.1,Confirmed
+15/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+17/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+18/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+20/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+21/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+22/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+24/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+28/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+29/01/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+02/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+04/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+05/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+06/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+07/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+08/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+09/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+11/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+12/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+13/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+14/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+15/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+18/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+19/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+22/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+24/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+25/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:50,11.83,10,118.3,Confirmed
+27/02/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+01/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+02/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+03/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,22:25,12.42,10,124.2,Confirmed
+05/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+06/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+07/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+08/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+10/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+11/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+12/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+13/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+17/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+18/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+19/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+20/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+21/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+22/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+23/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+24/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+26/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,12:00,18:00,6,10,60,Confirmed
+28/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+29/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+31/03/2023,Hedonism Wines 3 7 Davies Street London W1J 3LD,Grosvenor Security Services,TERRY ATSERUNBOMA,10:00,21:00,11,10,110,Confirmed
+16/01/2023,ISG Oak Cancer Centre Cotswold Road Sutton SM2 5NF,O Neil & Brennan,Abdul Jabar,07:30,17:30,10,10,100,Confirmed
+17/01/2023,ISG Oak Cancer Centre Cotswold Road Sutton SM2 5NF,O Neil & Brennan,AHMED AHMED,07:30,17:30,10,10,100,Confirmed
+18/01/2023,ISG Oak Cancer Centre Cotswold Road Sutton SM2 5NF,O Neil & Brennan,AHMED AHMED,07:30,17:30,10,10,100,Confirmed
+02/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+10/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+11/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+12/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+13/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+15/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+16/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+17/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+24/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+28/08/2022,Hedonism Wine Store3 7 Davies St London W1K 3LD,Grosvenor,﻿Abdul Majid  Hamid ,10:00,23:00,13,10,130,Confirmed
+24/01/2023,ISG Oak Cancer Centre Cotswold Road Sutton SM2 5NF,O Neil & Brennan,﻿Abdul Majid Hamid ,07:30,17:30,10,10,100,Confirmed
+25/01/2023,ISG Oak Cancer Centre Cotswold Road Sutton SM2 5NF,O Neil & Brennan,﻿Abdul Majid Hamid ,07:30,17:30,10,10,100,Confirmed
