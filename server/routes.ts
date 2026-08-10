@@ -15286,9 +15286,17 @@ Respond in JSON format:
       const user = (req as any).user as User;
       if (!user.tenantId) return res.json({});
 
-      const [allEmployees, allShifts, allIncidents, allInvoices, allSuppliers, allSites, allUsers, allOnboarding, allVetting, allJobPostings, allApplicants, allAuditLogs, clientCountResult] = await Promise.all([
+      const now = new Date();
+      const todayStr = now.toISOString().split("T")[0];
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Shifts and audit logs are queried as targeted aggregates (not full-table
+      // fetches) because tenants can have hundreds of thousands of historical
+      // shift rows — loading them all into memory just to compute today's
+      // counts or the last 8 activity entries caused OOM/timeout failures
+      // (502s) once real production-scale data was in place.
+      const [allEmployees, allIncidents, allInvoices, allSuppliers, allSites, allUsers, allOnboarding, allVetting, allJobPostings, allApplicants, clientCountResult, todayShiftStatusResult, recentAuditLogsResult] = await Promise.all([
         storage.getEmployeesByTenant(user.tenantId),
-        storage.getShiftsByTenant(user.tenantId),
         storage.getIncidentsByTenant(user.tenantId),
         storage.getInvoicesByTenant(user.tenantId),
         storage.getSuppliersByTenant(user.tenantId),
@@ -15298,20 +15306,26 @@ Respond in JSON format:
         storage.getVettingRecordsByTenant(user.tenantId),
         storage.getJobPostingsByTenant(user.tenantId),
         storage.getApplicantsByTenant(user.tenantId),
-        storage.getAuditLogs(user.tenantId),
         pool.query("SELECT COUNT(*) as count FROM clients WHERE tenant_id = $1", [user.tenantId]),
+        pool.query("SELECT status, COUNT(*)::int as count FROM shifts WHERE tenant_id = $1 AND date = $2 GROUP BY status", [user.tenantId, todayStr]),
+        pool.query(
+          `SELECT id, action, entity_type as "entityType", entity_id as "entityId", details, created_at as "createdAt", user_id as "userId"
+           FROM audit_logs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 8`,
+          [user.tenantId]
+        ),
       ]);
       const clientCount = parseInt(clientCountResult.rows[0]?.count || "0");
 
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
-      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      const todayShifts = allShifts.filter(s => s.date === todayStr);
-      const scheduledToday = todayShifts.filter(s => s.status === "scheduled").length;
-      const activeToday = todayShifts.filter(s => s.status === "in_progress").length;
-      const completedToday = todayShifts.filter(s => s.status === "completed").length;
-      const noShowToday = todayShifts.filter(s => s.status === "no_show").length;
+      const shiftCountsByStatus: Record<string, number> = {};
+      let todayTotal = 0;
+      for (const row of todayShiftStatusResult.rows) {
+        shiftCountsByStatus[row.status] = row.count;
+        todayTotal += row.count;
+      }
+      const scheduledToday = shiftCountsByStatus["scheduled"] || 0;
+      const activeToday = shiftCountsByStatus["in_progress"] || 0;
+      const completedToday = shiftCountsByStatus["completed"] || 0;
+      const noShowToday = shiftCountsByStatus["no_show"] || 0;
 
       const siaExpiring = allEmployees.filter(e => {
         if (!e.siaExpiryDate) return false;
@@ -15366,15 +15380,7 @@ Respond in JSON format:
       const openJobs = allJobPostings.filter(j => j.status === "open" || j.status === "active").length;
       const newApplicants = allApplicants.filter(a => a.status === "applied" || a.status === "new").length;
 
-      const recentActivity = allAuditLogs.slice(0, 8).map(log => ({
-        id: log.id,
-        action: log.action,
-        entityType: log.entityType,
-        entityId: log.entityId,
-        details: log.details,
-        createdAt: log.createdAt,
-        userId: log.userId,
-      }));
+      const recentActivity = recentAuditLogsResult.rows;
 
       const currentlyAbsent = await storage.getAbsencesByTenant(user.tenantId, { status: "open" });
 
@@ -15399,7 +15405,7 @@ Respond in JSON format:
           total: allSuppliers.length,
         },
         shifts: {
-          todayTotal: todayShifts.length,
+          todayTotal,
           scheduled: scheduledToday,
           active: activeToday,
           completed: completedToday,

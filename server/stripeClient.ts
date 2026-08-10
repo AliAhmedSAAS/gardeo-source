@@ -115,10 +115,12 @@ export async function getStripeSync() {
     const { StripeSync } = await import('stripe-replit-sync');
     const secretKey = await getStripeSecretKey();
 
+    const { isLocalDb } = await import('./db');
     stripeSync = new StripeSync({
       poolConfig: {
         connectionString: process.env.DATABASE_URL!,
         max: 2,
+        ssl: isLocalDb ? false : { rejectUnauthorized: false },
       },
       stripeSecretKey: secretKey,
     });
