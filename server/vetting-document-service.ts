@@ -92,6 +92,9 @@ type VettingEmployeeSource = Employee & {
     agreeSiaCriminalCheck?: string | null;
     understandConsequences?: string | null;
     agreeCreditCheck?: string | null;
+    signaturePrintName?: string | null;
+    signatureData?: string | null;
+    signatureDate?: string | null;
   } | null;
 };
 
@@ -208,6 +211,10 @@ export function buildVettingMergeContext(
     GENDER: employee.gender || "",
     NATIONALITY: employee.nationality || "",
     HEARD_ABOUT_ROLE: String(screening.heardAboutRole || "").trim(),
+    APPLICANT_PRINT_NAME:
+      String(screening.signaturePrintName || "").trim() ||
+      employeeName,
+    APPLICANT_SIGNATURE_DATE: formatUkDate(screening.signatureDate) || formatUkDate(new Date()),
     CRIMINAL_CONVICTION: criminalConviction,
     CRIMINAL_CONVICTION_DETAILS: String(screening.criminalConvictionDetails || "").trim(),
     BEEN_BANKRUPT: beenBankrupt,
@@ -674,7 +681,7 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
     }
 
     if (/^NAME:\s*_+/i.test(text)) {
-      paragraphs[i] = setParagraphText(paragraphs[i], `NAME: ${ctx.EMPLOYEE_NAME}`);
+      paragraphs[i] = setParagraphText(paragraphs[i], `NAME: ${ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME}`);
       continue;
     }
     if (/^N\.I:\s*_+/i.test(text)) {
@@ -691,6 +698,61 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
     }
     if (text.startsWith("Position:") && text.toLowerCase().includes("vetting officer")) {
       paragraphs[i] = setParagraphText(paragraphs[i], `Position: ${ctx.HR_SIGNATORY_POSITION}`);
+      continue;
+    }
+
+    // Applicant name + signature blocks (appear on multiple pages of SF 01 and similar forms)
+    if (/^I\s+_+\s*CERTIFY/i.test(text) || /^I\s+_{5,}/i.test(text)) {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      if (name) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          text.replace(/^I\s+_+/i, `I ${name} `).replace(/\s+/g, " ").trim(),
+        );
+      }
+      continue;
+    }
+    if (/^APPLICANTS?\s+SIGNATURE/i.test(text)) {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT;
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        `APPLICANTS SIGNATURE: ${name} __APPLICANT_SIG_IMG__                    DATE: ${date}`,
+      );
+      continue;
+    }
+    // Combined PRINT NAME / SIGN lines (check before plain "Print Name")
+    if (/^PRINT NAME/i.test(text) && /\bSIGN\b/i.test(text)) {
+      const prev = i > 0 ? getParagraphText(paragraphs[i - 1]).toUpperCase() : "";
+      const office =
+        prev.includes("I HAVE CHECKED") ||
+        prev.includes("OFFICE USE") ||
+        prev.includes("INFORMATION IS CORRECT AT TIME OF INTERVIEW");
+      if (!office) {
+        const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+        if (name) {
+          paragraphs[i] = setParagraphText(
+            paragraphs[i],
+            `PRINT NAME: ${name}          SIGN: ${name} __APPLICANT_SIG_IMG__`,
+          );
+        }
+      }
+      continue;
+    }
+    if (/^Print Name/i.test(text)) {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      if (name) paragraphs[i] = setParagraphText(paragraphs[i], `Print Name: ${name}`);
+      continue;
+    }
+    if (/^Signature[_:\s]/i.test(text) || /^Signature_{2,}/i.test(text) || /^Signature…/i.test(text) || text === "Signature________________________") {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      // Text placeholder kept for image injection pass; still put printed name as fallback.
+      paragraphs[i] = setParagraphText(paragraphs[i], `Signature: ${name} __APPLICANT_SIG_IMG__`);
+      continue;
+    }
+    if (/^Date\s*_+/i.test(text) || /^Date\s*_{3,}/i.test(text) || text.startsWith("Date ________")) {
+      const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT;
+      if (date) paragraphs[i] = setParagraphText(paragraphs[i], `Date: ${date}`);
       continue;
     }
   }
@@ -841,9 +903,15 @@ async function mergeDocxTemplate(
   templatePath: string,
   ctx: VettingMergeContext,
   postProcess?: (xml: string) => string,
+  signatureDataUrl?: string | null,
 ): Promise<Buffer> {
   const fileData = fs.readFileSync(templatePath);
   const zip = await JSZip.loadAsync(fileData);
+
+  let signatureRelId: string | null = null;
+  if (signatureDataUrl) {
+    signatureRelId = await embedSignatureImage(zip, signatureDataUrl);
+  }
 
   const xmlPaths = Object.keys(zip.files).filter(
     (name) => name.startsWith("word/") && name.endsWith(".xml") && !name.includes("_rels"),
@@ -855,10 +923,137 @@ async function mergeDocxTemplate(
     const content = await entry.async("string");
     let merged = applyReplacements(content, ctx);
     if (postProcess) merged = postProcess(merged);
+    if (signatureRelId && xmlPath === "word/document.xml") {
+      merged = injectApplicantSignatureDrawings(merged, signatureRelId, ctx);
+    }
     zip.file(xmlPath, merged);
   }
 
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
+function parseDataUrlImage(dataUrl: string): { ext: "png" | "jpg"; buffer: Buffer } | null {
+  const match = String(dataUrl || "").match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/i);
+  if (!match) return null;
+  const ext = match[1].toLowerCase() === "png" ? "png" : "jpg";
+  try {
+    return { ext, buffer: Buffer.from(match[2], "base64") };
+  } catch {
+    return null;
+  }
+}
+
+async function embedSignatureImage(zip: JSZip, signatureDataUrl: string): Promise<string | null> {
+  const parsed = parseDataUrlImage(signatureDataUrl);
+  if (!parsed) return null;
+
+  const mediaName = `applicant_signature.${parsed.ext}`;
+  const mediaPath = `word/media/${mediaName}`;
+  zip.file(mediaPath, parsed.buffer);
+
+  const contentTypesPath = "[Content_Types].xml";
+  const ctEntry = zip.file(contentTypesPath);
+  if (ctEntry) {
+    let ct = await ctEntry.async("string");
+    const pngDefault = '<Default Extension="png" ContentType="image/png"/>';
+    const jpgDefault = '<Default Extension="jpg" ContentType="image/jpeg"/>';
+    const jpegDefault = '<Default Extension="jpeg" ContentType="image/jpeg"/>';
+    if (parsed.ext === "png" && !ct.includes('Extension="png"')) {
+      ct = ct.replace("<Default ", `${pngDefault}<Default `);
+    }
+    if (parsed.ext === "jpg") {
+      if (!ct.includes('Extension="jpg"')) ct = ct.replace("<Default ", `${jpgDefault}<Default `);
+      if (!ct.includes('Extension="jpeg"')) ct = ct.replace("<Default ", `${jpegDefault}<Default `);
+    }
+    zip.file(contentTypesPath, ct);
+  }
+
+  const relsPath = "word/_rels/document.xml.rels";
+  const relsEntry = zip.file(relsPath);
+  if (!relsEntry) return null;
+  let rels = await relsEntry.async("string");
+  const ids = Array.from(rels.matchAll(/Id="rId(\d+)"/g)).map((m) => parseInt(m[1], 10));
+  const nextId = (ids.length ? Math.max(...ids) : 1) + 1;
+  const rId = `rId${nextId}`;
+  const relType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+  if (!rels.includes("</Relationships>")) return null;
+  rels = rels.replace(
+    "</Relationships>",
+    `<Relationship Id="${rId}" Type="${relType}" Target="media/${mediaName}"/></Relationships>`,
+  );
+  zip.file(relsPath, rels);
+  return rId;
+}
+
+function signatureDrawingXml(rId: string): string {
+  // ~2.2" wide x 0.7" tall
+  const cx = 2016000;
+  const cy = 640080;
+  const docPrId = 9000 + Math.floor(Math.random() * 1000);
+  return (
+    `<w:r><w:drawing>` +
+    `<wp:inline distT="0" distB="0" distL="0" distR="0" ` +
+    `xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ` +
+    `xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ` +
+    `xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" ` +
+    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+    `<wp:extent cx="${cx}" cy="${cy}"/>` +
+    `<wp:docPr id="${docPrId}" name="ApplicantSignature"/>` +
+    `<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+    `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
+    `<pic:pic>` +
+    `<pic:nvPicPr><pic:cNvPr id="0" name="applicant_signature"/><pic:cNvPicPr/></pic:nvPicPr>` +
+    `<pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+    `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+    `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`
+  );
+}
+
+function injectApplicantSignatureDrawings(xml: string, rId: string, ctx: VettingMergeContext): string {
+  const paragraphs = Array.from(xml.matchAll(PARA_REGEX)).map((m) => m[0]);
+  if (paragraphs.length === 0) return xml;
+  const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME || "";
+  const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT || "";
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    if (paragraphs[i].includes("<w:drawing>")) continue;
+    const text = getParagraphText(paragraphs[i]).replace(/\u00a0/g, " ").trim();
+    const upper = text.toUpperCase();
+
+    if (text.includes("__APPLICANT_SIG_IMG__")) {
+      const label = text.replace("__APPLICANT_SIG_IMG__", "").replace(/\s+/g, " ").trim() || `Signature: ${name}`;
+      paragraphs[i] = replaceParagraphRuns(
+        paragraphs[i],
+        plainTextRun(`${label} `) + signatureDrawingXml(rId),
+      );
+      continue;
+    }
+
+    if (/^APPLICANTS?\s+SIGNATURE/i.test(text)) {
+      paragraphs[i] = replaceParagraphRuns(
+        paragraphs[i],
+        plainTextRun("APPLICANTS SIGNATURE: ") +
+          signatureDrawingXml(rId) +
+          plainTextRun(`    DATE: ${date}`),
+      );
+      continue;
+    }
+
+    // Only inject into explicit Signature label lines (not SIGN: office-use / signatory lines)
+    if (
+      /^SIGNATURE\s*:/i.test(text) &&
+      !upper.includes("SIGNATORY")
+    ) {
+      paragraphs[i] = replaceParagraphRuns(
+        paragraphs[i],
+        plainTextRun(`Signature: ${name} `) + signatureDrawingXml(rId),
+      );
+    }
+  }
+
+  let idx = 0;
+  return xml.replace(PARA_REGEX, () => paragraphs[idx++] ?? "");
 }
 
 function resolveTemplatePath(form: VettingDocumentForm): string {
@@ -923,7 +1118,12 @@ export async function generateVettingDocument(
     form.code === "sf08"
       ? (xml: string) => applyReferenceTrackerFills(xml, ctx, employee.employmentHistory, employee.references)
       : undefined;
-  const buffer = await mergeDocxTemplate(templatePath, ctx, postProcess);
+  const buffer = await mergeDocxTemplate(
+    templatePath,
+    ctx,
+    postProcess,
+    employee.screeningAnswers?.signatureData || null,
+  );
   const safeName = ctx.EMPLOYEE_NAME.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
   const base = form.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
   return {

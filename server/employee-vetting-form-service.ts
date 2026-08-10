@@ -672,7 +672,9 @@ export async function getLatestVettingFormAnswers(
           data.agreeSiaCriminalCheck ||
           data.agreeCreditCheck ||
           data.maritalStatus ||
-          data.carOwner,
+          data.carOwner ||
+          data.signaturePrintName ||
+          data.signatureData,
       );
     }) ||
     rows[0];
