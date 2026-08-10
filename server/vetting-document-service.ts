@@ -927,6 +927,16 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
     }
 
     // Applicant name + signature blocks
+    if (/^I\s+_+\s*agree\b/i.test(text) || /^I\s+[.…_]{5,}\s*agree\b/i.test(text)) {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      if (name) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          text.replace(/^I\s+[.…_\s]+/i, `I ${name} `).replace(/\s+/g, " ").trim(),
+        );
+      }
+      continue;
+    }
     if (/^I\s+_+\s*CERTIFY/i.test(text) || /^I\s+_{5,}/i.test(text)) {
       const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
       if (name) {
@@ -935,6 +945,11 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
           text.replace(/^I\s+_+/i, `I ${name} `).replace(/\s+/g, " ").trim(),
         );
       }
+      continue;
+    }
+    if (/^Signed:\s*_+/i.test(text)) {
+      const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
+      paragraphs[i] = setParagraphText(paragraphs[i], `Signed: ${name} __APPLICANT_SIG_IMG__`);
       continue;
     }
     if (/^APPLICANT'?S?\s+SIGNATURE/i.test(text)) {
@@ -994,14 +1009,27 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
     }
     if (upper === "DATE:" || /^Date\s*_+/i.test(text) || /^Date\s*_{3,}/i.test(text) || text.startsWith("Date ________")) {
       const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT;
-      // Avoid office-use "Date:" under associated documents when previous is Seen/Copy.
       const prev = i > 0 ? getParagraphText(paragraphs[i - 1]).toUpperCase() : "";
-      if (prev.includes("☐ SEEN") || prev === "SEEN" || prev.includes("COPY RETAINED")) {
+      if (
+        prev.includes("☐ SEEN") ||
+        prev === "SEEN" ||
+        prev.includes("COPY RETAINED") ||
+        prev.includes("RECEIVED BY") ||
+        prev.includes("FILE REF") ||
+        prev.includes("FOR OFFICE USE")
+      ) {
         continue;
       }
-      if (upper === "DATE:" && date) {
-        i = fillNextBlankParagraph(paragraphs, i, date);
-      } else if (date) {
+      // Exact "Date:" label in office-use tables — leave blank unless it looks like a signature date line.
+      if (upper === "DATE:" && !looksLikeBlankFormLine(text)) {
+        // Prefer filling the next blank value cell (applicant declaration layout).
+        const next = i + 1 < paragraphs.length ? getParagraphText(paragraphs[i + 1]).replace(/\u00a0/g, " ").trim() : "";
+        if (!next && date) {
+          i = fillNextBlankParagraph(paragraphs, i, date);
+        }
+        continue;
+      }
+      if (date) {
         paragraphs[i] = setParagraphText(paragraphs[i], `Date: ${date}`);
       }
       continue;
@@ -1295,14 +1323,17 @@ function injectApplicantSignatureDrawings(xml: string, rId: string, ctx: Vetting
       continue;
     }
 
-    // Only inject into explicit Signature label lines (not SIGN: office-use / signatory lines)
+    // Only inject into Signed/Signature lines that already carry a name or blank underline
     if (
-      /^SIGNATURE\s*:/i.test(text) &&
-      !upper.includes("SIGNATORY")
+      (/^SIGNATURE\s*:/i.test(text) || /^SIGNED\s*:/i.test(text)) &&
+      !upper.includes("SIGNATORY") &&
+      !/^SIGNED:\s*$/i.test(text) &&
+      !/^SIGNATURE:\s*$/i.test(text)
     ) {
       paragraphs[i] = replaceParagraphRuns(
         paragraphs[i],
-        plainTextRun(`Signature: ${name} `) + signatureDrawingXml(rId),
+        plainTextRun(/^SIGNED/i.test(text) ? `Signed: ${name} ` : `Signature: ${name} `) +
+          signatureDrawingXml(rId),
       );
     }
   }
