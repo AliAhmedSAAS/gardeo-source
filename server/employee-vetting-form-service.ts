@@ -647,6 +647,40 @@ function tokenExpired(row: EmployeeVettingFormToken): boolean {
   return row.expiresAt.getTime() < Date.now();
 }
 
+/** Latest saved/submitted public vetting form answers for document merges. */
+export async function getLatestVettingFormAnswers(
+  employeeId: number,
+): Promise<Partial<VettingFormPayload> | null> {
+  const rows = await db
+    .select()
+    .from(employeeVettingFormTokens)
+    .where(eq(employeeVettingFormTokens.employeeId, employeeId))
+    .orderBy(desc(employeeVettingFormTokens.createdAt))
+    .limit(10);
+
+  // Prefer submitted forms — NULL submittedAt sorts first under DESC in Postgres,
+  // so we cannot rely on ORDER BY submitted_at alone.
+  const preferred =
+    rows.find((r) => r.submittedAt) ||
+    rows.find((r) => {
+      const data = r.formData as Record<string, unknown> | null;
+      if (!data || typeof data !== "object") return false;
+      return Boolean(
+        data.criminalConviction ||
+          data.beenBankrupt ||
+          data.hasCcj ||
+          data.agreeSiaCriminalCheck ||
+          data.agreeCreditCheck ||
+          data.maritalStatus ||
+          data.carOwner,
+      );
+    }) ||
+    rows[0];
+
+  if (!preferred?.formData || typeof preferred.formData !== "object") return null;
+  return preferred.formData as Partial<VettingFormPayload>;
+}
+
 export async function createEmployeeVettingFormToken(params: {
   tenantId: number | null;
   employeeId: number;

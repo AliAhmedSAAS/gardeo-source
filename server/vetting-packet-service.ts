@@ -67,12 +67,14 @@ export async function getVettingPacketByToken(token: string) {
 
   const empUser = employee.userId ? await storage.getUser(employee.userId) : null;
   const { staffProfileStorage } = await import("./staff-profile-storage");
-  const [emergencyContacts, bankDetails, employmentHistory, references, extras] = await Promise.all([
+  const { getLatestVettingFormAnswers } = await import("./employee-vetting-form-service");
+  const [emergencyContacts, bankDetails, employmentHistory, references, extras, screeningAnswers] = await Promise.all([
     storage.getEmergencyContacts(row.employeeId),
     storage.getBankDetails(row.employeeId),
     storage.getEmploymentHistory(row.employeeId),
     storage.getReferences(row.employeeId),
     staffProfileStorage.getStaffProfileExtras(row.employeeId),
+    getLatestVettingFormAnswers(row.employeeId),
   ]);
 
   const available = new Set(
@@ -103,6 +105,7 @@ export async function getVettingPacketByToken(token: string) {
         drivingLicences: extras.drivingLicences,
         health: extras.health,
         education: extras.education,
+        screeningAnswers,
       },
       empUser,
     );

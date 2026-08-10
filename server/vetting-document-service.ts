@@ -79,6 +79,20 @@ type VettingEmployeeSource = Employee & {
     screeningComments?: string | null;
     referenceKind?: string | null;
   }>;
+  /** Latest public vetting-form answers (screening / yes-no declarations). */
+  screeningAnswers?: {
+    heardAboutRole?: string | null;
+    carOwner?: string | null;
+    maritalStatus?: string | null;
+    criminalConviction?: string | null;
+    criminalConvictionDetails?: string | null;
+    beenBankrupt?: string | null;
+    hasCcj?: string | null;
+    objectToCreditAgency?: string | null;
+    agreeSiaCriminalCheck?: string | null;
+    understandConsequences?: string | null;
+    agreeCreditCheck?: string | null;
+  } | null;
 };
 
 export type VettingMergeContext = Record<string, string>;
@@ -131,9 +145,18 @@ export function buildVettingMergeContext(
   const fourthHistory = history[3] || null;
   const fifthHistory = history[4] || null;
   const drivingLicenceNumber = employee.drivingLicences?.[0]?.licenceNumber || "";
-  const carOwnerRaw = String(employee.carOwner || "").trim().toLowerCase();
+  const screening = employee.screeningAnswers || {};
+  const carOwnerRaw = String(screening.carOwner || employee.carOwner || "").trim().toLowerCase();
   const carOwnerLabel =
-    carOwnerRaw === "yes" ? "YES" : carOwnerRaw === "no" ? "NO" : (employee.carOwner || "").toUpperCase();
+    carOwnerRaw === "yes" ? "YES" : carOwnerRaw === "no" ? "NO" : String(screening.carOwner || employee.carOwner || "").toUpperCase();
+  const maritalStatus = String(screening.maritalStatus || employee.maritalStatus || "").trim();
+  const criminalConviction = normalizeYesNo(screening.criminalConviction);
+  const beenBankrupt = normalizeYesNo(screening.beenBankrupt);
+  const hasCcj = normalizeYesNo(screening.hasCcj);
+  const objectToCreditAgency = normalizeYesNo(screening.objectToCreditAgency);
+  const agreeSiaCriminalCheck = normalizeYesNo(screening.agreeSiaCriminalCheck);
+  const understandConsequences = normalizeYesNo(screening.understandConsequences);
+  const agreeCreditCheck = normalizeYesNo(screening.agreeCreditCheck);
   const health = employee.health || null;
   const education = employee.education || [];
   const school =
@@ -179,11 +202,20 @@ export function buildVettingMergeContext(
     EMPLOYEE_SURNAME: surname,
     EMPLOYEE_NUMBER: employee.employeeNumber || "",
     NI_NUMBER: employee.nationalInsurance || "",
-    MARITAL_STATUS: employee.maritalStatus || "",
+    MARITAL_STATUS: maritalStatus,
     DOB: formatUkDate(employee.dateOfBirth),
     PLACE_OF_BIRTH: employee.placeOfBirth || "",
     GENDER: employee.gender || "",
     NATIONALITY: employee.nationality || "",
+    HEARD_ABOUT_ROLE: String(screening.heardAboutRole || "").trim(),
+    CRIMINAL_CONVICTION: criminalConviction,
+    CRIMINAL_CONVICTION_DETAILS: String(screening.criminalConvictionDetails || "").trim(),
+    BEEN_BANKRUPT: beenBankrupt,
+    HAS_CCJ: hasCcj,
+    OBJECT_TO_CREDIT_AGENCY: objectToCreditAgency,
+    AGREE_SIA_CHECK: agreeSiaCriminalCheck,
+    UNDERSTAND_CONSEQUENCES: understandConsequences,
+    AGREE_CREDIT_CHECK: agreeCreditCheck,
     EMPLOYEE_ADDRESS: employeeAddress,
     PREVIOUS_ADDRESS: previousAddress,
     PREVIOUS_LIVING_FROM: formatUkDate(employee.previousLivingFrom),
@@ -240,8 +272,78 @@ function escapeXml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function normalizeYesNo(value: string | null | undefined): "YES" | "NO" | "" {
+  const v = String(value || "").trim().toLowerCase();
+  if (["yes", "y", "true", "1"].includes(v)) return "YES";
+  if (["no", "n", "false", "0"].includes(v)) return "NO";
+  return "";
+}
+
+function yellowTextRun(text: string): string {
+  return `<w:r><w:rPr><w:highlight w:val="yellow"/></w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+}
+
+function plainTextRun(text: string): string {
+  return `<w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+}
+
+function replaceParagraphRuns(paragraphXml: string, runsXml: string): string {
+  const withoutRuns = paragraphXml.replace(/<w:r[\s\S]*?<\/w:r>/g, "");
+  return withoutRuns.replace(/<\/w:p>\s*$/, `${runsXml}</w:p>`);
+}
+
+function setParagraphHighlighted(paragraphXml: string, text: string): string {
+  return replaceParagraphRuns(paragraphXml, yellowTextRun(text));
+}
+
+/** Rewrite a label that ends with YES/NO, highlighting the selected answer in yellow. */
+function markInlineYesNo(paragraphXml: string, originalText: string, choice: "YES" | "NO" | ""): string {
+  if (!choice) return paragraphXml;
+  if (!/YES\s*\/\s*NO/i.test(originalText)) return paragraphXml;
+
+  // Support one or two YES/NO pairs in the same paragraph (bankrupt + CCJ).
+  const parts = originalText.split(/(YES\s*\/\s*NO\s*\??)/i);
+  let yesNoIndex = 0;
+  const choices = [choice];
+  // Caller can pass a second choice via a special delimiter in choice... instead handle multi via dedicated helper.
+  let runs = "";
+  for (const part of parts) {
+    if (/^YES\s*\/\s*NO/i.test(part)) {
+      const selected = choices[Math.min(yesNoIndex, choices.length - 1)];
+      runs += yellowTextRun(selected);
+      yesNoIndex += 1;
+    } else if (part) {
+      runs += plainTextRun(part);
+    }
+  }
+  return replaceParagraphRuns(paragraphXml, runs);
+}
+
+function markDualInlineYesNo(
+  paragraphXml: string,
+  originalText: string,
+  first: "YES" | "NO" | "",
+  second: "YES" | "NO" | "",
+): string {
+  if (!first && !second) return paragraphXml;
+  const parts = originalText.split(/(YES\s*\/\s*NO\s*\??)/i);
+  let idx = 0;
+  const picks = [first, second];
+  let runs = "";
+  for (const part of parts) {
+    if (/^YES\s*\/\s*NO/i.test(part)) {
+      const selected = picks[idx] || "";
+      runs += selected ? yellowTextRun(selected) : plainTextRun(part);
+      idx += 1;
+    } else if (part) {
+      runs += plainTextRun(part);
+    }
+  }
+  return replaceParagraphRuns(paragraphXml, runs);
+}
+
 function getParagraphText(paragraphXml: string): string {
-  return [...paragraphXml.matchAll(WT_REGEX)].map((m) => m[2]).join("");
+  return Array.from(paragraphXml.matchAll(WT_REGEX)).map((m) => m[2]).join("");
 }
 
 function setParagraphText(paragraphXml: string, newText: string): string {
@@ -364,13 +466,80 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
         paragraphs[i],
         ctx.CAR_OWNER ? `CAR OWNER: ${ctx.CAR_OWNER}` : "CAR OWNER:",
       );
-      // Clear the following "YES NO (delete)" choice line when we have a definite answer.
       if (ctx.CAR_OWNER && i + 1 < paragraphs.length) {
         const choice = getParagraphText(paragraphs[i + 1]).toUpperCase();
         if (choice.includes("YES") && choice.includes("NO")) {
-          paragraphs[i + 1] = setParagraphText(paragraphs[i + 1], "");
+          paragraphs[i + 1] =
+            ctx.CAR_OWNER === "YES"
+              ? replaceParagraphRuns(paragraphs[i + 1], yellowTextRun("YES") + plainTextRun("     NO"))
+              : replaceParagraphRuns(paragraphs[i + 1], plainTextRun("YES     ") + yellowTextRun("NO"));
         }
       }
+      continue;
+    }
+    if (upper === "MARRIED" || upper === "DIVORCED" || upper === "SINGLE" || upper === "OR OTHER" || upper === "SINGLE OR OTHER") {
+      const marital = (ctx.MARITAL_STATUS || "").toUpperCase();
+      const selected =
+        (upper.startsWith("SINGLE") && (marital.includes("SINGLE") || marital.includes("OTHER") || marital.includes("WIDOW"))) ||
+        (upper === "OR OTHER" && (marital.includes("OTHER") || marital.includes("WIDOW"))) ||
+        (upper === "MARRIED" && marital.includes("MARRIED")) ||
+        (upper === "DIVORCED" && marital.includes("DIVORCED"));
+      if (selected) {
+        paragraphs[i] = setParagraphHighlighted(paragraphs[i], text);
+      }
+      continue;
+    }
+    if (upper.startsWith("HOW DID YOU HEAR ABOUT THE ROLE")) {
+      if (ctx.HEARD_ABOUT_ROLE) {
+        paragraphs[i] = setParagraphText(paragraphs[i], `HOW DID YOU HEAR ABOUT THE ROLE ${ctx.HEARD_ABOUT_ROLE}`);
+      }
+      continue;
+    }
+    if (upper.startsWith("4. HAVE YOU EVER APPEARED BEFORE A COURT")) {
+      const answer = (ctx.CRIMINAL_CONVICTION || "") as "YES" | "NO" | "";
+      for (let j = i + 1; j < Math.min(i + 8, paragraphs.length); j++) {
+        const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
+        if (t === "YES" || t === "NO") {
+          if (answer && t === answer) {
+            paragraphs[j] = setParagraphHighlighted(paragraphs[j], t);
+          }
+        }
+        if (t.startsWith("IF YES, GIVE DETAILS") && ctx.CRIMINAL_CONVICTION_DETAILS) {
+          fillNextBlankParagraph(paragraphs, j, ctx.CRIMINAL_CONVICTION_DETAILS);
+        }
+      }
+      continue;
+    }
+    if (upper.startsWith("HAVE YOU BEEN MADE BANKRUPT")) {
+      paragraphs[i] = markDualInlineYesNo(paragraphs[i], text, (ctx.BEEN_BANKRUPT || "") as any, (ctx.HAS_CCJ || "") as any);
+      continue;
+    }
+    if (upper.startsWith("DO YOU OBJECT TO THE COMPANY CONTACTING A CREDIT AGENCY")) {
+      // Question may span two paragraphs; mark YES/NO on this or the next line.
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
+      } else if (i + 1 < paragraphs.length) {
+        const next = getParagraphText(paragraphs[i + 1]).replace(/\u00a0/g, " ").trim();
+        if (/YES\s*\/\s*NO/i.test(next)) {
+          paragraphs[i + 1] = markInlineYesNo(paragraphs[i + 1], next, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
+        }
+      }
+      continue;
+    }
+    if (upper.startsWith("WITH REFERENCE TO YOURSELF") && /YES\s*\/\s*NO/i.test(upper)) {
+      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
+      continue;
+    }
+    if (upper.startsWith("DO YOU AGREE TO A S.I.A. CRIMINAL RECORD CHECK") || upper.startsWith("DO YOU AGREE TO A SIA CRIMINAL RECORD CHECK")) {
+      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_SIA_CHECK || "") as any);
+      continue;
+    }
+    if (upper.startsWith("DO YOU FULLY UNDERSTAND THE POTENTIAL CONSEQUENCES")) {
+      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.UNDERSTAND_CONSEQUENCES || "") as any);
+      continue;
+    }
+    if (upper.startsWith("DO YOU AGREE TO A CREDIT CHECK")) {
+      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_CREDIT_CHECK || "") as any);
       continue;
     }
     if (upper.startsWith("PLACE OF BIRTH")) {

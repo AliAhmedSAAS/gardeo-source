@@ -1027,12 +1027,14 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
 
       const empUser = ctx.employee.userId ? await storage.getUser(ctx.employee.userId) : null;
       const { staffProfileStorage } = await import("./staff-profile-storage");
-      const [emergencyContacts, bankDetails, employmentHistory, references, extras] = await Promise.all([
+      const { getLatestVettingFormAnswers } = await import("./employee-vetting-form-service");
+      const [emergencyContacts, bankDetails, employmentHistory, references, extras, screeningAnswers] = await Promise.all([
         storage.getEmergencyContacts(ctx.employeeId),
         storage.getBankDetails(ctx.employeeId),
         storage.getEmploymentHistory(ctx.employeeId),
         storage.getReferences(ctx.employeeId),
         staffProfileStorage.getStaffProfileExtras(ctx.employeeId),
+        getLatestVettingFormAnswers(ctx.employeeId),
       ]);
       const asPdf = String(req.query.format || "").toLowerCase() === "pdf";
       const screeningExceptions =
@@ -1050,6 +1052,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
           drivingLicences: extras.drivingLicences,
           health: extras.health,
           education: extras.education,
+          screeningAnswers,
         },
         empUser,
         { asPdf, screeningExceptions },
