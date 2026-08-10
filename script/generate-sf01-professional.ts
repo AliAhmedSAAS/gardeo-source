@@ -566,20 +566,22 @@ async function main() {
             rows: [
               new TableRow({
                 children: [
-                  ["HEIGHT: {{HEIGHT}}", "WEIGHT: {{WEIGHT}}", "COLOUR OF EYES: {{COLOUR_OF_EYES}}"].map(
-                    (t) =>
-                      new TableCell({
-                        borders,
-                        width: { size: 3120, type: WidthType.DXA },
-                        margins: { top: 60, bottom: 60, left: 80, right: 80 },
-                        children: [
-                          new Paragraph({
-                            children: [new TextRun({ text: t, font: "Calibri", size: 18 })],
-                          }),
-                        ],
-                      }),
-                  ),
-                ],
+                  "HEIGHT: {{HEIGHT}}",
+                  "WEIGHT: {{WEIGHT}}",
+                  "COLOUR OF EYES: {{COLOUR_OF_EYES}}",
+                ].map(
+                  (t) =>
+                    new TableCell({
+                      borders,
+                      width: { size: 3120, type: WidthType.DXA },
+                      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: t, font: "Calibri", size: 18 })],
+                        }),
+                      ],
+                    }),
+                ),
               }),
             ],
           }),
