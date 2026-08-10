@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2, XCircle, User, Mail, Phone, MapPin, ShieldCheck, Heart, CreditCard, Briefcase, Eraser } from "lucide-react";
+import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
 
 type VettingFormPayload = {
   firstName: string;
@@ -950,62 +951,57 @@ export default function PublicVettingFormPage() {
             {step === "addressHistory" && (
               <div className="space-y-4">
                 <SectionTitle>Current address</SectionTitle>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                      <Input placeholder="Address line 1 *" value={form.addressLine1} onChange={(e) => update("addressLine1", e.target.value)} />
-                    </FieldRow>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                      <Input placeholder="Address line 2" value={form.addressLine2} onChange={(e) => update("addressLine2", e.target.value)} />
-                    </FieldRow>
-                  </div>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="City / town" value={form.city} onChange={(e) => update("city", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="County" value={form.county} onChange={(e) => update("county", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="Postcode *" value={form.postcode} onChange={(e) => update("postcode", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="Country" value={form.country} onChange={(e) => update("country", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input type="date" placeholder="Living here from" value={form.livingFrom} onChange={(e) => update("livingFrom", e.target.value)} />
-                  </FieldRow>
-                </div>
+                <AddressFieldsGroup
+                  idPrefix="vetting-addr"
+                  value={{
+                    addressLine1: form.addressLine1,
+                    addressLine2: form.addressLine2,
+                    city: form.city,
+                    county: form.county,
+                    postcode: form.postcode,
+                    country: form.country,
+                  }}
+                  onChange={(patch) =>
+                    setForm((f) => ({
+                      ...f,
+                      ...(patch.addressLine1 !== undefined ? { addressLine1: patch.addressLine1 } : {}),
+                      ...(patch.addressLine2 !== undefined ? { addressLine2: patch.addressLine2 } : {}),
+                      ...(patch.city !== undefined ? { city: patch.city } : {}),
+                      ...(patch.county !== undefined ? { county: patch.county } : {}),
+                      ...(patch.postcode !== undefined ? { postcode: patch.postcode } : {}),
+                      ...(patch.country !== undefined ? { country: patch.country } : {}),
+                    }))
+                  }
+                  livingFrom={form.livingFrom}
+                  onLivingFromChange={(v) => update("livingFrom", v)}
+                />
 
                 <SectionTitle>Previous address (if less than 3 years at current address)</SectionTitle>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                      <Input placeholder="Previous address line 1" value={form.previousAddressLine1} onChange={(e) => update("previousAddressLine1", e.target.value)} />
-                    </FieldRow>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                      <Input placeholder="Previous address line 2" value={form.previousAddressLine2} onChange={(e) => update("previousAddressLine2", e.target.value)} />
-                    </FieldRow>
-                  </div>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="Previous city / town" value={form.previousCity} onChange={(e) => update("previousCity", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="Previous county" value={form.previousCounty} onChange={(e) => update("previousCounty", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input placeholder="Previous postcode" value={form.previousPostcode} onChange={(e) => update("previousPostcode", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input type="date" placeholder="From" value={form.previousLivingFrom} onChange={(e) => update("previousLivingFrom", e.target.value)} />
-                  </FieldRow>
-                  <FieldRow icon={<MapPin className="w-4 h-4" />}>
-                    <Input type="date" placeholder="To" value={form.previousLivingTo} onChange={(e) => update("previousLivingTo", e.target.value)} />
-                  </FieldRow>
-                </div>
+                <AddressFieldsGroup
+                  idPrefix="vetting-prev-addr"
+                  value={{
+                    addressLine1: form.previousAddressLine1,
+                    addressLine2: form.previousAddressLine2,
+                    city: form.previousCity,
+                    county: form.previousCounty,
+                    postcode: form.previousPostcode,
+                    country: "United Kingdom",
+                  }}
+                  onChange={(patch) =>
+                    setForm((f) => ({
+                      ...f,
+                      previousAddressLine1: patch.addressLine1 ?? f.previousAddressLine1,
+                      previousAddressLine2: patch.addressLine2 ?? f.previousAddressLine2,
+                      previousCity: patch.city ?? f.previousCity,
+                      previousCounty: patch.county ?? f.previousCounty,
+                      previousPostcode: patch.postcode ?? f.previousPostcode,
+                    }))
+                  }
+                  livingFrom={form.previousLivingFrom}
+                  livingTo={form.previousLivingTo}
+                  onLivingFromChange={(v) => update("previousLivingFrom", v)}
+                  onLivingToChange={(v) => update("previousLivingTo", v)}
+                />
               </div>
             )}
 
