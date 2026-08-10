@@ -130,6 +130,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
     "cross-env": "^10.1.0",
+    "docx": "^9.5.0",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.25.0",
     "playwright": "^1.58.2",

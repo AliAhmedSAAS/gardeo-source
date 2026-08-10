@@ -147,6 +147,8 @@ export function buildVettingMergeContext(
   const thirdHistory = history[2] || null;
   const fourthHistory = history[3] || null;
   const fifthHistory = history[4] || null;
+  const sixthHistory = history[5] || null;
+  const seventhHistory = history[6] || null;
   const drivingLicenceNumber = employee.drivingLicences?.[0]?.licenceNumber || "";
   const screening = employee.screeningAnswers || {};
   const carOwnerRaw = String(screening.carOwner || employee.carOwner || "").trim().toLowerCase();
@@ -266,6 +268,8 @@ export function buildVettingMergeContext(
     ...employmentSlot(thirdHistory, 3),
     ...employmentSlot(fourthHistory, 4),
     ...employmentSlot(fifthHistory, 5),
+    ...employmentSlot(sixthHistory, 6),
+    ...employmentSlot(seventhHistory, 7),
     TODAY: today,
     TODAY_SHORT: formatUkDate(new Date()),
   };
@@ -277,6 +281,10 @@ function escapeXml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function looksLikeBlankFormLine(text: string): boolean {
+  return /_{3,}|\.{3,}|…|\/\s*\/|\(delete\)/i.test(text);
 }
 
 function normalizeYesNo(value: string | null | undefined): "YES" | "NO" | "" {
@@ -307,18 +315,14 @@ function setParagraphHighlighted(paragraphXml: string, text: string): string {
 function markInlineYesNo(paragraphXml: string, originalText: string, choice: "YES" | "NO" | ""): string {
   if (!choice) return paragraphXml;
   if (!/YES\s*\/\s*NO/i.test(originalText)) return paragraphXml;
+  // Drop any already-merged answer after the YES/NO marker (placeholder templates).
+  const cleaned = originalText.replace(/(YES\s*\/\s*NO\s*\??)\s*(YES|NO)\b/gi, "$1");
 
-  // Support one or two YES/NO pairs in the same paragraph (bankrupt + CCJ).
-  const parts = originalText.split(/(YES\s*\/\s*NO\s*\??)/i);
-  let yesNoIndex = 0;
-  const choices = [choice];
-  // Caller can pass a second choice via a special delimiter in choice... instead handle multi via dedicated helper.
+  const parts = cleaned.split(/(YES\s*\/\s*NO\??)/i);
   let runs = "";
   for (const part of parts) {
     if (/^YES\s*\/\s*NO/i.test(part)) {
-      const selected = choices[Math.min(yesNoIndex, choices.length - 1)];
-      runs += yellowTextRun(selected);
-      yesNoIndex += 1;
+      runs += yellowTextRun(choice);
     } else if (part) {
       runs += plainTextRun(part);
     }
@@ -333,7 +337,8 @@ function markDualInlineYesNo(
   second: "YES" | "NO" | "",
 ): string {
   if (!first && !second) return paragraphXml;
-  const parts = originalText.split(/(YES\s*\/\s*NO\s*\??)/i);
+  const cleaned = originalText.replace(/(YES\s*\/\s*NO\s*\??)\s*(YES|NO)\b/gi, "$1");
+  const parts = cleaned.split(/(YES\s*\/\s*NO\??)/i);
   let idx = 0;
   const picks = [first, second];
   let runs = "";
@@ -416,7 +421,7 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_SURNAME || ctx.EMPLOYEE_NAME);
       continue;
     }
-    if (upper.startsWith("FIRST NAMES")) {
+    if (upper.startsWith("FIRST NAMES") && !/\{\{/.test(text) && !/[A-Za-z]{2,}/.test(text.replace(/^FIRST NAMES;?:?/i, ""))) {
       i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_FIRST_NAMES);
       continue;
     }
@@ -460,22 +465,24 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       }
     }
     if (upper.startsWith("CURRENT DRIVING LICENCE")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.DRIVING_LICENCE
-          ? `CURRENT DRIVING LICENCE: ${ctx.DRIVING_LICENCE}`
-          : "CURRENT DRIVING LICENCE: NO",
-      );
+      if (looksLikeBlankFormLine(text) || /^CURRENT DRIVING LICENCE:\s*(NO;?)?\s*$/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.DRIVING_LICENCE
+            ? `CURRENT DRIVING LICENCE: ${ctx.DRIVING_LICENCE}`
+            : "CURRENT DRIVING LICENCE: NO",
+        );
+      }
       continue;
     }
-    if (upper.startsWith("CAR OWNER")) {
+    if (upper.startsWith("CAR OWNER") && looksLikeBlankFormLine(text)) {
       paragraphs[i] = setParagraphText(
         paragraphs[i],
         ctx.CAR_OWNER ? `CAR OWNER: ${ctx.CAR_OWNER}` : "CAR OWNER:",
       );
       if (ctx.CAR_OWNER && i + 1 < paragraphs.length) {
         const choice = getParagraphText(paragraphs[i + 1]).toUpperCase();
-        if (choice.includes("YES") && choice.includes("NO")) {
+        if (/^YES\s+NO/i.test(choice.trim()) || /\(DELETE\)/i.test(choice)) {
           paragraphs[i + 1] =
             ctx.CAR_OWNER === "YES"
               ? replaceParagraphRuns(paragraphs[i + 1], yellowTextRun("YES") + plainTextRun("     NO"))
@@ -497,28 +504,34 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("HOW DID YOU HEAR ABOUT THE ROLE")) {
-      if (ctx.HEARD_ABOUT_ROLE) {
+      if (ctx.HEARD_ABOUT_ROLE && !text.toUpperCase().includes(ctx.HEARD_ABOUT_ROLE.toUpperCase())) {
         paragraphs[i] = setParagraphText(paragraphs[i], `HOW DID YOU HEAR ABOUT THE ROLE ${ctx.HEARD_ABOUT_ROLE}`);
       }
       continue;
     }
     if (upper.startsWith("4. HAVE YOU EVER APPEARED BEFORE A COURT")) {
       const answer = (ctx.CRIMINAL_CONVICTION || "") as "YES" | "NO" | "";
-      for (let j = i + 1; j < Math.min(i + 8, paragraphs.length); j++) {
-        const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
-        if (t === "YES" || t === "NO") {
-          if (answer && t === answer) {
-            paragraphs[j] = setParagraphHighlighted(paragraphs[j], t);
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(paragraphs[i], text, answer);
+      } else {
+        for (let j = i + 1; j < Math.min(i + 8, paragraphs.length); j++) {
+          const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
+          if (t === "YES" || t === "NO") {
+            if (answer && t === answer) {
+              paragraphs[j] = setParagraphHighlighted(paragraphs[j], t);
+            }
           }
-        }
-        if (t.startsWith("IF YES, GIVE DETAILS") && ctx.CRIMINAL_CONVICTION_DETAILS) {
-          fillNextBlankParagraph(paragraphs, j, ctx.CRIMINAL_CONVICTION_DETAILS);
+          if (t.startsWith("IF YES, GIVE DETAILS") && ctx.CRIMINAL_CONVICTION_DETAILS) {
+            fillNextBlankParagraph(paragraphs, j, ctx.CRIMINAL_CONVICTION_DETAILS);
+          }
         }
       }
       continue;
     }
     if (upper.startsWith("HAVE YOU BEEN MADE BANKRUPT")) {
-      paragraphs[i] = markDualInlineYesNo(paragraphs[i], text, (ctx.BEEN_BANKRUPT || "") as any, (ctx.HAS_CCJ || "") as any);
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markDualInlineYesNo(paragraphs[i], text, (ctx.BEEN_BANKRUPT || "") as any, (ctx.HAS_CCJ || "") as any);
+      }
       continue;
     }
     if (upper.startsWith("DO YOU OBJECT TO THE COMPANY CONTACTING A CREDIT AGENCY")) {
@@ -550,10 +563,12 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("PLACE OF BIRTH")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.PLACE_OF_BIRTH ? `PLACE OF BIRTH: ${ctx.PLACE_OF_BIRTH}` : text,
-      );
+      if (looksLikeBlankFormLine(text) || /IN THE UK/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.PLACE_OF_BIRTH ? `PLACE OF BIRTH: ${ctx.PLACE_OF_BIRTH}` : text,
+        );
+      }
       continue;
     }
     if (upper === "HEIGHT:") {
@@ -569,31 +584,39 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("SCHOOL NAME")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.SCHOOL_NAME ? `SCHOOL NAME: (secondary only) ${ctx.SCHOOL_NAME}` : text,
-      );
+      if (looksLikeBlankFormLine(text) || /^SCHOOL NAME:\s*\(secondary only\)\s*$/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.SCHOOL_NAME ? `SCHOOL NAME: (secondary only) ${ctx.SCHOOL_NAME}` : text,
+        );
+      }
       continue;
     }
     if (upper.startsWith("TOWN/CITY")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.SCHOOL_TOWN ? `TOWN/CITY: ${ctx.SCHOOL_TOWN}` : text,
-      );
+      if (looksLikeBlankFormLine(text) || /^TOWN\/CITY:\s*$/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.SCHOOL_TOWN ? `TOWN/CITY: ${ctx.SCHOOL_TOWN}` : text,
+        );
+      }
       continue;
     }
     if (upper.startsWith("DATE YOU LEFT SCHOOL")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.SCHOOL_LEFT ? `DATE YOU LEFT SCHOOL: ${ctx.SCHOOL_LEFT}` : text,
-      );
+      if (looksLikeBlankFormLine(text) || /^DATE YOU LEFT SCHOOL:\s*$/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.SCHOOL_LEFT ? `DATE YOU LEFT SCHOOL: ${ctx.SCHOOL_LEFT}` : text,
+        );
+      }
       continue;
     }
     if (upper.startsWith("COLLEGE")) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.COLLEGE_DETAILS ? `COLLEGE & DATES: ${ctx.COLLEGE_DETAILS}` : text,
-      );
+      if (looksLikeBlankFormLine(text) || /^COLLEGE & DATES:\s*$/i.test(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.COLLEGE_DETAILS ? `COLLEGE & DATES: ${ctx.COLLEGE_DETAILS}` : text,
+        );
+      }
       continue;
     }
     if (upper.includes("NATIONAL") && i + 1 < paragraphs.length && getParagraphText(paragraphs[i + 1]).toUpperCase().includes("INSURANCE")) {
@@ -608,14 +631,14 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       i = fillNextBlankParagraph(paragraphs, i, ctx.NI_NUMBER);
       continue;
     }
-    if (upper.startsWith("BANK ACCOUNT NUMBER")) {
+    if (upper.startsWith("BANK ACCOUNT NUMBER") && looksLikeBlankFormLine(text)) {
       const account = ctx.BANK_ACCOUNT_NUMBER || "";
       const sortCode = ctx.BANK_SORT_CODE || "";
       const filled = `BANK ACCOUNT NUMBER. ${account}    SORT CODE ${sortCode}`;
       paragraphs[i] = setParagraphText(paragraphs[i], filled);
       continue;
     }
-    if (upper.startsWith("NAME OF BANK")) {
+    if (upper.startsWith("NAME OF BANK") && looksLikeBlankFormLine(text)) {
       const filled = `NAME OF BANK ${ctx.BANK_NAME || ""}    NAME OF ACCOUNT HOLDER ${ctx.BANK_ACCOUNT_NAME || ""}`.trimEnd();
       paragraphs[i] = setParagraphText(paragraphs[i], filled);
       continue;
