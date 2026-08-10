@@ -168,6 +168,7 @@ export const employees = pgTable("employees", {
   previousPostcode: text("previous_postcode"),
   previousLivingFrom: date("previous_living_from"),
   previousLivingTo: date("previous_living_to"),
+  carOwner: text("car_owner"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

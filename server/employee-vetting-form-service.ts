@@ -309,6 +309,7 @@ async function buildFormFromEmployee(employeeId: number): Promise<VettingFormPay
   stored.previousLivingFrom = employee.previousLivingFrom || "";
   stored.previousLivingTo = employee.previousLivingTo || "";
   stored.drivingLicenceNumber = licence?.licenceNumber || "";
+  stored.carOwner = employee.carOwner || "";
   stored.siaLicenseNumber = employee.siaLicenseNumber || "";
   stored.siaLicenseType = employee.siaLicenseType || "";
   stored.siaExpiryDate = employee.siaExpiryDate || "";
@@ -423,6 +424,7 @@ async function applyFormToEmployee(employeeId: number, form: VettingFormPayload)
     siaLicenseType: form.siaLicenseType || null,
     siaExpiryDate: form.siaExpiryDate || null,
     portalEmail: form.email || employee.portalEmail,
+    carOwner: form.carOwner || null,
   });
 
   if (form.drivingLicenceNumber.trim()) {

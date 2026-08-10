@@ -211,6 +211,7 @@ type EmployeeDetail = EnrichedEmployee & {
   previousPostcode?: string | null;
   previousLivingFrom?: string | null;
   previousLivingTo?: string | null;
+  carOwner?: string | null;
   notes?: any[];
   preferredSites?: any[];
   education?: any[];
@@ -738,6 +739,8 @@ export default function EmployeesPage() {
       hasFirstAid: employeeDetail.hasFirstAid || false,
       firstAidExpiry: employeeDetail.firstAidExpiry || "",
       officerStep: String(employeeDetail.officerStep ?? 0),
+      drivingLicenceNumber: employeeDetail.drivingLicences?.[0]?.licenceNumber || "",
+      carOwner: employeeDetail.carOwner || "",
     });
     setIsEditing(true);
   };
@@ -1262,8 +1265,24 @@ export default function EmployeesPage() {
                       </div>
 
                       <div className="border-t pt-5">
-                        <h3 className="text-sm font-semibold mb-4">SIA License & DBS</h3>
+                        <h3 className="text-sm font-semibold mb-4">Driving &amp; SIA Licence</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
+                          <DetailItem
+                            icon={FileCheck}
+                            label="Driving Licence"
+                            value={employeeDetail.drivingLicences?.[0]?.licenceNumber}
+                          />
+                          <DetailItem
+                            icon={User}
+                            label="Car Owner"
+                            value={
+                              employeeDetail.carOwner === "yes"
+                                ? "Yes"
+                                : employeeDetail.carOwner === "no"
+                                  ? "No"
+                                  : employeeDetail.carOwner
+                            }
+                          />
                           <DetailItem icon={Shield} label="SIA License" value={employeeDetail.siaLicenseNumber} />
                           <DetailItem icon={Shield} label="SIA Type" value={employeeDetail.siaLicenseType} />
                           <DetailItem icon={Calendar} label="SIA Expiry" value={formatDate(employeeDetail.siaExpiryDate)} />
@@ -1493,8 +1512,33 @@ export default function EmployeesPage() {
                         onLivingToChange={(v) => setEditForm((f) => ({ ...f, previousLivingTo: v }))}
                       />
                       <Separator />
-                      <h4 className="text-sm font-medium">SIA License & DBS</h4>
+                      <h4 className="text-sm font-medium">Driving &amp; SIA Licence</h4>
                       <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Driving Licence No.</Label>
+                          <Input
+                            value={editForm.drivingLicenceNumber || ""}
+                            onChange={(e) => setEditForm((f) => ({ ...f, drivingLicenceNumber: e.target.value }))}
+                            placeholder="Driving licence no."
+                            data-testid="input-edit-driving-licence"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Car Owner</Label>
+                          <Select
+                            value={editForm.carOwner || "none"}
+                            onValueChange={(v) => setEditForm((f) => ({ ...f, carOwner: v === "none" ? "" : v }))}
+                          >
+                            <SelectTrigger data-testid="select-edit-car-owner">
+                              <SelectValue placeholder="Car owner?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Not selected</SelectItem>
+                              <SelectItem value="yes">Yes</SelectItem>
+                              <SelectItem value="no">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-1 col-span-2 sm:col-span-1">
                           <Label className="text-xs">SIA License Number</Label>
                           <div className="flex items-center gap-2">

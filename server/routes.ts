@@ -2885,7 +2885,7 @@ export async function registerRoutes(
       if (!employee) return res.status(404).json({ message: "Employee not found" });
       if (user.tenantId != null && employee.tenantId !== user.tenantId) return res.status(404).json({ message: "Employee not found" });
 
-      const { firstName, lastName, email, phone, ...employeeFields } = req.body;
+      const { firstName, lastName, email, phone, drivingLicenceNumber, ...employeeFields } = req.body;
 
       if (firstName !== undefined || lastName !== undefined || email !== undefined || phone !== undefined) {
         if (employee.userId) {
@@ -2909,7 +2909,7 @@ export async function registerRoutes(
         "sageId", "phone", "secondPhone", "photoUrl", "ethnicOrigin", "paymentType",
         "permitType", "officerType", "livingFrom",
         "previousAddressLine1", "previousAddressLine2", "previousCity", "previousCounty",
-        "previousPostcode", "previousLivingFrom", "previousLivingTo",
+        "previousPostcode", "previousLivingFrom", "previousLivingTo", "carOwner",
       ];
       const empUpdate: Record<string, any> = {};
       for (const key of allowedFields) {
@@ -2930,6 +2930,23 @@ export async function registerRoutes(
 
       if (Object.keys(empUpdate).length > 0) {
         await storage.updateEmployee(id, empUpdate);
+      }
+
+      if (drivingLicenceNumber !== undefined) {
+        const extras = await staffProfileStorage.getStaffProfileExtras(id);
+        const existing = extras.drivingLicences[0];
+        const licenceNumber = typeof drivingLicenceNumber === "string" ? drivingLicenceNumber.trim() : "";
+        if (licenceNumber) {
+          if (existing) {
+            await staffProfileStorage.updateDrivingLicence(existing.id, id, { licenceNumber });
+          } else {
+            await staffProfileStorage.createDrivingLicence({
+              employeeId: id,
+              tenantId: employee.tenantId,
+              licenceNumber,
+            });
+          }
+        }
       }
 
       const updatedEmployee = await storage.getEmployee(id);
