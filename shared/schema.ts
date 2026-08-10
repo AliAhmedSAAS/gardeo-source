@@ -1562,6 +1562,7 @@ export const employeeVettingFormTokens = pgTable("employee_vetting_form_tokens",
   equalOpsAcknowledgedAt: timestamp("equal_ops_acknowledged_at"),
   zeroHoursAcknowledgedAt: timestamp("zero_hours_acknowledged_at"),
   codeOfConductAcknowledgedAt: timestamp("code_of_conduct_acknowledged_at"),
+  optOutAcknowledgedAt: timestamp("opt_out_acknowledged_at"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [

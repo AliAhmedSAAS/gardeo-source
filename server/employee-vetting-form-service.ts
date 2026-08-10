@@ -15,6 +15,7 @@ const POLICY_ACKS = {
   equalOps: { name: "Equal Ops Review", type: "equal_ops" },
   zeroHours: { name: "Zero Hours Contract", type: "contract" },
   codeOfConduct: { name: "Code of Conduct", type: "policy" },
+  optOut: { name: "OPT OUT Agreement (Working Time)", type: "opt_out" },
 } as const;
 
 export type VettingFormPayload = {
@@ -765,6 +766,7 @@ export async function getVettingFormByToken(token: string) {
         equalOps: !!row.equalOpsAcknowledgedAt,
         zeroHours: !!row.zeroHoursAcknowledgedAt,
         codeOfConduct: !!row.codeOfConductAcknowledgedAt,
+        optOut: !!row.optOutAcknowledgedAt,
       },
       form,
     },
@@ -804,6 +806,7 @@ export async function submitVettingFormByToken(
     acknowledgeEqualOps?: boolean;
     acknowledgeZeroHours?: boolean;
     acknowledgeCodeOfConduct?: boolean;
+    acknowledgeOptOut?: boolean;
   },
 ) {
   const row = await loadTokenRow(token);
@@ -827,10 +830,16 @@ export async function submitVettingFormByToken(
   if (!merged.email || !merged.email.includes("@")) {
     return { ok: false as const, error: "A valid email is required", status: 400 };
   }
-  if (!body.acknowledgeEqualOps || !body.acknowledgeZeroHours || !body.acknowledgeCodeOfConduct) {
+  if (
+    !body.acknowledgeEqualOps ||
+    !body.acknowledgeZeroHours ||
+    !body.acknowledgeCodeOfConduct ||
+    !body.acknowledgeOptOut
+  ) {
     return {
       ok: false as const,
-      error: "You must acknowledge Equal Ops Review, Zero Hours Contract, and Code of Conduct",
+      error:
+        "You must acknowledge Equal Ops Review, Zero Hours Contract, Code of Conduct, and OPT OUT Agreement",
       status: 400,
     };
   }
@@ -853,6 +862,7 @@ export async function submitVettingFormByToken(
   await upsertPolicyAcknowledgement(row.employeeId, employee.tenantId, "equalOps", ackBy);
   await upsertPolicyAcknowledgement(row.employeeId, employee.tenantId, "zeroHours", ackBy);
   await upsertPolicyAcknowledgement(row.employeeId, employee.tenantId, "codeOfConduct", ackBy);
+  await upsertPolicyAcknowledgement(row.employeeId, employee.tenantId, "optOut", ackBy);
 
   await db
     .update(employeeVettingFormTokens)
@@ -863,6 +873,7 @@ export async function submitVettingFormByToken(
       equalOpsAcknowledgedAt: now,
       zeroHoursAcknowledgedAt: now,
       codeOfConductAcknowledgedAt: now,
+      optOutAcknowledgedAt: now,
     })
     .where(eq(employeeVettingFormTokens.id, row.id));
 

@@ -137,6 +137,7 @@ type FormResponse = {
     equalOps: boolean;
     zeroHours: boolean;
     codeOfConduct: boolean;
+    optOut: boolean;
   };
   form: VettingFormPayload;
 };
@@ -150,6 +151,7 @@ const STEPS = [
   { id: "declarationsSignature", label: "Declarations & Signature" },
   { id: "equalOps", label: "Equal Opportunities" },
   { id: "zeroHours", label: "Zero Hours Contract" },
+  { id: "optOut", label: "OPT OUT Agreement" },
   { id: "conduct", label: "Code of Conduct" },
   { id: "review", label: "Review & Submit" },
 ] as const;
@@ -397,6 +399,42 @@ function ZeroHoursContractContent({ companyName }: { companyName: string }) {
       <ContractClause title="16. Governing law">
         <p>This contract will be governed by the law of England and Wales.</p>
       </ContractClause>
+    </div>
+  );
+}
+
+/** SF 02 — Working Time Regulations 48-hour weekly limit OPT OUT Agreement */
+function OptOutAgreementContent({ companyName }: { companyName: string }) {
+  return (
+    <div className="max-h-[28rem] overflow-y-auto rounded-lg border bg-slate-50 p-4 space-y-5">
+      <div className="text-center space-y-1 pb-2 border-b">
+        <p className="text-sm font-bold text-slate-900">OPT OUT Agreement</p>
+        <p className="text-xs text-muted-foreground">
+          Working Time Regulations — SF 02 · {companyName}
+        </p>
+      </div>
+
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        I agree with <strong className="text-slate-800">{companyName}</strong> that:
+      </p>
+
+      <ol className="list-decimal pl-5 space-y-3 text-sm text-muted-foreground leading-relaxed">
+        <li>
+          The 48 hour weekly working time limit under the Working Time Regulations does not apply to
+          me.
+        </li>
+        <li>This agreement applies for an indefinite period.</li>
+        <li>
+          This agreement is terminable by me giving three months&apos; notice in writing to the
+          employer.
+        </li>
+        <li>I have read and understood all of the above and freely give my agreement to it.</li>
+      </ol>
+
+      <p className="text-xs text-muted-foreground border-t pt-3">
+        By acknowledging below, you confirm you voluntarily opt out of the 48-hour average weekly
+        working time limit. You may end this agreement by giving three months&apos; written notice.
+      </p>
     </div>
   );
 }
@@ -684,6 +722,7 @@ export default function PublicVettingFormPage() {
   const [form, setForm] = useState<VettingFormPayload | null>(null);
   const [ackEqualOps, setAckEqualOps] = useState(false);
   const [ackZeroHours, setAckZeroHours] = useState(false);
+  const [ackOptOut, setAckOptOut] = useState(false);
   const [ackConduct, setAckConduct] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [employmentCount, setEmploymentCount] = useState(1);
@@ -715,6 +754,7 @@ export default function PublicVettingFormPage() {
     setForm({ ...data.form });
     setAckEqualOps(data.acknowledgements.equalOps);
     setAckZeroHours(data.acknowledgements.zeroHours);
+    setAckOptOut(!!data.acknowledgements.optOut);
     setAckConduct(data.acknowledgements.codeOfConduct);
     setLastSavedAt(data.lastSavedAt);
     if (data.submittedAt) setSubmitted(true);
@@ -763,6 +803,7 @@ export default function PublicVettingFormPage() {
           acknowledgeEqualOps: ackEqualOps,
           acknowledgeZeroHours: ackZeroHours,
           acknowledgeCodeOfConduct: ackConduct,
+          acknowledgeOptOut: ackOptOut,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -1416,6 +1457,25 @@ export default function PublicVettingFormPage() {
               </div>
             )}
 
+            {step === "optOut" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Please read the Working Time OPT OUT Agreement (SF 02) below carefully. By
+                  acknowledging, you voluntarily agree that the 48-hour weekly working time limit does
+                  not apply to your work with {data?.companyName}.
+                </p>
+                <OptOutAgreementContent companyName={data?.companyName || "the Company"} />
+                <div className="flex items-start gap-2 rounded-md border p-3">
+                  <Checkbox checked={ackOptOut} onCheckedChange={(v) => setAckOptOut(!!v)} id="ack-optout" />
+                  <Label htmlFor="ack-optout" className="text-sm leading-snug">
+                    I have read and freely agree to the OPT OUT Agreement above. I understand the 48-hour
+                    weekly working time limit does not apply to me, and that I may end this agreement by
+                    giving three months&apos; written notice.
+                  </Label>
+                </div>
+              </div>
+            )}
+
             {step === "conduct" && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -1474,6 +1534,7 @@ export default function PublicVettingFormPage() {
                   <p className="text-xs font-semibold uppercase text-muted-foreground">Acknowledgements</p>
                   <p>{ackEqualOps ? "✓" : "✗"} Equal Ops Review</p>
                   <p>{ackZeroHours ? "✓" : "✗"} Zero Hours Contract</p>
+                  <p>{ackOptOut ? "✓" : "✗"} OPT OUT Agreement</p>
                   <p>{ackConduct ? "✓" : "✗"} Code of Conduct</p>
                 </div>
               </div>
@@ -1505,6 +1566,7 @@ export default function PublicVettingFormPage() {
                       submitMut.isPending ||
                       !ackEqualOps ||
                       !ackZeroHours ||
+                      !ackOptOut ||
                       !ackConduct ||
                       !form.signatureData ||
                       !form.signaturePrintName.trim()

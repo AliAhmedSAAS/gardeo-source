@@ -356,6 +356,7 @@ app.use((req, res, next) => {
         equal_ops_acknowledged_at timestamp,
         zero_hours_acknowledged_at timestamp,
         code_of_conduct_acknowledged_at timestamp,
+        opt_out_acknowledged_at timestamp,
         created_by varchar(255) REFERENCES users(id),
         created_at timestamp NOT NULL DEFAULT NOW()
       )
@@ -363,6 +364,16 @@ app.use((req, res, next) => {
     log("Ensured employee_vetting_form_tokens table exists");
   } catch (e) {
     log("Could not create employee_vetting_form_tokens table: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE employee_vetting_form_tokens
+      ADD COLUMN IF NOT EXISTS opt_out_acknowledged_at timestamp
+    `);
+    log("Ensured employee_vetting_form_tokens.opt_out_acknowledged_at exists");
+  } catch (e) {
+    log("Could not add opt_out_acknowledged_at column: " + (e as Error).message);
   }
 
   try {
