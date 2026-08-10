@@ -66,11 +66,13 @@ export async function getVettingPacketByToken(token: string) {
   if (!tenant) return { ok: false as const, error: "Tenant not found", status: 404 };
 
   const empUser = employee.userId ? await storage.getUser(employee.userId) : null;
-  const [emergencyContacts, bankDetails, employmentHistory, references] = await Promise.all([
+  const { staffProfileStorage } = await import("./staff-profile-storage");
+  const [emergencyContacts, bankDetails, employmentHistory, references, extras] = await Promise.all([
     storage.getEmergencyContacts(row.employeeId),
     storage.getBankDetails(row.employeeId),
     storage.getEmploymentHistory(row.employeeId),
     storage.getReferences(row.employeeId),
+    staffProfileStorage.getStaffProfileExtras(row.employeeId),
   ]);
 
   const available = new Set(
@@ -92,7 +94,16 @@ export async function getVettingPacketByToken(token: string) {
     const result = await generateVettingDocument(
       code,
       tenant,
-      { ...employee, emergencyContacts, bankDetails, employmentHistory, references },
+      {
+        ...employee,
+        emergencyContacts,
+        bankDetails,
+        employmentHistory,
+        references,
+        drivingLicences: extras.drivingLicences,
+        health: extras.health,
+        education: extras.education,
+      },
       empUser,
     );
     zip.file(result.filename, result.buffer);

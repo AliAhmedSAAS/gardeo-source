@@ -1026,11 +1026,13 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
       const empUser = ctx.employee.userId ? await storage.getUser(ctx.employee.userId) : null;
-      const [emergencyContacts, bankDetails, employmentHistory, references] = await Promise.all([
+      const { staffProfileStorage } = await import("./staff-profile-storage");
+      const [emergencyContacts, bankDetails, employmentHistory, references, extras] = await Promise.all([
         storage.getEmergencyContacts(ctx.employeeId),
         storage.getBankDetails(ctx.employeeId),
         storage.getEmploymentHistory(ctx.employeeId),
         storage.getReferences(ctx.employeeId),
+        staffProfileStorage.getStaffProfileExtras(ctx.employeeId),
       ]);
       const asPdf = String(req.query.format || "").toLowerCase() === "pdf";
       const screeningExceptions =
@@ -1039,7 +1041,16 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const result = await generateVettingDocument(
         String(req.params.code),
         tenant,
-        { ...ctx.employee, emergencyContacts, bankDetails, employmentHistory, references },
+        {
+          ...ctx.employee,
+          emergencyContacts,
+          bankDetails,
+          employmentHistory,
+          references,
+          drivingLicences: extras.drivingLicences,
+          health: extras.health,
+          education: extras.education,
+        },
         empUser,
         { asPdf, screeningExceptions },
       );

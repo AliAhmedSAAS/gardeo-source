@@ -37,8 +37,22 @@ function joinAddress(parts: Array<string | null | undefined>): string {
 
 type VettingEmployeeSource = Employee & {
   maritalStatus?: string | null;
+  carOwner?: string | null;
   emergencyContacts?: Array<{ name?: string | null; relationship?: string | null; phone?: string | null; address?: string | null; isPrimary?: boolean | null }>;
   bankDetails?: { accountName?: string | null; bankName?: string | null; sortCode?: string | null; accountNumber?: string | null } | null;
+  drivingLicences?: Array<{ licenceNumber?: string | null }>;
+  health?: {
+    height?: string | null;
+    weight?: string | null;
+    colourOfEyes?: string | null;
+  } | null;
+  education?: Array<{
+    institution?: string | null;
+    qualification?: string | null;
+    dateFrom?: string | Date | null;
+    dateTo?: string | Date | null;
+    notes?: string | null;
+  }>;
   employmentHistory?: Array<{
     employerName?: string | null;
     jobTitle?: string | null;
@@ -99,6 +113,13 @@ export function buildVettingMergeContext(
     employee.county,
     employee.postcode,
   ]);
+  const previousAddress = joinAddress([
+    employee.previousAddressLine1,
+    employee.previousAddressLine2,
+    employee.previousCity,
+    employee.previousCounty,
+    employee.previousPostcode,
+  ]);
   const primaryEmergency =
     employee.emergencyContacts?.find((c) => c.isPrimary) ||
     employee.emergencyContacts?.[0];
@@ -106,9 +127,39 @@ export function buildVettingMergeContext(
   const history = employee.employmentHistory || [];
   const firstHistory = history[0] || null;
   const secondHistory = history[1] || null;
+  const thirdHistory = history[2] || null;
+  const fourthHistory = history[3] || null;
+  const fifthHistory = history[4] || null;
+  const drivingLicenceNumber = employee.drivingLicences?.[0]?.licenceNumber || "";
+  const carOwnerRaw = String(employee.carOwner || "").trim().toLowerCase();
+  const carOwnerLabel =
+    carOwnerRaw === "yes" ? "YES" : carOwnerRaw === "no" ? "NO" : (employee.carOwner || "").toUpperCase();
+  const health = employee.health || null;
+  const education = employee.education || [];
+  const school =
+    education.find((e) => /school|secondary/i.test(`${e.qualification || ""} ${e.notes || ""}`)) ||
+    education[0] ||
+    null;
+  const college =
+    education.find(
+      (e) => e !== school && /college|university|further/i.test(`${e.qualification || ""} ${e.institution || ""}`),
+    ) ||
+    education[1] ||
+    null;
   const today = formatUkLongDate(new Date());
   const vettingFrom = formatUkDate(employee.vettingStartDate || employee.startDate);
   const vettingFromParts = vettingFrom.split("/");
+
+  const employmentSlot = (row: (typeof history)[0] | null | undefined, n: number) => ({
+    [`EMPLOYMENT_${n}_NAME`]: row?.employerName || "",
+    [`EMPLOYMENT_${n}_TITLE`]: row?.jobTitle || "",
+    [`EMPLOYMENT_${n}_START`]: formatUkDate(row?.dateFrom),
+    [`EMPLOYMENT_${n}_END`]: formatUkDate(row?.dateTo),
+    [`EMPLOYMENT_${n}_REASON`]: row?.reasonForLeaving || "",
+    [`EMPLOYMENT_${n}_PHONE`]: row?.refereePhone || "",
+    [`EMPLOYMENT_${n}_ADDRESS`]: row?.refereeAddress || "",
+    [`EMPLOYMENT_${n}_REFEREE`]: extractRefereeNameFromDuties(row?.duties),
+  });
 
   return {
     COMPANY_NAME: companyName,
@@ -130,11 +181,30 @@ export function buildVettingMergeContext(
     NI_NUMBER: employee.nationalInsurance || "",
     MARITAL_STATUS: employee.maritalStatus || "",
     DOB: formatUkDate(employee.dateOfBirth),
+    PLACE_OF_BIRTH: employee.placeOfBirth || "",
+    GENDER: employee.gender || "",
+    NATIONALITY: employee.nationality || "",
     EMPLOYEE_ADDRESS: employeeAddress,
+    PREVIOUS_ADDRESS: previousAddress,
+    PREVIOUS_LIVING_FROM: formatUkDate(employee.previousLivingFrom),
+    PREVIOUS_LIVING_TO: formatUkDate(employee.previousLivingTo),
+    LIVING_FROM: formatUkDate(employee.livingFrom),
     EMPLOYEE_PHONE: employee.phone || empUser?.phone || "",
+    EMPLOYEE_MOBILE: employee.secondPhone || employee.phone || empUser?.phone || "",
     EMPLOYEE_EMAIL: empUser?.email || employee.portalEmail || "",
     SIA_LICENCE: employee.siaLicenseNumber || "",
     SIA_EXPIRY: formatUkDate(employee.siaExpiryDate),
+    DRIVING_LICENCE: drivingLicenceNumber,
+    CAR_OWNER: carOwnerLabel,
+    HEIGHT: health?.height || "",
+    WEIGHT: health?.weight || "",
+    COLOUR_OF_EYES: health?.colourOfEyes || "",
+    SCHOOL_NAME: school?.institution || "",
+    SCHOOL_TOWN: school?.notes || "",
+    SCHOOL_LEFT: formatUkDate(school?.dateTo),
+    COLLEGE_DETAILS: [college?.institution, formatUkDate(college?.dateFrom), formatUkDate(college?.dateTo)]
+      .filter(Boolean)
+      .join(" — "),
     JOB_TITLE: employee.jobTitle || employee.officerType || "Security Operative",
     OFFICER_TYPE: employee.officerType || "Security Operative",
     START_DATE: formatUkDate(employee.startDate),
@@ -152,18 +222,11 @@ export function buildVettingMergeContext(
     BANK_SORT_CODE: bankDetails?.sortCode || "",
     BANK_NAME: bankDetails?.bankName || "",
     BANK_ACCOUNT_NAME: bankDetails?.accountName || "",
-    EMPLOYMENT_1_NAME: firstHistory?.employerName || "",
-    EMPLOYMENT_1_TITLE: firstHistory?.jobTitle || "",
-    EMPLOYMENT_1_START: formatUkDate(firstHistory?.dateFrom),
-    EMPLOYMENT_1_END: formatUkDate(firstHistory?.dateTo),
-    EMPLOYMENT_1_REASON: firstHistory?.reasonForLeaving || "",
-    EMPLOYMENT_1_PHONE: firstHistory?.refereePhone || "",
-    EMPLOYMENT_2_NAME: secondHistory?.employerName || "",
-    EMPLOYMENT_2_TITLE: secondHistory?.jobTitle || "",
-    EMPLOYMENT_2_START: formatUkDate(secondHistory?.dateFrom),
-    EMPLOYMENT_2_END: formatUkDate(secondHistory?.dateTo),
-    EMPLOYMENT_2_REASON: secondHistory?.reasonForLeaving || "",
-    EMPLOYMENT_2_PHONE: secondHistory?.refereePhone || "",
+    ...employmentSlot(firstHistory, 1),
+    ...employmentSlot(secondHistory, 2),
+    ...employmentSlot(thirdHistory, 3),
+    ...employmentSlot(fourthHistory, 4),
+    ...employmentSlot(fifthHistory, 5),
     TODAY: today,
     TODAY_SHORT: formatUkDate(new Date()),
   };
@@ -267,7 +330,94 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("MOBILE NO")) {
-      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_PHONE);
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_MOBILE || ctx.EMPLOYEE_PHONE);
+      continue;
+    }
+    if (upper === "PREVIOUS" && i + 1 < paragraphs.length) {
+      const next = getParagraphText(paragraphs[i + 1]).toUpperCase();
+      if (next.startsWith("ADDRESS")) {
+        // Skip "IF LESS THAN 3 YEARS..." label block, then fill the next blank.
+        let fillAt = i + 1;
+        for (let j = i + 2; j < Math.min(i + 8, paragraphs.length); j++) {
+          const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
+          if (!t || t.startsWith("IF LESS") || t.startsWith("3 YEARS") || t === "ABOVE," || t === "ABOVE") {
+            fillAt = j;
+            continue;
+          }
+          break;
+        }
+        i = fillNextBlankParagraph(paragraphs, fillAt, ctx.PREVIOUS_ADDRESS);
+        continue;
+      }
+    }
+    if (upper.startsWith("CURRENT DRIVING LICENCE")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.DRIVING_LICENCE
+          ? `CURRENT DRIVING LICENCE: ${ctx.DRIVING_LICENCE}`
+          : "CURRENT DRIVING LICENCE: NO",
+      );
+      continue;
+    }
+    if (upper.startsWith("CAR OWNER")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.CAR_OWNER ? `CAR OWNER: ${ctx.CAR_OWNER}` : "CAR OWNER:",
+      );
+      // Clear the following "YES NO (delete)" choice line when we have a definite answer.
+      if (ctx.CAR_OWNER && i + 1 < paragraphs.length) {
+        const choice = getParagraphText(paragraphs[i + 1]).toUpperCase();
+        if (choice.includes("YES") && choice.includes("NO")) {
+          paragraphs[i + 1] = setParagraphText(paragraphs[i + 1], "");
+        }
+      }
+      continue;
+    }
+    if (upper.startsWith("PLACE OF BIRTH")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.PLACE_OF_BIRTH ? `PLACE OF BIRTH: ${ctx.PLACE_OF_BIRTH}` : text,
+      );
+      continue;
+    }
+    if (upper === "HEIGHT:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.HEIGHT);
+      continue;
+    }
+    if (upper === "WEIGHT:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.WEIGHT);
+      continue;
+    }
+    if (upper.startsWith("COLOUR OF EYES")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.COLOUR_OF_EYES);
+      continue;
+    }
+    if (upper.startsWith("SCHOOL NAME")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.SCHOOL_NAME ? `SCHOOL NAME: (secondary only) ${ctx.SCHOOL_NAME}` : text,
+      );
+      continue;
+    }
+    if (upper.startsWith("TOWN/CITY")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.SCHOOL_TOWN ? `TOWN/CITY: ${ctx.SCHOOL_TOWN}` : text,
+      );
+      continue;
+    }
+    if (upper.startsWith("DATE YOU LEFT SCHOOL")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.SCHOOL_LEFT ? `DATE YOU LEFT SCHOOL: ${ctx.SCHOOL_LEFT}` : text,
+      );
+      continue;
+    }
+    if (upper.startsWith("COLLEGE")) {
+      paragraphs[i] = setParagraphText(
+        paragraphs[i],
+        ctx.COLLEGE_DETAILS ? `COLLEGE & DATES: ${ctx.COLLEGE_DETAILS}` : text,
+      );
       continue;
     }
     if (upper.includes("NATIONAL") && i + 1 < paragraphs.length && getParagraphText(paragraphs[i + 1]).toUpperCase().includes("INSURANCE")) {
