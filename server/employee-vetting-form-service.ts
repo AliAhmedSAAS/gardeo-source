@@ -362,9 +362,16 @@ function mergeForm(base: VettingFormPayload, patch: Record<string, unknown>): Ve
   const out: VettingFormPayload = { ...emptyForm(), ...base };
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
-    if (key in out) {
-      (out as Record<string, string>)[key] = str(value);
-    }
+    if (!(key in out)) continue;
+    const strValue = str(value);
+    // An empty stored value must not clobber fresher, non-empty data that
+    // buildFormFromEmployee() just pulled live from the employee record.
+    // Without this guard, a token snapshot taken before a field (e.g. job
+    // title) was filled in on the Employee Profile would permanently mask
+    // later edits for the lifetime of the link (up to 3 days, or longer if
+    // reused) — the two screens would silently drift out of sync.
+    if (strValue === "" && (out as Record<string, string>)[key] !== "") continue;
+    (out as Record<string, string>)[key] = strValue;
   }
   return out;
 }
