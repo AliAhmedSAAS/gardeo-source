@@ -303,7 +303,8 @@ function plainTextRun(text: string): string {
 }
 
 function replaceParagraphRuns(paragraphXml: string, runsXml: string): string {
-  const withoutRuns = paragraphXml.replace(/<w:r[\s\S]*?<\/w:r>/g, "");
+  // Match <w:r>...</w:r> only — not <w:rPr> / <w:rFonts> etc.
+  const withoutRuns = paragraphXml.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, "");
   return withoutRuns.replace(/<\/w:p>\s*$/, `${runsXml}</w:p>`);
 }
 
@@ -359,11 +360,11 @@ function getParagraphText(paragraphXml: string): string {
 }
 
 function setParagraphText(paragraphXml: string, newText: string): string {
-  if (!WT_REGEX.test(paragraphXml)) {
+  const hasText = /<w:t[\s>]/.test(paragraphXml);
+  if (!hasText) {
     const run = `<w:r><w:t xml:space="preserve">${escapeXml(newText)}</w:t></w:r>`;
     return paragraphXml.replace(/<\/w:p>\s*$/, `${run}</w:p>`);
   }
-  WT_REGEX.lastIndex = 0;
   let used = false;
   return paragraphXml.replace(WT_REGEX, (_match, attrs: string) => {
     if (!used) {
@@ -401,6 +402,82 @@ function fillSpecificBlankParagraph(paragraphs: string[], index: number, value: 
   paragraphs[index] = setParagraphText(paragraphs[index], value.toUpperCase());
 }
 
+function markCheckboxOption(paragraphXml: string, text: string, selected: boolean): string {
+  if (!selected) return paragraphXml;
+  const checked = text.replace(/^☐\s*/, "☑ ");
+  return setParagraphHighlighted(paragraphXml, checked);
+}
+
+function markAdjacentCheckboxYesNo(paragraphs: string[], startIndex: number, choice: "YES" | "NO" | ""): void {
+  if (!choice) return;
+  for (let j = startIndex + 1; j < Math.min(startIndex + 6, paragraphs.length); j++) {
+    const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim();
+    const upper = t.toUpperCase().replace(/^☑\s*/, "☐ ");
+    if (upper === "☐ YES" || upper === "YES" || upper === "☐YES") {
+      if (choice === "YES") paragraphs[j] = markCheckboxOption(paragraphs[j], t.startsWith("☐") || t.startsWith("☑") ? t : `☐ ${t}`, true);
+    } else if (upper === "☐ NO" || upper === "NO" || upper === "☐NO") {
+      if (choice === "NO") paragraphs[j] = markCheckboxOption(paragraphs[j], t.startsWith("☐") || t.startsWith("☑") ? t : `☐ ${t}`, true);
+    } else if (t && !/^☐|^☑|IF YES/i.test(t) && j > startIndex + 1) {
+      // Stop once we leave the yes/no block.
+      break;
+    }
+  }
+}
+
+function replaceRowCellsInOrder(rowXml: string, cells: string[], nextCells: string[]): string {
+  let result = "";
+  let remaining = rowXml;
+  for (let c = 0; c < cells.length; c++) {
+    const idx = remaining.indexOf(cells[c]);
+    if (idx < 0) return rowXml;
+    result += remaining.slice(0, idx) + nextCells[c];
+    remaining = remaining.slice(idx + cells[c].length);
+  }
+  return result + remaining;
+}
+
+function applySf01EmploymentTableFills(xml: string, ctx: VettingMergeContext): string {
+  const tables = Array.from(xml.matchAll(TABLE_REGEX)).map((m) => m[0]);
+  let out = xml;
+  for (const tableXml of tables) {
+    const rows = getTableRows(tableXml);
+    if (rows.length < 2) continue;
+    const header = getRowCells(rows[0]).map(getCellText).join(" ").toUpperCase();
+    if (!header.includes("EMPLOYER") || !header.includes("POSITION")) continue;
+
+    let updated = tableXml;
+    for (let r = 1; r < rows.length && r <= 7; r++) {
+      const cells = getRowCells(rows[r]);
+      if (cells.length < 5) continue;
+      const phone = String((ctx as any)[`EMPLOYMENT_${r}_PHONE`] || "");
+      const name = String((ctx as any)[`EMPLOYMENT_${r}_NAME`] || "");
+      const address = String((ctx as any)[`EMPLOYMENT_${r}_ADDRESS`] || "");
+      const referee = String((ctx as any)[`EMPLOYMENT_${r}_REFEREE`] || "");
+      const title = String((ctx as any)[`EMPLOYMENT_${r}_TITLE`] || "");
+      const start = String((ctx as any)[`EMPLOYMENT_${r}_START`] || "");
+      const end = String((ctx as any)[`EMPLOYMENT_${r}_END`] || "");
+      const reason = String((ctx as any)[`EMPLOYMENT_${r}_REASON`] || "");
+      if (!name && !phone && !title) continue;
+
+      const employerBlock = [name, address, phone ? `Tele No: ${phone}` : ""].filter(Boolean).join(" — ");
+      const nextCells = [...cells];
+      nextCells[0] = setCellText(cells[0], employerBlock || getCellText(cells[0]));
+      if (referee) nextCells[1] = setCellText(cells[1], referee);
+      if (title) nextCells[2] = setCellText(cells[2], title);
+      nextCells[3] = setCellText(cells[3], `Start: ${start || "—"}    End: ${end || "—"}`);
+      if (reason) nextCells[4] = setCellText(cells[4], reason);
+      const rebuilt = replaceRowCellsInOrder(rows[r], cells, nextCells);
+      // Replace this row only once, in order, within the updated table.
+      const rowIdx = updated.indexOf(rows[r]);
+      if (rowIdx >= 0) {
+        updated = updated.slice(0, rowIdx) + rebuilt + updated.slice(rowIdx + rows[r].length);
+      }
+    }
+    out = out.replace(tableXml, updated);
+  }
+  return out;
+}
+
 function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string {
   const paragraphs = [...xml.matchAll(PARA_REGEX)].map((m) => m[0]);
   if (paragraphs.length === 0) return xml;
@@ -421,8 +498,12 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_SURNAME || ctx.EMPLOYEE_NAME);
       continue;
     }
-    if (upper.startsWith("FIRST NAMES") && !/\{\{/.test(text) && !/[A-Za-z]{2,}/.test(text.replace(/^FIRST NAMES;?:?/i, ""))) {
+    if (upper.startsWith("FIRST NAME")) {
       i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_FIRST_NAMES);
+      continue;
+    }
+    if (upper === "CURRENT ADDRESS:" || upper.startsWith("CURRENT ADDRESS")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_ADDRESS);
       continue;
     }
     if (upper === "CURRENT" && i + 2 < paragraphs.length) {
@@ -434,8 +515,13 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
     }
     if (upper === "ADDRESS:" && i > 0) {
       const prev = getParagraphText(paragraphs[i - 1]).toUpperCase();
-      if (prev.includes("CURRENT") || prev === "ADDRESS:") {
-        i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_ADDRESS);
+      if (prev.includes("CURRENT") || prev === "ADDRESS:" || prev.includes("NEXT OF KIN") || prev.includes("EMERGENCY") || prev === "RELATIONSHIP:") {
+        // Emergency ADDRESS uses fill below; current-address legacy handled above.
+        if (prev.includes("NEXT OF KIN") || prev.includes("EMERGENCY") || prev === "RELATIONSHIP:" || prev === "NAME:") {
+          i = fillNextBlankParagraph(paragraphs, i, ctx.EMERGENCY_CONTACT_ADDRESS);
+        } else {
+          i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_ADDRESS);
+        }
         continue;
       }
     }
@@ -447,10 +533,13 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       i = fillNextBlankParagraph(paragraphs, i, ctx.EMPLOYEE_MOBILE || ctx.EMPLOYEE_PHONE);
       continue;
     }
+    if (upper.startsWith("PREVIOUS ADDRESS")) {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.PREVIOUS_ADDRESS);
+      continue;
+    }
     if (upper === "PREVIOUS" && i + 1 < paragraphs.length) {
       const next = getParagraphText(paragraphs[i + 1]).toUpperCase();
       if (next.startsWith("ADDRESS")) {
-        // Skip "IF LESS THAN 3 YEARS..." label block, then fill the next blank.
         let fillAt = i + 1;
         for (let j = i + 2; j < Math.min(i + 8, paragraphs.length); j++) {
           const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
@@ -465,61 +554,87 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       }
     }
     if (upper.startsWith("CURRENT DRIVING LICENCE")) {
-      if (looksLikeBlankFormLine(text) || /^CURRENT DRIVING LICENCE:\s*(NO;?)?\s*$/i.test(text)) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
           ctx.DRIVING_LICENCE
-            ? `CURRENT DRIVING LICENCE: ${ctx.DRIVING_LICENCE}`
-            : "CURRENT DRIVING LICENCE: NO",
+            ? `CURRENT DRIVING LICENCE NO: ${ctx.DRIVING_LICENCE}`
+            : "CURRENT DRIVING LICENCE NO:",
         );
+      } else if (/^CURRENT DRIVING LICENCE NO:\s*$/i.test(text)) {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.DRIVING_LICENCE);
       }
       continue;
     }
-    if (upper.startsWith("CAR OWNER") && looksLikeBlankFormLine(text)) {
-      paragraphs[i] = setParagraphText(
-        paragraphs[i],
-        ctx.CAR_OWNER ? `CAR OWNER: ${ctx.CAR_OWNER}` : "CAR OWNER:",
-      );
+    if (upper === "CAR OWNER:" || (upper.startsWith("CAR OWNER") && looksLikeBlankFormLine(text))) {
+      if (looksLikeBlankFormLine(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          ctx.CAR_OWNER ? `CAR OWNER: ${ctx.CAR_OWNER}` : "CAR OWNER:",
+        );
+      }
       if (ctx.CAR_OWNER && i + 1 < paragraphs.length) {
-        const choice = getParagraphText(paragraphs[i + 1]).toUpperCase();
-        if (/^YES\s+NO/i.test(choice.trim()) || /\(DELETE\)/i.test(choice)) {
-          paragraphs[i + 1] =
-            ctx.CAR_OWNER === "YES"
-              ? replaceParagraphRuns(paragraphs[i + 1], yellowTextRun("YES") + plainTextRun("     NO"))
-              : replaceParagraphRuns(paragraphs[i + 1], plainTextRun("YES     ") + yellowTextRun("NO"));
+        const choice = getParagraphText(paragraphs[i + 1]).replace(/\u00a0/g, " ").trim();
+        if (/☐\s*YES/i.test(choice) || /^YES\s+NO/i.test(choice) || /\(DELETE\)/i.test(choice)) {
+          if (/☐/.test(choice)) {
+            paragraphs[i + 1] = markCheckboxOption(paragraphs[i + 1], choice, ctx.CAR_OWNER === "YES");
+            if (ctx.CAR_OWNER === "NO") {
+              paragraphs[i + 1] = setParagraphHighlighted(paragraphs[i + 1], "☑ NO");
+            }
+          } else {
+            paragraphs[i + 1] =
+              ctx.CAR_OWNER === "YES"
+                ? replaceParagraphRuns(paragraphs[i + 1], yellowTextRun("YES") + plainTextRun("     NO"))
+                : replaceParagraphRuns(paragraphs[i + 1], plainTextRun("YES     ") + yellowTextRun("NO"));
+          }
         }
       }
       continue;
     }
-    if (upper === "MARRIED" || upper === "DIVORCED" || upper === "SINGLE" || upper === "OR OTHER" || upper === "SINGLE OR OTHER") {
+    if (
+      upper === "☐ MARRIED" ||
+      upper === "☐ DIVORCED" ||
+      upper === "☐ SINGLE / OTHER" ||
+      upper === "MARRIED" ||
+      upper === "DIVORCED" ||
+      upper === "SINGLE" ||
+      upper === "OR OTHER" ||
+      upper === "SINGLE OR OTHER"
+    ) {
       const marital = (ctx.MARITAL_STATUS || "").toUpperCase();
       const selected =
-        (upper.startsWith("SINGLE") && (marital.includes("SINGLE") || marital.includes("OTHER") || marital.includes("WIDOW"))) ||
-        (upper === "OR OTHER" && (marital.includes("OTHER") || marital.includes("WIDOW"))) ||
-        (upper === "MARRIED" && marital.includes("MARRIED")) ||
-        (upper === "DIVORCED" && marital.includes("DIVORCED"));
+        (upper.includes("SINGLE") && (marital.includes("SINGLE") || marital.includes("OTHER") || marital.includes("WIDOW"))) ||
+        (upper.includes("OTHER") && (marital.includes("OTHER") || marital.includes("WIDOW"))) ||
+        (upper.includes("MARRIED") && marital.includes("MARRIED")) ||
+        (upper.includes("DIVORCED") && marital.includes("DIVORCED"));
       if (selected) {
-        paragraphs[i] = setParagraphHighlighted(paragraphs[i], text);
+        paragraphs[i] = markCheckboxOption(paragraphs[i], text.startsWith("☐") ? text : `☐ ${text}`, true);
       }
       continue;
     }
     if (upper.startsWith("HOW DID YOU HEAR ABOUT THE ROLE")) {
-      if (ctx.HEARD_ABOUT_ROLE && !text.toUpperCase().includes(ctx.HEARD_ABOUT_ROLE.toUpperCase())) {
-        paragraphs[i] = setParagraphText(paragraphs[i], `HOW DID YOU HEAR ABOUT THE ROLE ${ctx.HEARD_ABOUT_ROLE}`);
+      if (ctx.HEARD_ABOUT_ROLE) {
+        if (looksLikeBlankFormLine(text) || /\?$/.test(text)) {
+          i = fillNextBlankParagraph(paragraphs, i, ctx.HEARD_ABOUT_ROLE);
+        } else if (!text.toUpperCase().includes(ctx.HEARD_ABOUT_ROLE.toUpperCase())) {
+          paragraphs[i] = setParagraphText(paragraphs[i], `${text} ${ctx.HEARD_ABOUT_ROLE}`);
+        }
       }
       continue;
     }
-    if (upper.startsWith("4. HAVE YOU EVER APPEARED BEFORE A COURT")) {
+    if (
+      upper.startsWith("4. HAVE YOU EVER APPEARED BEFORE A COURT") ||
+      upper.startsWith("HAVE YOU EVER APPEARED BEFORE A COURT")
+    ) {
       const answer = (ctx.CRIMINAL_CONVICTION || "") as "YES" | "NO" | "";
       if (/YES\s*\/\s*NO/i.test(text)) {
         paragraphs[i] = markInlineYesNo(paragraphs[i], text, answer);
       } else {
+        markAdjacentCheckboxYesNo(paragraphs, i, answer);
         for (let j = i + 1; j < Math.min(i + 8, paragraphs.length); j++) {
           const t = getParagraphText(paragraphs[j]).replace(/\u00a0/g, " ").trim().toUpperCase();
           if (t === "YES" || t === "NO") {
-            if (answer && t === answer) {
-              paragraphs[j] = setParagraphHighlighted(paragraphs[j], t);
-            }
+            if (answer && t === answer) paragraphs[j] = setParagraphHighlighted(paragraphs[j], t);
           }
           if (t.startsWith("IF YES, GIVE DETAILS") && ctx.CRIMINAL_CONVICTION_DETAILS) {
             fillNextBlankParagraph(paragraphs, j, ctx.CRIMINAL_CONVICTION_DETAILS);
@@ -528,20 +643,37 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       }
       continue;
     }
-    if (upper.startsWith("HAVE YOU BEEN MADE BANKRUPT")) {
-      if (/YES\s*\/\s*NO/i.test(text)) {
-        paragraphs[i] = markDualInlineYesNo(paragraphs[i], text, (ctx.BEEN_BANKRUPT || "") as any, (ctx.HAS_CCJ || "") as any);
+    if (upper.includes("HAVE YOU BEEN MADE BANKRUPT")) {
+      if (/YES\s*\/?\s*NO/i.test(text) || /YES\s+NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(
+          paragraphs[i],
+          text.replace(/YES\s+NO/i, "YES/NO"),
+          (ctx.BEEN_BANKRUPT || "") as any,
+        );
       }
       continue;
     }
-    if (upper.startsWith("DO YOU OBJECT TO THE COMPANY CONTACTING A CREDIT AGENCY")) {
-      // Question may span two paragraphs; mark YES/NO on this or the next line.
-      if (/YES\s*\/\s*NO/i.test(text)) {
-        paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
+    if (upper.includes("COUNTY COURT JUDGEMENT")) {
+      if (/YES\s*\/?\s*NO/i.test(text) || /YES\s+NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(
+          paragraphs[i],
+          text.replace(/YES\s+NO/i, "YES/NO"),
+          (ctx.HAS_CCJ || "") as any,
+        );
+      }
+      continue;
+    }
+    if (upper.includes("OBJECT TO THE COMPANY CONTACTING A CREDIT AGENCY") || upper.startsWith("DO YOU OBJECT TO THE COMPANY CONTACTING A CREDIT AGENCY")) {
+      if (/YES\s*\/?\s*NO/i.test(text) || /YES\s+NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(
+          paragraphs[i],
+          text.replace(/YES\s+NO/i, "YES/NO"),
+          (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any,
+        );
       } else if (i + 1 < paragraphs.length) {
         const next = getParagraphText(paragraphs[i + 1]).replace(/\u00a0/g, " ").trim();
-        if (/YES\s*\/\s*NO/i.test(next)) {
-          paragraphs[i + 1] = markInlineYesNo(paragraphs[i + 1], next, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
+        if (/YES\s*\/\s*NO/i.test(next) || /YES\s+NO/i.test(next)) {
+          paragraphs[i + 1] = markInlineYesNo(paragraphs[i + 1], next.replace(/YES\s+NO/i, "YES/NO"), (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
         }
       }
       continue;
@@ -550,24 +682,42 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.OBJECT_TO_CREDIT_AGENCY || "") as any);
       continue;
     }
-    if (upper.startsWith("DO YOU AGREE TO A S.I.A. CRIMINAL RECORD CHECK") || upper.startsWith("DO YOU AGREE TO A SIA CRIMINAL RECORD CHECK")) {
-      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_SIA_CHECK || "") as any);
+    if (
+      upper.startsWith("DO YOU AGREE TO AN S.I.A.") ||
+      upper.startsWith("DO YOU AGREE TO A S.I.A.") ||
+      upper.startsWith("DO YOU AGREE TO A SIA")
+    ) {
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_SIA_CHECK || "") as any);
+      } else {
+        markAdjacentCheckboxYesNo(paragraphs, i, (ctx.AGREE_SIA_CHECK || "") as any);
+      }
       continue;
     }
     if (upper.startsWith("DO YOU FULLY UNDERSTAND THE POTENTIAL CONSEQUENCES")) {
-      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.UNDERSTAND_CONSEQUENCES || "") as any);
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.UNDERSTAND_CONSEQUENCES || "") as any);
+      } else {
+        markAdjacentCheckboxYesNo(paragraphs, i, (ctx.UNDERSTAND_CONSEQUENCES || "") as any);
+      }
       continue;
     }
     if (upper.startsWith("DO YOU AGREE TO A CREDIT CHECK")) {
-      paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_CREDIT_CHECK || "") as any);
+      if (/YES\s*\/\s*NO/i.test(text)) {
+        paragraphs[i] = markInlineYesNo(paragraphs[i], text, (ctx.AGREE_CREDIT_CHECK || "") as any);
+      } else {
+        markAdjacentCheckboxYesNo(paragraphs, i, (ctx.AGREE_CREDIT_CHECK || "") as any);
+      }
       continue;
     }
     if (upper.startsWith("PLACE OF BIRTH")) {
-      if (looksLikeBlankFormLine(text) || /IN THE UK/i.test(text)) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
           ctx.PLACE_OF_BIRTH ? `PLACE OF BIRTH: ${ctx.PLACE_OF_BIRTH}` : text,
         );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.PLACE_OF_BIRTH);
       }
       continue;
     }
@@ -584,38 +734,46 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("SCHOOL NAME")) {
-      if (looksLikeBlankFormLine(text) || /^SCHOOL NAME:\s*\(secondary only\)\s*$/i.test(text)) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
-          ctx.SCHOOL_NAME ? `SCHOOL NAME: (secondary only) ${ctx.SCHOOL_NAME}` : text,
+          ctx.SCHOOL_NAME ? `SCHOOL NAME (secondary only): ${ctx.SCHOOL_NAME}` : text,
         );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.SCHOOL_NAME);
       }
       continue;
     }
-    if (upper.startsWith("TOWN/CITY")) {
-      if (looksLikeBlankFormLine(text) || /^TOWN\/CITY:\s*$/i.test(text)) {
+    if (upper.startsWith("TOWN / CITY") || upper.startsWith("TOWN/CITY")) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
-          ctx.SCHOOL_TOWN ? `TOWN/CITY: ${ctx.SCHOOL_TOWN}` : text,
+          ctx.SCHOOL_TOWN ? `TOWN / CITY: ${ctx.SCHOOL_TOWN}` : text,
         );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.SCHOOL_TOWN);
       }
       continue;
     }
     if (upper.startsWith("DATE YOU LEFT SCHOOL")) {
-      if (looksLikeBlankFormLine(text) || /^DATE YOU LEFT SCHOOL:\s*$/i.test(text)) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
           ctx.SCHOOL_LEFT ? `DATE YOU LEFT SCHOOL: ${ctx.SCHOOL_LEFT}` : text,
         );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.SCHOOL_LEFT);
       }
       continue;
     }
     if (upper.startsWith("COLLEGE")) {
-      if (looksLikeBlankFormLine(text) || /^COLLEGE & DATES:\s*$/i.test(text)) {
+      if (looksLikeBlankFormLine(text)) {
         paragraphs[i] = setParagraphText(
           paragraphs[i],
           ctx.COLLEGE_DETAILS ? `COLLEGE & DATES: ${ctx.COLLEGE_DETAILS}` : text,
         );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.COLLEGE_DETAILS);
       }
       continue;
     }
@@ -627,20 +785,37 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       i = fillNextBlankParagraph(paragraphs, i, ctx.MARITAL_STATUS);
       continue;
     }
-    if (upper.includes("INSURANCE NO") || upper === "INSURANCE NO") {
+    if (upper.startsWith("NATIONAL INSURANCE") || upper.includes("INSURANCE NO") || upper === "INSURANCE NO") {
       i = fillNextBlankParagraph(paragraphs, i, ctx.NI_NUMBER);
       continue;
     }
-    if (upper.startsWith("BANK ACCOUNT NUMBER") && looksLikeBlankFormLine(text)) {
-      const account = ctx.BANK_ACCOUNT_NUMBER || "";
-      const sortCode = ctx.BANK_SORT_CODE || "";
-      const filled = `BANK ACCOUNT NUMBER. ${account}    SORT CODE ${sortCode}`;
-      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+    if (upper === "BANK ACCOUNT NUMBER:" || (upper.startsWith("BANK ACCOUNT NUMBER") && looksLikeBlankFormLine(text))) {
+      if (looksLikeBlankFormLine(text)) {
+        const account = ctx.BANK_ACCOUNT_NUMBER || "";
+        const sortCode = ctx.BANK_SORT_CODE || "";
+        paragraphs[i] = setParagraphText(paragraphs[i], `BANK ACCOUNT NUMBER. ${account}    SORT CODE ${sortCode}`);
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.BANK_ACCOUNT_NUMBER);
+      }
       continue;
     }
-    if (upper.startsWith("NAME OF BANK") && looksLikeBlankFormLine(text)) {
-      const filled = `NAME OF BANK ${ctx.BANK_NAME || ""}    NAME OF ACCOUNT HOLDER ${ctx.BANK_ACCOUNT_NAME || ""}`.trimEnd();
-      paragraphs[i] = setParagraphText(paragraphs[i], filled);
+    if (upper === "SORT CODE:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.BANK_SORT_CODE);
+      continue;
+    }
+    if (upper === "NAME OF BANK:" || (upper.startsWith("NAME OF BANK") && looksLikeBlankFormLine(text))) {
+      if (looksLikeBlankFormLine(text)) {
+        paragraphs[i] = setParagraphText(
+          paragraphs[i],
+          `NAME OF BANK ${ctx.BANK_NAME || ""}    NAME OF ACCOUNT HOLDER ${ctx.BANK_ACCOUNT_NAME || ""}`.trimEnd(),
+        );
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.BANK_NAME);
+      }
+      continue;
+    }
+    if (upper === "NAME OF ACCOUNT HOLDER:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.BANK_ACCOUNT_NAME);
       continue;
     }
     if (upper.startsWith("VETTING FROM")) {
@@ -651,7 +826,11 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
     if (upper.startsWith("VETTED BY")) {
-      i = fillNextBlankParagraph(paragraphs, i, ctx.HR_SIGNATORY_NAME);
+      if (looksLikeBlankFormLine(text)) {
+        paragraphs[i] = setParagraphText(paragraphs[i], `VETTED BY: ${ctx.HR_SIGNATORY_NAME || ""}`.trimEnd());
+      } else {
+        i = fillNextBlankParagraph(paragraphs, i, ctx.HR_SIGNATORY_NAME);
+      }
       continue;
     }
     if (upper.includes("S.I.A. LICENCE NUMBER") || upper.includes("SIA LICENCE NUMBER")) {
@@ -665,14 +844,37 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       paragraphs[i] = setParagraphText(paragraphs[i], `EMPLOYMENT AS: ${(ctx.OFFICER_TYPE || ctx.JOB_TITLE).toUpperCase()}`);
       continue;
     }
-    if (upper.startsWith("3. PERSON/NEXT OF KIN TO BE CONTACTED IN ANY EMERGENCY:")) {
-      fillSpecificBlankParagraph(paragraphs, i + 2, ctx.EMERGENCY_CONTACT_NAME);
-      fillSpecificBlankParagraph(paragraphs, i + 4, ctx.EMERGENCY_CONTACT_ADDRESS);
-      fillSpecificBlankParagraph(paragraphs, i + 15, ctx.EMERGENCY_CONTACT_RELATIONSHIP);
-      fillSpecificBlankParagraph(paragraphs, i + 19, ctx.EMERGENCY_CONTACT_PHONE);
+    if (upper === "NAME:") {
+      // Prefer emergency contact when nearby section header mentions emergency/next of kin.
+      let emergency = false;
+      for (let j = Math.max(0, i - 8); j < i; j++) {
+        const prev = getParagraphText(paragraphs[j]).toUpperCase();
+        if (prev.includes("EMERGENCY") || prev.includes("NEXT OF KIN")) {
+          emergency = true;
+          break;
+        }
+      }
+      i = fillNextBlankParagraph(
+        paragraphs,
+        i,
+        emergency ? ctx.EMERGENCY_CONTACT_NAME : ctx.EMPLOYEE_NAME,
+      );
       continue;
     }
-    if (upper === "5.PERSONAL HISTORY (PART A)") {
+    if (upper === "RELATIONSHIP:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMERGENCY_CONTACT_RELATIONSHIP);
+      continue;
+    }
+    if (upper === "TELEPHONE NUMBER:") {
+      i = fillNextBlankParagraph(paragraphs, i, ctx.EMERGENCY_CONTACT_PHONE);
+      continue;
+    }
+    if (upper.startsWith("3. PERSON/NEXT OF KIN TO BE CONTACTED IN ANY EMERGENCY:") || upper.startsWith("3. PERSON / NEXT OF KIN")) {
+      // Label+blank layout is handled by NAME:/ADDRESS: rules above.
+      continue;
+    }
+    if (upper === "5.PERSONAL HISTORY (PART A)" || upper === "5. PERSONAL HISTORY (PART A)") {
+      // Employment table filled separately for the professional/reference layout.
       fillSpecificBlankParagraph(paragraphs, i + 22, ctx.EMPLOYMENT_1_PHONE);
       fillSpecificBlankParagraph(paragraphs, i + 23, ctx.EMPLOYMENT_1_NAME);
       fillSpecificBlankParagraph(paragraphs, i + 24, ctx.EMPLOYMENT_1_TITLE);
@@ -724,7 +926,7 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       continue;
     }
 
-    // Applicant name + signature blocks (appear on multiple pages of SF 01 and similar forms)
+    // Applicant name + signature blocks
     if (/^I\s+_+\s*CERTIFY/i.test(text) || /^I\s+_{5,}/i.test(text)) {
       const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
       if (name) {
@@ -735,17 +937,17 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       }
       continue;
     }
-    if (/^APPLICANTS?\s+SIGNATURE/i.test(text)) {
+    if (/^APPLICANT'?S?\s+SIGNATURE/i.test(text)) {
       const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
       const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT;
       paragraphs[i] = setParagraphText(
         paragraphs[i],
-        `APPLICANTS SIGNATURE: ${name} __APPLICANT_SIG_IMG__                    DATE: ${date}`,
+        `APPLICANT'S SIGNATURE: ${name} __APPLICANT_SIG_IMG__                    DATE: ${date}`,
       );
       continue;
     }
     // Combined PRINT NAME / SIGN lines (check before plain "Print Name")
-    if (/^PRINT NAME/i.test(text) && /\bSIGN\b/i.test(text)) {
+    if (/^PRINT NAME/i.test(text) && /\bSIGN\b/i.test(text) && !/^PRINT NAME:\s*$/i.test(text)) {
       const prev = i > 0 ? getParagraphText(paragraphs[i - 1]).toUpperCase() : "";
       const office =
         prev.includes("I HAVE CHECKED") ||
@@ -762,26 +964,54 @@ function applyParagraphFormFills(xml: string, ctx: VettingMergeContext): string 
       }
       continue;
     }
-    if (/^Print Name/i.test(text)) {
+    if (/^PRINT NAME:\s*$/i.test(text) || /^Print Name$/i.test(text) || /^Print Name:/i.test(text)) {
+      const prev = i > 0 ? getParagraphText(paragraphs[i - 1]).toUpperCase() : "";
+      const office =
+        prev.includes("I HAVE CHECKED") ||
+        prev.includes("OFFICE USE") ||
+        prev.includes("CORRECT AT THE TIME OF INTERVIEW") ||
+        prev.includes("INFORMATION IS CORRECT");
       const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
-      if (name) paragraphs[i] = setParagraphText(paragraphs[i], `Print Name: ${name}`);
+      if (!office && name) {
+        if (/^PRINT NAME:\s*$/i.test(text) || /^Print Name:\s*$/i.test(text)) {
+          i = fillNextBlankParagraph(paragraphs, i, name);
+        } else {
+          paragraphs[i] = setParagraphText(paragraphs[i], `Print Name: ${name}`);
+        }
+      }
       continue;
     }
-    if (/^Signature[_:\s]/i.test(text) || /^Signature_{2,}/i.test(text) || /^Signature…/i.test(text) || text === "Signature________________________") {
+    if (
+      /^SIGNATURE:\s*$/i.test(text) ||
+      /^Signature[_:\s]*$/i.test(text) ||
+      /^Signature_{2,}/i.test(text) ||
+      /^Signature…/i.test(text) ||
+      text === "Signature________________________"
+    ) {
       const name = ctx.APPLICANT_PRINT_NAME || ctx.EMPLOYEE_NAME;
-      // Text placeholder kept for image injection pass; still put printed name as fallback.
-      paragraphs[i] = setParagraphText(paragraphs[i], `Signature: ${name} __APPLICANT_SIG_IMG__`);
+      paragraphs[i] = setParagraphText(paragraphs[i], `SIGNATURE: ${name} __APPLICANT_SIG_IMG__`);
       continue;
     }
-    if (/^Date\s*_+/i.test(text) || /^Date\s*_{3,}/i.test(text) || text.startsWith("Date ________")) {
+    if (upper === "DATE:" || /^Date\s*_+/i.test(text) || /^Date\s*_{3,}/i.test(text) || text.startsWith("Date ________")) {
       const date = ctx.APPLICANT_SIGNATURE_DATE || ctx.TODAY_SHORT;
-      if (date) paragraphs[i] = setParagraphText(paragraphs[i], `Date: ${date}`);
+      // Avoid office-use "Date:" under associated documents when previous is Seen/Copy.
+      const prev = i > 0 ? getParagraphText(paragraphs[i - 1]).toUpperCase() : "";
+      if (prev.includes("☐ SEEN") || prev === "SEEN" || prev.includes("COPY RETAINED")) {
+        continue;
+      }
+      if (upper === "DATE:" && date) {
+        i = fillNextBlankParagraph(paragraphs, i, date);
+      } else if (date) {
+        paragraphs[i] = setParagraphText(paragraphs[i], `Date: ${date}`);
+      }
       continue;
     }
   }
 
   let idx = 0;
-  return xml.replace(PARA_REGEX, () => paragraphs[idx++] ?? "");
+  let out = xml.replace(PARA_REGEX, () => paragraphs[idx++] ?? "");
+  out = applySf01EmploymentTableFills(out, ctx);
+  return out;
 }
 
 function getCellText(cellXml: string): string {
@@ -896,6 +1126,8 @@ function applyReplacements(xml: string, ctx: VettingMergeContext): string {
 
   out = out.split(LEGACY_TEMPLATE_COMPANY_NAME).join(escapeXml(ctx.COMPANY_NAME));
   out = out.split(escapeXml(LEGACY_TEMPLATE_COMPANY_NAME)).join(escapeXml(ctx.COMPANY_NAME));
+  out = out.split("CSTM Services Ltd").join(escapeXml(ctx.COMPANY_NAME));
+  out = out.split("CSTM SERVICES LTD").join(escapeXml(ctx.COMPANY_NAME));
   out = out.split("(ADDRESS)").join(escapeXml(ctx.COMPANY_ADDRESS));
 
   for (const [key, value] of Object.entries(ctx)) {
@@ -1053,10 +1285,10 @@ function injectApplicantSignatureDrawings(xml: string, rId: string, ctx: Vetting
       continue;
     }
 
-    if (/^APPLICANTS?\s+SIGNATURE/i.test(text)) {
+    if (/^APPLICANT'?S?\s+SIGNATURE/i.test(text)) {
       paragraphs[i] = replaceParagraphRuns(
         paragraphs[i],
-        plainTextRun("APPLICANTS SIGNATURE: ") +
+        plainTextRun("APPLICANT'S SIGNATURE: ") +
           signatureDrawingXml(rId) +
           plainTextRun(`    DATE: ${date}`),
       );
