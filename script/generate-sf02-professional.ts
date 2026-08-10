@@ -119,28 +119,6 @@ function labelValue(label: string, value: string) {
   });
 }
 
-function metaCell(text: string, fill: string, bold = false) {
-  return new TableCell({
-    borders,
-    width: { size: 2340, type: WidthType.DXA },
-    shading: { type: ShadingType.CLEAR, fill },
-    margins: { top: 30, bottom: 30, left: 60, right: 60 },
-    children: [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text,
-            font: "Arial",
-            size: 15,
-            bold,
-            color: NAVY,
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
 async function main() {
   if (fs.existsSync(OUT) && !fs.existsSync(BACKUP)) {
     fs.copyFileSync(OUT, BACKUP);
@@ -238,32 +216,6 @@ async function main() {
           }),
         },
         children: [
-          // Document control
-          new Table({
-            width: { size: 9360, type: WidthType.DXA },
-            columnWidths: [2340, 2340, 2340, 2340],
-            rows: [
-              new TableRow({
-                children: [
-                  metaCell("Reference", LIGHT, true),
-                  metaCell("SF 02", WHITE),
-                  metaCell("Version", LIGHT, true),
-                  metaCell("2.0", WHITE),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  metaCell("Issue Date", LIGHT, true),
-                  metaCell("10/02/2026", WHITE),
-                  metaCell("Approved", LIGHT, true),
-                  metaCell("MD", WHITE),
-                ],
-              }),
-            ],
-          }),
-
-          spacer(200),
-
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 },
@@ -394,45 +346,6 @@ async function main() {
               labelValue("Print Name:", "{{APPLICANT_PRINT_NAME}}"),
               labelValue("Signed:", "{{EMPLOYEE_NAME}} __APPLICANT_SIG_IMG__"),
               labelValue("Date:", "{{APPLICANT_SIGNATURE_DATE}}"),
-            ],
-          }),
-
-          spacer(280),
-          new Paragraph({
-            spacing: { after: 60 },
-            children: [
-              new TextRun({
-                text: "FOR OFFICE USE ONLY",
-                font: "Arial",
-                size: 16,
-                bold: true,
-                color: MUTED,
-              }),
-            ],
-          }),
-          new Table({
-            width: { size: 9360, type: WidthType.DXA },
-            columnWidths: [3120, 3120, 3120],
-            rows: [
-              new TableRow({
-                children: ["Received by:", "Date received:", "File ref:"].map(
-                  (t) =>
-                    new TableCell({
-                      borders,
-                      width: { size: 3120, type: WidthType.DXA },
-                      shading: { type: ShadingType.CLEAR, fill: LIGHT },
-                      margins: { top: 80, bottom: 80, left: 80, right: 80 },
-                      children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: t, font: "Arial", size: 16, color: MUTED }),
-                          ],
-                        }),
-                        spacer(200),
-                      ],
-                    }),
-                ),
-              }),
             ],
           }),
         ],
