@@ -5396,14 +5396,26 @@ export async function registerRoutes(
       const officerEmployees = await storage.getEmployeesBySupplier(supplierId);
       const enriched = await Promise.all(officerEmployees.map(async (emp) => {
         const empUser = emp.userId ? await storage.getUser(emp.userId) : null;
-        if (empUser && !empUser.isActive) return null;
+        const firstName = empUser?.firstName || "";
+        const lastName = empUser?.lastName || "";
+        // Keep officers selectable for scheduling even if the linked user is inactive
+        // (common after import/onboarding). Sort active first on the client via isActive.
         return {
           id: emp.id,
-          firstName: empUser?.firstName || "",
-          lastName: empUser?.lastName || "",
+          firstName,
+          lastName,
+          isActive: empUser?.isActive ?? true,
+          employeeNumber: emp.employeeNumber || null,
+          jobTitle: emp.jobTitle || null,
         };
       }));
-      res.json(enriched.filter(Boolean));
+      const sorted = enriched
+        .filter((e) => e.firstName || e.lastName || e.employeeNumber)
+        .sort((a, b) => {
+          if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+          return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+        });
+      res.json(sorted);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

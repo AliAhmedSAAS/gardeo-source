@@ -50,6 +50,8 @@ type EmployeeOption = {
   id: number;
   firstName: string;
   lastName: string;
+  isActive?: boolean;
+  employeeNumber?: string | null;
 };
 
 type SupplierOption = {
@@ -226,10 +228,33 @@ export default function SchedulingPage() {
 
   const { data: supplierEmployees = [] } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/suppliers", selectedSupplierId, "employees"],
+    queryFn: async () => {
+      const res = await fetch(`/api/suppliers/${selectedSupplierId}/employees`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load supplier officers");
+      return res.json();
+    },
     enabled: !isInhouse && !!selectedSupplierId,
   });
 
+  const editSupplierId = editForm.supplierId;
+  const editIsInhouse = !editSupplierId || editSupplierId === "inhouse";
+  const { data: editSupplierEmployees = [] } = useQuery<EmployeeOption[]>({
+    queryKey: ["/api/suppliers", editSupplierId, "employees"],
+    queryFn: async () => {
+      const res = await fetch(`/api/suppliers/${editSupplierId}/employees`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load supplier officers");
+      return res.json();
+    },
+    enabled: !!editShift && !editIsInhouse && !!editSupplierId,
+  });
+
   const filteredEmployees = isInhouse ? inhouseEmployees : supplierEmployees;
+  const editFilteredEmployees = editIsInhouse ? inhouseEmployees : editSupplierEmployees;
+
+  const officerLabel = (emp: EmployeeOption) => {
+    const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.employeeNumber || `Officer #${emp.id}`;
+    return emp.isActive === false ? `${name} (inactive)` : name;
+  };
 
   const { data: approvedSuppliers = [] } = useQuery<SupplierOption[]>({
     queryKey: ["/api/suppliers/approved-list"],
@@ -1144,7 +1169,7 @@ export default function SchedulingPage() {
                     </div>
                   ) : (
                     filteredEmployees.map((emp) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                      <SelectItem key={emp.id} value={String(emp.id)}>{officerLabel(emp)}</SelectItem>
                     ))
                   )}
                 </SelectContent>
@@ -1360,8 +1385,8 @@ export default function SchedulingPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {((!editForm.supplierId || editForm.supplierId === "inhouse") ? inhouseEmployees : supplierEmployees).map(emp => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                  {editFilteredEmployees.map((emp) => (
+                    <SelectItem key={emp.id} value={String(emp.id)}>{officerLabel(emp)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
