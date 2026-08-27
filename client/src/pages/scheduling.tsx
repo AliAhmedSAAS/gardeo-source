@@ -24,7 +24,7 @@ import {
   Plus, Calendar, Clock, MapPin, Users, Building2, CalendarDays, Truck,
   ChevronLeft, ChevronRight, Copy, Eye, LayoutList, LayoutGrid,
   Pencil, Trash2, CheckSquare, X, AlertTriangle, Zap, CheckCircle2,
-  BookTemplate, LayoutTemplate, RefreshCw, Search,
+  BookTemplate, LayoutTemplate, RefreshCw, Search, Filter, ChevronDown,
 } from "lucide-react";
 import type { Site, ShiftTemplate } from "@shared/schema";
 
@@ -44,6 +44,8 @@ type EnrichedShift = {
   siteName: string;
   employeeName: string;
   supplierName: string;
+  clientId?: number | null;
+  clientName?: string | null;
 };
 
 type EmployeeOption = {
@@ -56,6 +58,12 @@ type EmployeeOption = {
 type SupplierOption = {
   id: number;
   companyName: string;
+};
+
+type ClientOption = {
+  id: number;
+  companyName?: string;
+  company_name?: string;
 };
 
 type TenantInfo = {
@@ -165,9 +173,15 @@ export default function SchedulingPage() {
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchDate, setSearchDate] = useState("");
+  const [searchDateFrom, setSearchDateFrom] = useState("");
+  const [searchDateTo, setSearchDateTo] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [searchStatus, setSearchStatus] = useState("all");
   const [searchSite, setSearchSite] = useState("all");
+  const [searchClient, setSearchClient] = useState("all");
+  const [searchSupplier, setSearchSupplier] = useState("all");
+  const [searchOfficer, setSearchOfficer] = useState("all");
+  const [searchAssignment, setSearchAssignment] = useState("all");
 
   const [shiftForm, setShiftForm] = useState({
     title: "", date: "", startTime: "", endTime: "",
@@ -204,10 +218,18 @@ export default function SchedulingPage() {
     return { startDate: formatDateKey(currentDate), endDate: formatDateKey(endDay) };
   }, [currentDate, calendarView]);
 
+  const shiftsFetchRange = useMemo(() => {
+    if (viewMode !== "list") return dateRange;
+    const start = searchDateFrom || dateRange.startDate;
+    const end = searchDateTo || dateRange.endDate;
+    if (start && end && end < start) return { startDate: start, endDate: start };
+    return { startDate: start, endDate: end };
+  }, [viewMode, searchDateFrom, searchDateTo, dateRange]);
+
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<EnrichedShift[]>({
-    queryKey: ["/api/shifts", dateRange.startDate, dateRange.endDate],
+    queryKey: ["/api/shifts", shiftsFetchRange.startDate, shiftsFetchRange.endDate],
     queryFn: async () => {
-      const params = new URLSearchParams({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+      const params = new URLSearchParams({ startDate: shiftsFetchRange.startDate, endDate: shiftsFetchRange.endDate });
       const res = await fetch(`/api/shifts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load shifts");
       return res.json();
@@ -216,6 +238,10 @@ export default function SchedulingPage() {
 
   const { data: sites = [] } = useQuery<Site[]>({
     queryKey: ["/api/sites"],
+  });
+
+  const { data: clients = [] } = useQuery<ClientOption[]>({
+    queryKey: ["/api/clients"],
   });
 
   const selectedSupplierId = shiftForm.supplierId;
@@ -258,6 +284,21 @@ export default function SchedulingPage() {
 
   const { data: approvedSuppliers = [] } = useQuery<SupplierOption[]>({
     queryKey: ["/api/suppliers/approved-list"],
+  });
+
+  const { data: filterInhouseOfficers = [] } = useQuery<EmployeeOption[]>({
+    queryKey: ["/api/employees/inhouse"],
+    enabled: showAdvancedFilters && (searchSupplier === "inhouse" || searchSupplier === "all"),
+  });
+
+  const { data: filterSupplierOfficers = [] } = useQuery<EmployeeOption[]>({
+    queryKey: ["/api/suppliers", searchSupplier, "employees"],
+    queryFn: async () => {
+      const res = await fetch(`/api/suppliers/${searchSupplier}/employees`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load supplier officers");
+      return res.json();
+    },
+    enabled: showAdvancedFilters && !!searchSupplier && searchSupplier !== "all" && searchSupplier !== "inhouse",
   });
 
   const { data: permissionsData } = useQuery<{ tenant?: TenantInfo }>({
@@ -577,12 +618,82 @@ export default function SchedulingPage() {
     noShow: shifts.filter((s) => s.status === "no_show").length,
   }), [shifts]);
 
+  const filteredSitesForFilter = useMemo(() => {
+    if (searchClient === "all") return sites;
+    return sites.filter((s) => String(s.clientId) === searchClient);
+  }, [sites, searchClient]);
+
+  const officerFilterOptions = useMemo(() => {
+    const byId = new Map<number, string>();
+    const addEmp = (id: number, name: string) => {
+      const cleaned = name.trim();
+      if (!id || !cleaned || cleaned === "Unassigned") return;
+      if (!byId.has(id)) byId.set(id, cleaned);
+    };
+
+    if (searchSupplier === "inhouse") {
+      for (const emp of filterInhouseOfficers) {
+        addEmp(emp.id, officerLabel(emp));
+      }
+    } else if (searchSupplier !== "all") {
+      for (const emp of filterSupplierOfficers) {
+        addEmp(emp.id, officerLabel(emp));
+      }
+    } else {
+      for (const emp of filterInhouseOfficers) {
+        addEmp(emp.id, officerLabel(emp));
+      }
+      for (const shift of shifts) {
+        if (shift.employeeId) addEmp(shift.employeeId, shift.employeeName || "");
+      }
+    }
+
+    return Array.from(byId.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [searchSupplier, filterInhouseOfficers, filterSupplierOfficers, shifts]);
+
+  const hasActiveFilters = !!(
+    searchQuery
+    || searchDateFrom
+    || searchDateTo
+    || searchStatus !== "all"
+    || searchSite !== "all"
+    || searchClient !== "all"
+    || searchSupplier !== "all"
+    || searchOfficer !== "all"
+    || searchAssignment !== "all"
+  );
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSearchDateFrom("");
+    setSearchDateTo("");
+    setSearchStatus("all");
+    setSearchSite("all");
+    setSearchClient("all");
+    setSearchSupplier("all");
+    setSearchOfficer("all");
+    setSearchAssignment("all");
+  };
+
   const filteredShifts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return shifts.filter((shift) => {
-      if (searchDate && shift.date.split("T")[0] !== searchDate) return false;
+      const shiftDate = shift.date.split("T")[0];
+      if (searchDateFrom && shiftDate < searchDateFrom) return false;
+      if (searchDateTo && shiftDate > searchDateTo) return false;
       if (searchStatus !== "all" && shift.status !== searchStatus) return false;
       if (searchSite !== "all" && String(shift.siteId) !== searchSite) return false;
+      if (searchClient !== "all" && String(shift.clientId || "") !== searchClient) return false;
+      if (searchSupplier === "inhouse") {
+        if (shift.supplierId) return false;
+      } else if (searchSupplier !== "all" && String(shift.supplierId || "") !== searchSupplier) {
+        return false;
+      }
+      if (searchOfficer !== "all" && String(shift.employeeId || "") !== searchOfficer) return false;
+      if (searchAssignment === "assigned" && !shift.employeeId) return false;
+      if (searchAssignment === "unassigned" && shift.employeeId) return false;
       if (q) {
         const statusLabel = (STATUS_CONFIG[shift.status || "scheduled"]?.label || shift.status || "").toLowerCase();
         const haystack = [
@@ -590,6 +701,7 @@ export default function SchedulingPage() {
           shift.employeeName,
           shift.siteName,
           shift.supplierName,
+          shift.clientName,
           shift.shiftCode,
           shift.externalId,
           shift.notes,
@@ -601,7 +713,7 @@ export default function SchedulingPage() {
       }
       return true;
     });
-  }, [shifts, searchQuery, searchDate, searchStatus, searchSite]);
+  }, [shifts, searchQuery, searchDateFrom, searchDateTo, searchStatus, searchSite, searchClient, searchSupplier, searchOfficer, searchAssignment]);
 
   const getStatusBorderColor = (status: string | null) => {
     switch (status) {
@@ -749,64 +861,176 @@ export default function SchedulingPage() {
 
   const renderListView = () => (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            data-testid="input-filter-search"
-            placeholder="Search shifts, officers, sites, suppliers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            data-testid="input-filter-date"
-            type="date"
-            value={searchDate}
-            onChange={(e) => setSearchDate(e.target.value)}
-            className="pl-9 w-44"
-          />
-        </div>
-        <Select value={searchStatus} onValueChange={setSearchStatus}>
-          <SelectTrigger className="w-40" data-testid="select-filter-status">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="booked_on">Booked On</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="booked_off">Booked Off</SelectItem>
-            <SelectItem value="verified">Verified</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="no_show">No Show</SelectItem>
-            <SelectItem value="missed">Missed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={searchSite} onValueChange={setSearchSite}>
-          <SelectTrigger className="w-44" data-testid="select-filter-site">
-            <SelectValue placeholder="Site" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Sites</SelectItem>
-            {sites.map((site) => (
-              <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {(searchQuery || searchDate || searchStatus !== "all" || searchSite !== "all") && (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              data-testid="input-filter-search"
+              placeholder="Search shifts, officers, sites, suppliers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-muted-foreground px-0.5">From</Label>
+              <Input
+                data-testid="input-filter-date-from"
+                type="date"
+                value={searchDateFrom}
+                max={searchDateTo || undefined}
+                onChange={(e) => setSearchDateFrom(e.target.value)}
+                className="w-40"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-muted-foreground px-0.5">To</Label>
+              <Input
+                data-testid="input-filter-date-to"
+                type="date"
+                value={searchDateTo}
+                min={searchDateFrom || undefined}
+                onChange={(e) => setSearchDateTo(e.target.value)}
+                className="w-40"
+              />
+            </div>
+          </div>
           <Button
-            variant="ghost"
+            type="button"
+            variant={showAdvancedFilters || hasActiveFilters ? "secondary" : "outline"}
             size="sm"
-            onClick={() => { setSearchQuery(""); setSearchDate(""); setSearchStatus("all"); setSearchSite("all"); }}
-            data-testid="button-clear-filters"
+            className="gap-1.5"
+            onClick={() => setShowAdvancedFilters((v) => !v)}
+            data-testid="button-advanced-filters"
           >
-            Clear Filters
+            <Filter className="w-3.5 h-3.5" />
+            Advanced Filters
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvancedFilters ? "rotate-180" : ""}`} />
           </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              data-testid="button-clear-filters"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+
+        {showAdvancedFilters && (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 p-3 rounded-lg border bg-muted/20"
+            data-testid="advanced-filters-panel"
+          >
+            <div className="space-y-1.5">
+              <Label className="text-xs">Client</Label>
+              <Select
+                value={searchClient}
+                onValueChange={(val) => {
+                  setSearchClient(val);
+                  setSearchSite("all");
+                }}
+              >
+                <SelectTrigger data-testid="select-filter-client">
+                  <SelectValue placeholder="All clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={String(client.id)}>
+                      {client.companyName || client.company_name || `Client #${client.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Site</Label>
+              <Select value={searchSite} onValueChange={setSearchSite}>
+                <SelectTrigger data-testid="select-filter-site">
+                  <SelectValue placeholder="All sites" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  {filteredSitesForFilter.map((site) => (
+                    <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Subcontractor</Label>
+              <Select
+                value={searchSupplier}
+                onValueChange={(val) => {
+                  setSearchSupplier(val);
+                  setSearchOfficer("all");
+                }}
+              >
+                <SelectTrigger data-testid="select-filter-supplier">
+                  <SelectValue placeholder="All subcontractors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subcontractors</SelectItem>
+                  <SelectItem value="inhouse">{tenantCompanyName} (In-house)</SelectItem>
+                  {approvedSuppliers.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Officer</Label>
+              <Select value={searchOfficer} onValueChange={setSearchOfficer}>
+                <SelectTrigger data-testid="select-filter-officer">
+                  <SelectValue placeholder="All officers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Officers</SelectItem>
+                  {officerFilterOptions.map((officer) => (
+                    <SelectItem key={officer.id} value={String(officer.id)}>{officer.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Status</Label>
+              <Select value={searchStatus} onValueChange={setSearchStatus}>
+                <SelectTrigger data-testid="select-filter-status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="booked_on">Booked On</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="booked_off">Booked Off</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="no_show">No Show</SelectItem>
+                  <SelectItem value="missed">Missed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Assignment</Label>
+              <Select value={searchAssignment} onValueChange={setSearchAssignment}>
+                <SelectTrigger data-testid="select-filter-assignment">
+                  <SelectValue placeholder="Assignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         )}
       </div>
       {filteredShifts.length === 0 ? (
@@ -844,6 +1068,12 @@ export default function SchedulingPage() {
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="text-right text-sm min-w-0">
+                        {shift.clientName && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Building2 className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate" data-testid={`text-shift-client-${shift.id}`}>{shift.clientName}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate" data-testid={`text-shift-site-${shift.id}`}>{shift.siteName || "Unassigned"}</span>

@@ -4383,6 +4383,8 @@ export async function registerRoutes(
           COALESCE(si.name, 'Unassigned') AS site_name,
           COALESCE(si.address, '') AS site_address,
           COALESCE(si.postcode, '') AS site_postcode,
+          si.client_id AS client_id,
+          COALESCE(cl.company_name, si.client_name, '') AS client_name,
           CASE WHEN eu.id IS NOT NULL THEN COALESCE(eu.first_name || ' ' || eu.last_name, 'Unassigned') ELSE 'Unassigned' END AS employee_name,
           eu.phone AS employee_phone,
           e.sia_license_number AS emp_sia_license_number, e.sia_expiry_date AS emp_sia_expiry_date,
@@ -4390,6 +4392,7 @@ export async function registerRoutes(
           sup.company_name AS supplier_name
         FROM shifts sh
         LEFT JOIN sites si ON sh.site_id = si.id
+        LEFT JOIN clients cl ON si.client_id = cl.id
         LEFT JOIN employees e ON sh.employee_id = e.id
         LEFT JOIN users eu ON e.user_id = eu.id
         LEFT JOIN suppliers sup ON sh.supplier_id = sup.id
@@ -4475,6 +4478,8 @@ export async function registerRoutes(
           siteName: r.site_name,
           siteAddress: r.site_address,
           sitePostcode: r.site_postcode,
+          clientId: r.client_id || null,
+          clientName: r.client_name || null,
           employeeName: r.employee_name,
           employeePhone: r.employee_phone || null,
           siaLicenseNumber: r.emp_sia_license_number || null,
