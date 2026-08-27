@@ -5393,33 +5393,28 @@ export async function registerRoutes(
       if (!supplier || supplier.tenantId !== user.tenantId) {
         return res.status(404).json({ message: "Supplier not found" });
       }
-      // Keep officers selectable for scheduling even if the linked user is inactive
-      // (common after import/onboarding). Sort active first.
       const { rows } = await pool.query<{
         id: number;
         employee_number: string | null;
         job_title: string | null;
         first_name: string;
         last_name: string;
-        is_active: boolean;
       }>(
         `SELECT e.id,
                 e.employee_number,
                 e.job_title,
                 COALESCE(u.first_name, '') AS first_name,
-                COALESCE(u.last_name, '') AS last_name,
-                COALESCE(u.is_active, true) AS is_active
+                COALESCE(u.last_name, '') AS last_name
          FROM employees e
          LEFT JOIN users u ON u.id = e.user_id
          WHERE e.supplier_id = $1
+           AND COALESCE(u.is_active, true) = true
            AND (
              COALESCE(u.first_name, '') <> ''
              OR COALESCE(u.last_name, '') <> ''
              OR e.employee_number IS NOT NULL
            )
-         ORDER BY COALESCE(u.is_active, true) DESC,
-                  COALESCE(u.first_name, ''),
-                  COALESCE(u.last_name, '')`,
+         ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')`,
         [supplierId],
       );
       res.json(
@@ -5427,7 +5422,6 @@ export async function registerRoutes(
           id: r.id,
           firstName: r.first_name,
           lastName: r.last_name,
-          isActive: r.is_active,
           employeeNumber: r.employee_number,
           jobTitle: r.job_title,
         })),
@@ -5441,34 +5435,29 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.json([]);
-      // Single join query — avoid loading every tenant employee then N+1 user lookups.
-      // Include inactive officers (common after import) so schedulers can still assign them.
       const { rows } = await pool.query<{
         id: number;
         employee_number: string | null;
         job_title: string | null;
         first_name: string;
         last_name: string;
-        is_active: boolean;
       }>(
         `SELECT e.id,
                 e.employee_number,
                 e.job_title,
                 COALESCE(u.first_name, '') AS first_name,
-                COALESCE(u.last_name, '') AS last_name,
-                COALESCE(u.is_active, true) AS is_active
+                COALESCE(u.last_name, '') AS last_name
          FROM employees e
          LEFT JOIN users u ON u.id = e.user_id
          WHERE e.tenant_id = $1
            AND e.supplier_id IS NULL
+           AND COALESCE(u.is_active, true) = true
            AND (
              COALESCE(u.first_name, '') <> ''
              OR COALESCE(u.last_name, '') <> ''
              OR e.employee_number IS NOT NULL
            )
-         ORDER BY COALESCE(u.is_active, true) DESC,
-                  COALESCE(u.first_name, ''),
-                  COALESCE(u.last_name, '')`,
+         ORDER BY COALESCE(u.first_name, ''), COALESCE(u.last_name, '')`,
         [user.tenantId],
       );
       res.json(
@@ -5476,7 +5465,6 @@ export async function registerRoutes(
           id: r.id,
           firstName: r.first_name,
           lastName: r.last_name,
-          isActive: r.is_active,
           employeeNumber: r.employee_number,
           jobTitle: r.job_title,
         })),

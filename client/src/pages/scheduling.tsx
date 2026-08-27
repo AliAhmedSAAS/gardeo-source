@@ -24,7 +24,7 @@ import {
   Plus, Calendar, Clock, MapPin, Users, Building2, CalendarDays, Truck,
   ChevronLeft, ChevronRight, Copy, Eye, LayoutList, LayoutGrid,
   Pencil, Trash2, CheckSquare, X, AlertTriangle, Zap, CheckCircle2,
-  BookTemplate, LayoutTemplate, RefreshCw,
+  BookTemplate, LayoutTemplate, RefreshCw, Search,
 } from "lucide-react";
 import type { Site, ShiftTemplate } from "@shared/schema";
 
@@ -50,7 +50,6 @@ type EmployeeOption = {
   id: number;
   firstName: string;
   lastName: string;
-  isActive?: boolean;
   employeeNumber?: string | null;
 };
 
@@ -165,6 +164,7 @@ export default function SchedulingPage() {
   const [selectedShiftIds, setSelectedShiftIds] = useState<Set<number>>(new Set());
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchDate, setSearchDate] = useState("");
   const [searchStatus, setSearchStatus] = useState("all");
   const [searchSite, setSearchSite] = useState("all");
@@ -253,10 +253,8 @@ export default function SchedulingPage() {
   const officersLoading = isInhouse ? inhouseLoading : supplierOfficersLoading;
   const officersError = isInhouse ? inhouseError : supplierOfficersError;
 
-  const officerLabel = (emp: EmployeeOption) => {
-    const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.employeeNumber || `Officer #${emp.id}`;
-    return emp.isActive === false ? `${name} (inactive)` : name;
-  };
+  const officerLabel = (emp: EmployeeOption) =>
+    `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.employeeNumber || `Officer #${emp.id}`;
 
   const { data: approvedSuppliers = [] } = useQuery<SupplierOption[]>({
     queryKey: ["/api/suppliers/approved-list"],
@@ -579,12 +577,31 @@ export default function SchedulingPage() {
     noShow: shifts.filter((s) => s.status === "no_show").length,
   }), [shifts]);
 
-  const filteredShifts = useMemo(() => shifts.filter((shift) => {
-    if (searchDate && shift.date.split("T")[0] !== searchDate) return false;
-    if (searchStatus !== "all" && shift.status !== searchStatus) return false;
-    if (searchSite !== "all" && String(shift.siteId) !== searchSite) return false;
-    return true;
-  }), [shifts, searchDate, searchStatus, searchSite]);
+  const filteredShifts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return shifts.filter((shift) => {
+      if (searchDate && shift.date.split("T")[0] !== searchDate) return false;
+      if (searchStatus !== "all" && shift.status !== searchStatus) return false;
+      if (searchSite !== "all" && String(shift.siteId) !== searchSite) return false;
+      if (q) {
+        const statusLabel = (STATUS_CONFIG[shift.status || "scheduled"]?.label || shift.status || "").toLowerCase();
+        const haystack = [
+          shift.title,
+          shift.employeeName,
+          shift.siteName,
+          shift.supplierName,
+          shift.shiftCode,
+          shift.externalId,
+          shift.notes,
+          shift.startTime,
+          shift.endTime,
+          statusLabel,
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [shifts, searchQuery, searchDate, searchStatus, searchSite]);
 
   const getStatusBorderColor = (status: string | null) => {
     switch (status) {
@@ -733,6 +750,16 @@ export default function SchedulingPage() {
   const renderListView = () => (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="input-filter-search"
+            placeholder="Search shifts, officers, sites, suppliers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -771,11 +798,11 @@ export default function SchedulingPage() {
             ))}
           </SelectContent>
         </Select>
-        {(searchDate || searchStatus !== "all" || searchSite !== "all") && (
+        {(searchQuery || searchDate || searchStatus !== "all" || searchSite !== "all") && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSearchDate(""); setSearchStatus("all"); setSearchSite("all"); }}
+            onClick={() => { setSearchQuery(""); setSearchDate(""); setSearchStatus("all"); setSearchSite("all"); }}
             data-testid="button-clear-filters"
           >
             Clear Filters
