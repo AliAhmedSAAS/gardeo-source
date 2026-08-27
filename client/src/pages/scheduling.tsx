@@ -221,12 +221,12 @@ export default function SchedulingPage() {
   const selectedSupplierId = shiftForm.supplierId;
   const isInhouse = !selectedSupplierId || selectedSupplierId === "inhouse";
 
-  const { data: inhouseEmployees = [] } = useQuery<EmployeeOption[]>({
+  const { data: inhouseEmployees = [], isLoading: inhouseLoading, isError: inhouseError } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/employees/inhouse"],
     enabled: isInhouse,
   });
 
-  const { data: supplierEmployees = [] } = useQuery<EmployeeOption[]>({
+  const { data: supplierEmployees = [], isLoading: supplierOfficersLoading, isError: supplierOfficersError } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/suppliers", selectedSupplierId, "employees"],
     queryFn: async () => {
       const res = await fetch(`/api/suppliers/${selectedSupplierId}/employees`, { credentials: "include" });
@@ -250,6 +250,8 @@ export default function SchedulingPage() {
 
   const filteredEmployees = isInhouse ? inhouseEmployees : supplierEmployees;
   const editFilteredEmployees = editIsInhouse ? inhouseEmployees : editSupplierEmployees;
+  const officersLoading = isInhouse ? inhouseLoading : supplierOfficersLoading;
+  const officersError = isInhouse ? inhouseError : supplierOfficersError;
 
   const officerLabel = (emp: EmployeeOption) => {
     const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.employeeNumber || `Officer #${emp.id}`;
@@ -1160,12 +1162,28 @@ export default function SchedulingPage() {
               </div>
               <Select value={shiftForm.employeeId} onValueChange={(val) => setShiftForm((f) => ({ ...f, employeeId: val }))}>
                 <SelectTrigger data-testid="select-shift-employee">
-                  <SelectValue placeholder={filteredEmployees.length === 0 ? "No officers available" : "Select an officer"} />
+                  <SelectValue
+                    placeholder={
+                      officersLoading
+                        ? "Loading officers..."
+                        : officersError
+                          ? "Failed to load officers"
+                          : filteredEmployees.length === 0
+                            ? "No officers available"
+                            : "Select an officer"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredEmployees.length === 0 ? (
+                  {officersLoading ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">Loading officers...</div>
+                  ) : officersError ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">Could not load officers. Try again.</div>
+                  ) : filteredEmployees.length === 0 ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground text-center">
-                      {!isInhouse ? "This supplier has no officers yet." : "No in-house employees found."}
+                      {!isInhouse
+                        ? "This supplier has no officers yet."
+                        : "No in-house staff found (employees with no supplier)."}
                     </div>
                   ) : (
                     filteredEmployees.map((emp) => (

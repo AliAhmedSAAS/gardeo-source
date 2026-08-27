@@ -5393,29 +5393,45 @@ export async function registerRoutes(
       if (!supplier || supplier.tenantId !== user.tenantId) {
         return res.status(404).json({ message: "Supplier not found" });
       }
-      const officerEmployees = await storage.getEmployeesBySupplier(supplierId);
-      const enriched = await Promise.all(officerEmployees.map(async (emp) => {
-        const empUser = emp.userId ? await storage.getUser(emp.userId) : null;
-        const firstName = empUser?.firstName || "";
-        const lastName = empUser?.lastName || "";
-        // Keep officers selectable for scheduling even if the linked user is inactive
-        // (common after import/onboarding). Sort active first on the client via isActive.
-        return {
-          id: emp.id,
-          firstName,
-          lastName,
-          isActive: empUser?.isActive ?? true,
-          employeeNumber: emp.employeeNumber || null,
-          jobTitle: emp.jobTitle || null,
-        };
-      }));
-      const sorted = enriched
-        .filter((e) => e.firstName || e.lastName || e.employeeNumber)
-        .sort((a, b) => {
-          if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
-          return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
-        });
-      res.json(sorted);
+      // Keep officers selectable for scheduling even if the linked user is inactive
+      // (common after import/onboarding). Sort active first.
+      const { rows } = await pool.query<{
+        id: number;
+        employee_number: string | null;
+        job_title: string | null;
+        first_name: string;
+        last_name: string;
+        is_active: boolean;
+      }>(
+        `SELECT e.id,
+                e.employee_number,
+                e.job_title,
+                COALESCE(u.first_name, '') AS first_name,
+                COALESCE(u.last_name, '') AS last_name,
+                COALESCE(u.is_active, true) AS is_active
+         FROM employees e
+         LEFT JOIN users u ON u.id = e.user_id
+         WHERE e.supplier_id = $1
+           AND (
+             COALESCE(u.first_name, '') <> ''
+             OR COALESCE(u.last_name, '') <> ''
+             OR e.employee_number IS NOT NULL
+           )
+         ORDER BY COALESCE(u.is_active, true) DESC,
+                  COALESCE(u.first_name, ''),
+                  COALESCE(u.last_name, '')`,
+        [supplierId],
+      );
+      res.json(
+        rows.map((r) => ({
+          id: r.id,
+          firstName: r.first_name,
+          lastName: r.last_name,
+          isActive: r.is_active,
+          employeeNumber: r.employee_number,
+          jobTitle: r.job_title,
+        })),
+      );
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -5425,18 +5441,46 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.json([]);
-      const emps = await storage.getEmployeesByTenant(user.tenantId);
-      const inhouseEmps = emps.filter(e => !e.supplierId);
-      const enriched = await Promise.all(inhouseEmps.map(async (e) => {
-        const empUser = e.userId ? await storage.getUser(e.userId) : null;
-        if (empUser && !empUser.isActive) return null;
-        return {
-          id: e.id,
-          firstName: empUser?.firstName || "",
-          lastName: empUser?.lastName || "",
-        };
-      }));
-      res.json(enriched.filter(Boolean));
+      // Single join query — avoid loading every tenant employee then N+1 user lookups.
+      // Include inactive officers (common after import) so schedulers can still assign them.
+      const { rows } = await pool.query<{
+        id: number;
+        employee_number: string | null;
+        job_title: string | null;
+        first_name: string;
+        last_name: string;
+        is_active: boolean;
+      }>(
+        `SELECT e.id,
+                e.employee_number,
+                e.job_title,
+                COALESCE(u.first_name, '') AS first_name,
+                COALESCE(u.last_name, '') AS last_name,
+                COALESCE(u.is_active, true) AS is_active
+         FROM employees e
+         LEFT JOIN users u ON u.id = e.user_id
+         WHERE e.tenant_id = $1
+           AND e.supplier_id IS NULL
+           AND (
+             COALESCE(u.first_name, '') <> ''
+             OR COALESCE(u.last_name, '') <> ''
+             OR e.employee_number IS NOT NULL
+           )
+         ORDER BY COALESCE(u.is_active, true) DESC,
+                  COALESCE(u.first_name, ''),
+                  COALESCE(u.last_name, '')`,
+        [user.tenantId],
+      );
+      res.json(
+        rows.map((r) => ({
+          id: r.id,
+          firstName: r.first_name,
+          lastName: r.last_name,
+          isActive: r.is_active,
+          employeeNumber: r.employee_number,
+          jobTitle: r.job_title,
+        })),
+      );
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
