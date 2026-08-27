@@ -24,7 +24,7 @@ import {
   Plus, Calendar, Clock, MapPin, Users, Building2, CalendarDays, Truck,
   ChevronLeft, ChevronRight, Copy, Eye, LayoutList, LayoutGrid,
   Pencil, Trash2, CheckSquare, X, AlertTriangle, Zap, CheckCircle2,
-  BookTemplate, LayoutTemplate, RefreshCw, Search, Filter, ChevronDown,
+  BookTemplate, LayoutTemplate, RefreshCw, Search,
 } from "lucide-react";
 import type { Site, ShiftTemplate } from "@shared/schema";
 
@@ -175,7 +175,6 @@ export default function SchedulingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDateFrom, setSearchDateFrom] = useState("");
   const [searchDateTo, setSearchDateTo] = useState("");
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [searchStatus, setSearchStatus] = useState("all");
   const [searchSite, setSearchSite] = useState("all");
   const [searchClient, setSearchClient] = useState("all");
@@ -288,7 +287,7 @@ export default function SchedulingPage() {
 
   const { data: filterInhouseOfficers = [] } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/employees/inhouse"],
-    enabled: showAdvancedFilters && (searchSupplier === "inhouse" || searchSupplier === "all"),
+    enabled: viewMode === "list" && (searchSupplier === "inhouse" || searchSupplier === "all"),
   });
 
   const { data: filterSupplierOfficers = [] } = useQuery<EmployeeOption[]>({
@@ -298,7 +297,7 @@ export default function SchedulingPage() {
       if (!res.ok) throw new Error("Failed to load supplier officers");
       return res.json();
     },
-    enabled: showAdvancedFilters && !!searchSupplier && searchSupplier !== "all" && searchSupplier !== "inhouse",
+    enabled: viewMode === "list" && !!searchSupplier && searchSupplier !== "all" && searchSupplier !== "inhouse",
   });
 
   const { data: permissionsData } = useQuery<{ tenant?: TenantInfo }>({
@@ -861,176 +860,159 @@ export default function SchedulingPage() {
 
   const renderListView = () => (
     <div className="space-y-4">
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[220px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div
+        className="flex items-end gap-2 flex-nowrap overflow-x-auto pb-1"
+        data-testid="list-filters-row"
+      >
+        <div className="relative min-w-[200px] w-[220px] flex-shrink-0">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               data-testid="input-filter-search"
-              placeholder="Search shifts, officers, sites, suppliers..."
+              placeholder="Search shifts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-8 h-9"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <div className="space-y-0.5">
-              <Label className="text-[10px] text-muted-foreground px-0.5">From</Label>
-              <Input
-                data-testid="input-filter-date-from"
-                type="date"
-                value={searchDateFrom}
-                max={searchDateTo || undefined}
-                onChange={(e) => setSearchDateFrom(e.target.value)}
-                className="w-40"
-              />
-            </div>
-            <div className="space-y-0.5">
-              <Label className="text-[10px] text-muted-foreground px-0.5">To</Label>
-              <Input
-                data-testid="input-filter-date-to"
-                type="date"
-                value={searchDateTo}
-                min={searchDateFrom || undefined}
-                onChange={(e) => setSearchDateTo(e.target.value)}
-                className="w-40"
-              />
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant={showAdvancedFilters || hasActiveFilters ? "secondary" : "outline"}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setShowAdvancedFilters((v) => !v)}
-            data-testid="button-advanced-filters"
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Advanced Filters
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvancedFilters ? "rotate-180" : ""}`} />
-          </Button>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              data-testid="button-clear-filters"
-            >
-              Clear Filters
-            </Button>
-          )}
         </div>
-
-        {showAdvancedFilters && (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 p-3 rounded-lg border bg-muted/20"
-            data-testid="advanced-filters-panel"
+        <div className="flex-shrink-0 w-[138px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">From</Label>
+          <Input
+            data-testid="input-filter-date-from"
+            type="date"
+            value={searchDateFrom}
+            max={searchDateTo || undefined}
+            onChange={(e) => setSearchDateFrom(e.target.value)}
+            className="h-9"
+          />
+        </div>
+        <div className="flex-shrink-0 w-[138px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">To</Label>
+          <Input
+            data-testid="input-filter-date-to"
+            type="date"
+            value={searchDateTo}
+            min={searchDateFrom || undefined}
+            onChange={(e) => setSearchDateTo(e.target.value)}
+            className="h-9"
+          />
+        </div>
+        <div className="flex-shrink-0 w-[150px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Client</Label>
+          <Select
+            value={searchClient}
+            onValueChange={(val) => {
+              setSearchClient(val);
+              setSearchSite("all");
+            }}
           >
-            <div className="space-y-1.5">
-              <Label className="text-xs">Client</Label>
-              <Select
-                value={searchClient}
-                onValueChange={(val) => {
-                  setSearchClient(val);
-                  setSearchSite("all");
-                }}
-              >
-                <SelectTrigger data-testid="select-filter-client">
-                  <SelectValue placeholder="All clients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Clients</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={String(client.id)}>
-                      {client.companyName || client.company_name || `Client #${client.id}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Site</Label>
-              <Select value={searchSite} onValueChange={setSearchSite}>
-                <SelectTrigger data-testid="select-filter-site">
-                  <SelectValue placeholder="All sites" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {filteredSitesForFilter.map((site) => (
-                    <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Subcontractor</Label>
-              <Select
-                value={searchSupplier}
-                onValueChange={(val) => {
-                  setSearchSupplier(val);
-                  setSearchOfficer("all");
-                }}
-              >
-                <SelectTrigger data-testid="select-filter-supplier">
-                  <SelectValue placeholder="All subcontractors" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subcontractors</SelectItem>
-                  <SelectItem value="inhouse">{tenantCompanyName} (In-house)</SelectItem>
-                  {approvedSuppliers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Officer</Label>
-              <Select value={searchOfficer} onValueChange={setSearchOfficer}>
-                <SelectTrigger data-testid="select-filter-officer">
-                  <SelectValue placeholder="All officers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Officers</SelectItem>
-                  {officerFilterOptions.map((officer) => (
-                    <SelectItem key={officer.id} value={String(officer.id)}>{officer.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <Select value={searchStatus} onValueChange={setSearchStatus}>
-                <SelectTrigger data-testid="select-filter-status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="booked_on">Booked On</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="booked_off">Booked Off</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no_show">No Show</SelectItem>
-                  <SelectItem value="missed">Missed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Assignment</Label>
-              <Select value={searchAssignment} onValueChange={setSearchAssignment}>
-                <SelectTrigger data-testid="select-filter-assignment">
-                  <SelectValue placeholder="Assignment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <SelectTrigger className="h-9" data-testid="select-filter-client">
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={String(client.id)}>
+                  {client.companyName || client.company_name || `Client #${client.id}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-shrink-0 w-[150px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Site</Label>
+          <Select value={searchSite} onValueChange={setSearchSite}>
+            <SelectTrigger className="h-9" data-testid="select-filter-site">
+              <SelectValue placeholder="All sites" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sites</SelectItem>
+              {filteredSitesForFilter.map((site) => (
+                <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-shrink-0 w-[170px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Subcontractor</Label>
+          <Select
+            value={searchSupplier}
+            onValueChange={(val) => {
+              setSearchSupplier(val);
+              setSearchOfficer("all");
+            }}
+          >
+            <SelectTrigger className="h-9" data-testid="select-filter-supplier">
+              <SelectValue placeholder="All subcontractors" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Subcontractors</SelectItem>
+              <SelectItem value="inhouse">{tenantCompanyName} (In-house)</SelectItem>
+              {approvedSuppliers.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-shrink-0 w-[160px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Officer</Label>
+          <Select value={searchOfficer} onValueChange={setSearchOfficer}>
+            <SelectTrigger className="h-9" data-testid="select-filter-officer">
+              <SelectValue placeholder="All officers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Officers</SelectItem>
+              {officerFilterOptions.map((officer) => (
+                <SelectItem key={officer.id} value={String(officer.id)}>{officer.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-shrink-0 w-[130px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Status</Label>
+          <Select value={searchStatus} onValueChange={setSearchStatus}>
+            <SelectTrigger className="h-9" data-testid="select-filter-status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="booked_on">Booked On</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="booked_off">Booked Off</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="no_show">No Show</SelectItem>
+              <SelectItem value="missed">Missed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-shrink-0 w-[120px]">
+          <Label className="text-[10px] text-muted-foreground px-0.5">Assignment</Label>
+          <Select value={searchAssignment} onValueChange={setSearchAssignment}>
+            <SelectTrigger className="h-9" data-testid="select-filter-assignment">
+              <SelectValue placeholder="Assignment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 flex-shrink-0 mb-0"
+            onClick={clearAllFilters}
+            data-testid="button-clear-filters"
+          >
+            Clear
+          </Button>
         )}
       </div>
       {filteredShifts.length === 0 ? (
