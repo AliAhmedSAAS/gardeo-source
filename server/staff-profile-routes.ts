@@ -1189,6 +1189,24 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
     }
   });
 
+  app.get("/api/admin/employees/:id/application-form", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      const empUser = ctx.employee.userId ? await storage.getUser(ctx.employee.userId) : null;
+      const email = String(empUser?.email || `officer-${ctx.employeeId}@onboarding.local`).trim();
+      const created = await createEmployeeVettingFormToken({
+        tenantId: ctx.employee.tenantId,
+        employeeId: ctx.employeeId,
+        recipientEmail: email,
+        createdBy: ctx.user.id,
+      });
+      res.json({ token: created.token, formUrl: created.formUrl, expiresAt: created.expiresAt });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   app.post("/api/admin/employees/:id/vetting-form/send-link", guard, async (req, res) => {
     try {
       const ctx = await loadEmployeeScoped(req, res);

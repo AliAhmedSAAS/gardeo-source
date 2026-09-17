@@ -1061,7 +1061,7 @@ export function HealthTab({ employeeId, health }: { employeeId: number; health: 
   );
 }
 
-export function VettingHubTab({ employee }: { employee: any }) {
+export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: any; onOpenApplicationForm?: () => void }) {
   const employeeId = employee.id;
   const { toast } = useToast();
 
@@ -1399,6 +1399,16 @@ export function VettingHubTab({ employee }: { employee: any }) {
           >
             <Mail className="w-3.5 h-3.5 mr-1" /> Email Application Form
           </Button>
+          {onOpenApplicationForm ? (
+            <Button
+              size="sm"
+              className="bg-[#1F3A5F] hover:bg-[#1F3A5F]/90"
+              onClick={onOpenApplicationForm}
+              data-testid="button-open-application-form"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" /> Open Application Form
+            </Button>
+          ) : null}
         </div>
         <div className="flex flex-col items-start sm:items-end gap-1 sm:ml-auto shrink-0">
           <div className="flex items-center gap-2">

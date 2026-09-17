@@ -50,7 +50,20 @@ type EnrichedShift = {
   supplierName: string;
   clientId?: number | null;
   clientName?: string | null;
+  bookedOnAt?: string | null;
+  checkInTime?: string | null;
+  bookedOnCallData?: unknown;
 };
+
+function isShiftBookedOn(shift: Pick<EnrichedShift, "status" | "bookedOnAt" | "checkInTime" | "bookedOnCallData">) {
+  return Boolean(
+    shift.bookedOnAt ||
+    shift.checkInTime ||
+    shift.bookedOnCallData ||
+    shift.status === "booked_on" ||
+    shift.status === "in_progress",
+  );
+}
 
 type EmployeeOption = {
   id: number;
@@ -177,7 +190,7 @@ export default function SchedulingPage() {
   });
   const [editRatesManual, setEditRatesManual] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EnrichedShift | null>(null);
   const [selectedShiftIds, setSelectedShiftIds] = useState<Set<number>>(new Set());
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
@@ -933,7 +946,7 @@ export default function SchedulingPage() {
               <Pencil className="w-2.5 h-2.5" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); setDeleteTarget(shift.id); setDeleteConfirmOpen(true); }}
+              onClick={(e) => { e.stopPropagation(); setDeleteTarget(shift); setDeleteConfirmOpen(true); }}
               className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
               data-testid={`button-delete-pill-${shift.id}`}
             >
@@ -1815,7 +1828,7 @@ export default function SchedulingPage() {
                   <Button size="sm" variant="outline" onClick={() => { setDetailShift(null); openEditShift(detailShift); }} data-testid="button-detail-edit">
                     <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(detailShift.id); setDeleteConfirmOpen(true); }} data-testid="button-detail-delete">
+                  <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(detailShift); setDeleteConfirmOpen(true); }} data-testid="button-detail-delete">
                     <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                   </Button>
                 </div>
@@ -2001,7 +2014,7 @@ export default function SchedulingPage() {
             </div>
           </div>
           <DialogFooter className="flex items-center justify-between gap-2">
-            <Button variant="destructive" size="sm" onClick={() => { if (editShift) { setDeleteTarget(editShift.id); setDeleteConfirmOpen(true); } }} data-testid="button-edit-delete">
+            <Button variant="destructive" size="sm" onClick={() => { if (editShift) { setDeleteTarget(editShift); setDeleteConfirmOpen(true); } }} data-testid="button-edit-delete">
               <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
             </Button>
             <div className="flex items-center gap-2">
@@ -2021,19 +2034,29 @@ export default function SchedulingPage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Shift</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteTarget && isShiftBookedOn(deleteTarget) ? "Officer already booked on" : "Delete Shift"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this shift? This action cannot be undone.
+              {deleteTarget && isShiftBookedOn(deleteTarget) ? (
+                <>
+                  {deleteTarget.employeeName ? `${deleteTarget.employeeName} has already booked on` : "An officer has already booked on"} this shift
+                  {deleteTarget.siteName ? ` at ${deleteTarget.siteName}` : ""}
+                  {" "}({deleteTarget.startTime}–{deleteTarget.endTime}). Deleting it will also remove the book-on, ops checks, and check-calls. This cannot be undone.
+                </>
+              ) : (
+                "Are you sure you want to delete this shift? This action cannot be undone."
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setDeleteTarget(null); }} data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { if (deleteTarget) deleteShiftMutation.mutate(deleteTarget); }}
+              onClick={() => { if (deleteTarget) deleteShiftMutation.mutate(deleteTarget.id); }}
               className="bg-red-600 hover:bg-red-700"
               data-testid="button-confirm-delete"
             >
-              {deleteShiftMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteShiftMutation.isPending ? "Deleting..." : deleteTarget && isShiftBookedOn(deleteTarget) ? "Delete booked-on shift" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2042,9 +2065,19 @@ export default function SchedulingPage() {
       <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedShiftIds.size} Shift{selectedShiftIds.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {shifts.filter((s) => selectedShiftIds.has(s.id) && isShiftBookedOn(s)).length > 0
+                ? "Delete shifts including booked-on"
+                : `Delete ${selectedShiftIds.size} Shift${selectedShiftIds.size !== 1 ? "s" : ""}`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedShiftIds.size} selected shift{selectedShiftIds.size !== 1 ? "s" : ""}? This action cannot be undone.
+              {(() => {
+                const bookedOnCount = shifts.filter((s) => selectedShiftIds.has(s.id) && isShiftBookedOn(s)).length;
+                if (bookedOnCount > 0) {
+                  return `${bookedOnCount} of ${selectedShiftIds.size} selected shift${selectedShiftIds.size !== 1 ? "s have" : " has"} already been booked on. Deleting will also remove those book-ons, ops checks, and check-calls. This cannot be undone.`;
+                }
+                return `Are you sure you want to delete ${selectedShiftIds.size} selected shift${selectedShiftIds.size !== 1 ? "s" : ""}? This action cannot be undone.`;
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

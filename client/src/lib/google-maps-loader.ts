@@ -1,4 +1,5 @@
 export type ParsedAddress = {
+  address: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
@@ -16,10 +17,21 @@ type AddressComponent = {
 };
 
 type PlaceResult = {
+  name?: string;
   address_components?: AddressComponent[];
   formatted_address?: string;
   geometry?: { location?: { lat: () => number; lng: () => number } };
 };
+
+const UK_POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
+
+export function extractUkPostcode(text: string): string | null {
+  const match = text.toUpperCase().match(UK_POSTCODE);
+  if (!match) return null;
+  const compact = match[1].replace(/\s+/g, "");
+  if (compact.length < 5) return null;
+  return `${compact.slice(0, compact.length - 3)} ${compact.slice(-3)}`;
+}
 
 let loadPromise: Promise<void> | null = null;
 
@@ -73,19 +85,30 @@ export function parsePlaceResult(place: PlaceResult): ParsedAddress {
   const country = pick("country");
 
   const line1 = [streetNumber, route].filter(Boolean).join(" ").trim();
+  const postcodeFromText = extractUkPostcode(place.formatted_address || place.name || "");
+  const address = line1
+    ? [subpremise, line1].filter(Boolean).join(", ")
+    : (place.name || place.formatted_address?.split(",")[0]?.trim() || "");
   const lat = place.geometry?.location?.lat?.();
   const lng = place.geometry?.location?.lng?.();
 
   return {
-    addressLine1: line1 || (place.formatted_address?.split(",")[0]?.trim() ?? ""),
+    address,
+    addressLine1: line1 || address,
     addressLine2: subpremise,
     city,
     county,
-    postcode,
+    postcode: postcode || postcodeFromText || "",
     country: country || "United Kingdom",
     lat: lat != null ? lat : undefined,
     lng: lng != null ? lng : undefined,
   };
+}
+
+export async function geocodePostcode(postcode: string): Promise<ParsedAddress | null> {
+  const q = postcode.trim().toUpperCase();
+  if (!q) return null;
+  return geocodeAddress(q);
 }
 
 export async function geocodeAddress(query: string): Promise<ParsedAddress | null> {
@@ -104,3 +127,4 @@ export async function geocodeAddress(query: string): Promise<ParsedAddress | nul
     });
   });
 }
+

@@ -17,8 +17,21 @@ export const isLocalDb = /^(localhost|127\.0\.0\.1)$/.test(
   new URL(process.env.DATABASE_URL).hostname,
 );
 
+if (!isLocalDb && process.env.NODE_ENV !== "production") {
+  const host = new URL(process.env.DATABASE_URL).hostname;
+  console.warn(
+    `[db] DATABASE_URL points at remote host "${host}". ` +
+      `Every API request pays network RTT — local page loads will feel slow. ` +
+      `Prefer a local Postgres for development when possible.`,
+  );
+}
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: isLocalDb ? false : { rejectUnauthorized: false },
+  max: 20,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 15_000,
+  keepAlive: true,
 });
 export const db = drizzle(pool, { schema });

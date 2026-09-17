@@ -38,7 +38,9 @@ import { generateCallScript } from "./elevenlabs-service";
 import { generateTwiML } from "./twilio-service";
 import { classifyTransactions, learnFromAllocation } from "./auto-classify-service";
 import { registerStaffProfileRoutes } from "./staff-profile-routes";
+import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
+import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
 
 async function generateUniqueCode(prefix: string, table: string, column: string, tenantId: number): Promise<string> {
   const { rows } = await pool.query(
@@ -366,8 +368,28 @@ export async function registerRoutes(
 
   app.set("trust proxy", 1);
 
+  const useMemorySessions =
+    process.env.SESSION_STORE === "memory" ||
+    (process.env.NODE_ENV !== "production" && process.env.SESSION_STORE !== "postgres");
+
+  let sessionStore: session.Store;
+  if (useMemorySessions) {
+    const createMemoryStore = (await import("memorystore")).default;
+    const MemoryStore = createMemoryStore(session);
+    sessionStore = new MemoryStore({ checkPeriod: 24 * 60 * 60 * 1000 });
+    console.warn(
+      "[session] Using in-memory session store (fast). Set SESSION_STORE=postgres to persist sessions in DB.",
+    );
+  } else {
+    const { createCachedSessionStore } = await import("./cached-session-store");
+    sessionStore = createCachedSessionStore(
+      new PgSession({ pool, tableName: "sessions", createTableIfMissing: false }),
+      60_000,
+    );
+  }
+
   const sessionMiddleware = session({
-    store: new PgSession({ pool, tableName: "sessions", createTableIfMissing: false }),
+    store: sessionStore,
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -415,7 +437,12 @@ export async function registerRoutes(
   passport.serializeUser((user: any, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
     try {
+      const cached = getCachedSessionUser(id);
+      if (cached !== undefined) {
+        return done(null, cached || false);
+      }
       const user = await storage.getUser(id);
+      if (user) setCachedSessionUser(id, user);
       done(null, user || false);
     } catch (err) {
       done(err);
@@ -738,7 +765,9 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/logout", (req, res) => {
+    const userId = (req.user as User | undefined)?.id;
     req.logout(() => {
+      if (userId) invalidateSessionUser(userId);
       req.session.destroy(() => {
         res.json({ message: "Logged out" });
       });
@@ -944,6 +973,27 @@ export async function registerRoutes(
         });
       }
       res.json({ message: "Change request submitted successfully.", status: "pending" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/employee/application-form", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const employee = await storage.getEmployeeByUserId(user.id);
+      if (!employee) return res.status(404).json({ message: "No employee profile found" });
+      const email = String(user.email || "").trim();
+      if (!email.includes("@")) {
+        return res.status(400).json({ message: "Your account needs an email address to open the application form." });
+      }
+      const created = await createEmployeeVettingFormToken({
+        tenantId: user.tenantId,
+        employeeId: employee.id,
+        recipientEmail: email,
+        createdBy: user.id,
+      });
+      res.json({ token: created.token, formUrl: created.formUrl, expiresAt: created.expiresAt });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -2446,7 +2496,8 @@ export async function registerRoutes(
       }
 
       const whereClause = conditions.join(" AND ");
-      const fromClause = `FROM employees e
+      const needsVettingJoin = statusFilter === "compliant" || statusFilter === "non_compliant";
+      const listFromClause = `FROM employees e
         LEFT JOIN users u ON e.user_id = u.id
         LEFT JOIN suppliers su ON e.supplier_id = su.id
         LEFT JOIN LATERAL (
@@ -2459,42 +2510,68 @@ export async function registerRoutes(
           FROM vetting_records vr WHERE vr.employee_id = e.id
         ) vc ON true`;
 
+      const countFromClause = needsVettingJoin
+        ? `FROM employees e
+            LEFT JOIN users u ON e.user_id = u.id
+            LEFT JOIN suppliers su ON e.supplier_id = su.id
+            LEFT JOIN LATERAL (
+              SELECT COUNT(*)::int AS vetting_count,
+                     COUNT(*) FILTER (WHERE vr.status = 'passed')::int AS vetting_passed
+              FROM vetting_records vr WHERE vr.employee_id = e.id
+            ) vc ON true`
+        : `FROM employees e
+            LEFT JOIN users u ON e.user_id = u.id
+            LEFT JOIN suppliers su ON e.supplier_id = su.id`;
+
       const [dataResult, countResult, statsResult] = await Promise.all([
         pool.query(
-          `SELECT e.*, COALESCE(u.first_name, '') AS first_name_u, COALESCE(u.last_name, '') AS last_name_u,
+          `SELECT e.id, e.user_id, e.tenant_id, e.employee_number, e.date_of_birth,
+            e.national_insurance, e.gender, e.nationality, e.address_line_1, e.address_line_2,
+            e.city, e.county, e.postcode, e.country, e.start_date, e.job_title, e.department,
+            e.employment_type, e.hourly_rate, e.uniform_size, e.boot_size, e.equipment_notes,
+            e.sia_license_number, e.sia_license_type, e.sia_expiry_date,
+            e.dbs_certificate_number, e.dbs_issue_date, e.has_first_aid, e.first_aid_expiry,
+            e.supplier_id, e.external_id, e.portal_access_enabled, e.portal_email,
+            e.portal_invitation_sent_at, e.portal_invitation_accepted, e.created_at, e.updated_at,
+            COALESCE(u.first_name, '') AS first_name_u, COALESCE(u.last_name, '') AS last_name_u,
             COALESCE(u.email, '') AS email_u, COALESCE(u.role, 'employee') AS role_u,
             COALESCE(u.is_active, true) AS user_is_active,
             COALESCE(orec.status::text, 'not_started') AS onboarding_status,
             COALESCE(vc.vetting_count, 0) AS vetting_count,
             COALESCE(vc.vetting_passed, 0) AS vetting_passed,
             su.company_name AS supplier_name
-          ${fromClause}
+          ${listFromClause}
           WHERE ${whereClause}
           ORDER BY e.id DESC
           LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
           [...params, limit, offset]
         ),
         pool.query(
-          `SELECT COUNT(*)::int AS total ${fromClause} WHERE ${whereClause}`,
+          `SELECT COUNT(*)::int AS total ${countFromClause} WHERE ${whereClause}`,
           params
         ),
         pool.query(
           `SELECT
             COUNT(*)::int AS total,
             COUNT(*) FILTER (WHERE u.is_active = true OR u.id IS NULL)::int AS active,
-            COUNT(*) FILTER (WHERE vc.vetting_count > 0 AND vc.vetting_passed = vc.vetting_count)::int AS compliant,
-            COUNT(*) FILTER (WHERE COALESCE(orec.status::text, 'not_started') != 'completed')::int AS onboarding
+            (
+              SELECT COUNT(*)::int FROM (
+                SELECT vr.employee_id
+                FROM vetting_records vr
+                INNER JOIN employees e2 ON e2.id = vr.employee_id
+                WHERE e2.tenant_id = $1 AND (e2.is_merged IS NULL OR e2.is_merged = false)
+                GROUP BY vr.employee_id
+                HAVING COUNT(*) > 0
+                   AND COUNT(*) FILTER (WHERE vr.status = 'passed') = COUNT(*)
+              ) compliant_emps
+            ) AS compliant,
+            (
+              SELECT COUNT(*)::int
+              FROM onboarding_records o
+              WHERE o.tenant_id = $1 AND COALESCE(o.status::text, 'not_started') != 'completed'
+            ) AS onboarding
           FROM employees e
           LEFT JOIN users u ON e.user_id = u.id
-          LEFT JOIN LATERAL (
-            SELECT orec_inner.status FROM onboarding_records orec_inner
-            WHERE orec_inner.user_id = e.user_id ORDER BY orec_inner.id DESC LIMIT 1
-          ) orec ON true
-          LEFT JOIN LATERAL (
-            SELECT COUNT(*)::int AS vetting_count,
-                   COUNT(*) FILTER (WHERE vr.status = 'passed')::int AS vetting_passed
-            FROM vetting_records vr WHERE vr.employee_id = e.id
-          ) vc ON true
           WHERE e.tenant_id = $1 AND (e.is_merged IS NULL OR e.is_merged = false)`,
           [user.tenantId]
         ),
@@ -4325,7 +4402,7 @@ export async function registerRoutes(
       );
 
       const sitesResult = await pool.query(
-        `SELECT s.id, s.tenant_id as "tenantId", s.name, s.address, s.city, s.postcode,
+        `SELECT s.id, s.tenant_id as "tenantId", s.name, s.address, s.city, s.county, s.postcode,
                 s.latitude, s.longitude, s.client_id as "clientId",
                 c.company_name as "clientName",
                 s.client_contact as "clientContact", s.client_email as "clientEmail",
@@ -5026,6 +5103,7 @@ export async function registerRoutes(
           notes: r.notes,
           controllerNotes: r.controller_notes,
           precheckData: r.precheck_data || null,
+          bookOnCallData: r.book_on_call_data || null,
           lastCheckInLat: r.last_check_in_lat,
           lastCheckInLng: r.last_check_in_lng,
           lastCheckInAddress: r.last_check_in_address,
@@ -5179,7 +5257,6 @@ export async function registerRoutes(
 
       const tenant = user.tenantId ? await storage.getTenant(user.tenantId) : null;
       const timeWindowMin = (tenant as any)?.checkinTimeWindowMinutes ?? 10;
-      let geofenceRadius = (tenant as any)?.geofenceRadiusMetres ?? 200;
 
       const now = new Date();
       const [startH, startM] = (shift.startTime || "00:00").split(":").map(Number);
@@ -5193,26 +5270,31 @@ export async function registerRoutes(
         return res.status(400).json({ message: `Check-in window has passed. Your shift started at ${shift.startTime} and the ${timeWindowMin}-minute window has expired. Contact your manager.` });
       }
 
-      const { lat, lng } = req.body;
-      if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
-        return res.status(400).json({ message: "Location is required for check-in. Please enable GPS and try again." });
-      }
-      const parsedLat = parseFloat(lat);
-      const parsedLng = parseFloat(lng);
-      if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) {
-        return res.status(400).json({ message: "Invalid GPS coordinates." });
-      }
-      let distanceMetres: number | null = null;
-      let withinRange = true;
-      if (shift.siteId) {
-        const site = await storage.getSite(shift.siteId);
-        if ((site as any)?.geofenceRadiusMetres != null) geofenceRadius = (site as any).geofenceRadiusMetres;
-        if (site?.latitude && site?.longitude) {
-          distanceMetres = Math.round(haversineDistanceMetres(parsedLat, parsedLng, parseFloat(site.latitude), parseFloat(site.longitude)) * 100) / 100;
-          if (distanceMetres > geofenceRadius) {
-            withinRange = false;
-          }
-        }
+      const { parseGpsCoords, resolveShiftGeofence, geofenceOutOfRangeMessage } = await import("./geofence");
+      const gps = parseGpsCoords(req.body?.lat, req.body?.lng);
+      if (!gps.ok) return res.status(400).json({ message: gps.message });
+      const geo = await resolveShiftGeofence({
+        siteId: shift.siteId,
+        tenantGeofenceRadius: (tenant as any)?.geofenceRadiusMetres,
+        lat: gps.lat,
+        lng: gps.lng,
+      });
+      const outOfRange = geofenceOutOfRangeMessage(geo, "book on");
+      if (outOfRange) {
+        await storage.createAuditLog({
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: "employee_self_checkin_blocked",
+          entityType: "shift",
+          entityId: String(shiftId),
+          details: { employeeId: employee.id, lat: geo.lat, lng: geo.lng, distanceMetres: geo.distanceMetres, withinRange: false, geofenceRadius: geo.geofenceRadius },
+        });
+        return res.status(400).json({
+          message: outOfRange,
+          distanceFromSite: geo.distanceMetres,
+          withinRange: false,
+          geofenceRadius: geo.geofenceRadius,
+        });
       }
 
       const existingOpsChecks = await storage.getOpsChecksForShift(shiftId);
@@ -5224,19 +5306,25 @@ export async function registerRoutes(
       const updated = await storage.updateShift(shiftId, {
         status: "in_progress",
         checkInTime: now,
-        lastCheckInLat: String(parsedLat),
-        lastCheckInLng: String(parsedLng),
-        checkInDistanceMetres: distanceMetres != null ? String(distanceMetres) : null,
+        lastCheckInLat: String(geo.lat),
+        lastCheckInLng: String(geo.lng),
+        checkInDistanceMetres: geo.distanceMetres != null ? String(geo.distanceMetres) : null,
       } as any);
+      try {
+        const { ensureCheckCallsForShift } = await import("./control-room-calls");
+        await ensureCheckCallsForShift(shiftId, user.tenantId ?? null);
+      } catch (err) {
+        console.error("[checkin] ensureCheckCallsForShift failed:", err);
+      }
       await storage.createAuditLog({
         tenantId: user.tenantId,
         userId: user.id,
         action: "employee_self_checkin",
         entityType: "shift",
         entityId: String(shiftId),
-        details: { employeeId: employee.id, lat: parsedLat, lng: parsedLng, distanceMetres, withinRange },
+        details: { employeeId: employee.id, lat: geo.lat, lng: geo.lng, distanceMetres: geo.distanceMetres, withinRange: geo.withinRange },
       });
-      res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius });
+      res.json({ ...updated, distanceFromSite: geo.distanceMetres, withinRange: geo.withinRange, geofenceRadius: geo.geofenceRadius });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -5251,11 +5339,12 @@ export async function registerRoutes(
       const shift = await storage.getShift(shiftId);
       if (!shift) return res.status(404).json({ message: "Shift not found" });
       if (shift.employeeId !== employee.id) return res.status(403).json({ message: "This shift is not assigned to you" });
-      if (shift.status !== "in_progress") return res.status(400).json({ message: "Only in-progress shifts can be checked out of" });
+      if (shift.status !== "in_progress" && shift.status !== "booked_on") {
+        return res.status(400).json({ message: "Only in-progress shifts can be checked out of" });
+      }
 
       const tenant = user.tenantId ? await storage.getTenant(user.tenantId) : null;
       const timeWindowMin = (tenant as any)?.checkinTimeWindowMinutes ?? 10;
-      let geofenceRadius = (tenant as any)?.geofenceRadiusMetres ?? 200;
 
       const now = new Date();
       const [endH, endM] = (shift.endTime || "23:59").split(":").map(Number);
@@ -5272,35 +5361,23 @@ export async function registerRoutes(
         return res.status(400).json({ message: `Check-out window has passed. Your shift ended at ${shift.endTime} and the ${timeWindowMin}-minute window has expired. Contact your manager.` });
       }
 
-      const { lat, lng } = req.body;
-      if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
-        return res.status(400).json({ message: "Location is required for check-out. Please enable GPS and try again." });
-      }
-      const parsedLat = parseFloat(lat);
-      const parsedLng = parseFloat(lng);
-      if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) {
-        return res.status(400).json({ message: "Invalid GPS coordinates." });
-      }
-      let distanceMetres: number | null = null;
-      let withinRange = true;
-      if (shift.siteId) {
-        const site = await storage.getSite(shift.siteId);
-        if ((site as any)?.geofenceRadiusMetres != null) geofenceRadius = (site as any).geofenceRadiusMetres;
-        if (site?.latitude && site?.longitude) {
-          distanceMetres = Math.round(haversineDistanceMetres(parsedLat, parsedLng, parseFloat(site.latitude), parseFloat(site.longitude)) * 100) / 100;
-          if (distanceMetres > geofenceRadius) {
-            withinRange = false;
-          }
-        }
-      }
+      const { parseGpsCoords, resolveShiftGeofence } = await import("./geofence");
+      const gps = parseGpsCoords(req.body?.lat, req.body?.lng);
+      if (!gps.ok) return res.status(400).json({ message: gps.message });
+      const geo = await resolveShiftGeofence({
+        siteId: shift.siteId,
+        tenantGeofenceRadius: (tenant as any)?.geofenceRadiusMetres,
+        lat: gps.lat,
+        lng: gps.lng,
+      });
 
       const { handoverNotes } = req.body;
       const updated = await storage.updateShift(shiftId, {
         status: "completed",
         checkOutTime: now,
-        lastCheckOutLat: String(parsedLat),
-        lastCheckOutLng: String(parsedLng),
-        checkOutDistanceMetres: distanceMetres != null ? String(distanceMetres) : null,
+        lastCheckOutLat: String(geo.lat),
+        lastCheckOutLng: String(geo.lng),
+        checkOutDistanceMetres: geo.distanceMetres != null ? String(geo.distanceMetres) : null,
         ...(handoverNotes ? { handoverNotes } : {}),
       } as any);
       await storage.createAuditLog({
@@ -5309,9 +5386,68 @@ export async function registerRoutes(
         action: "employee_self_checkout",
         entityType: "shift",
         entityId: String(shiftId),
-        details: { employeeId: employee.id, lat: parsedLat, lng: parsedLng, distanceMetres, withinRange },
+        details: { employeeId: employee.id, lat: geo.lat, lng: geo.lng, distanceMetres: geo.distanceMetres, withinRange: geo.withinRange },
       });
-      res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius });
+      res.json({ ...updated, distanceFromSite: geo.distanceMetres, withinRange: geo.withinRange, geofenceRadius: geo.geofenceRadius });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/my-shifts/check-calls", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const employee = await storage.getEmployeeByUserId(user.id);
+      if (!employee) return res.json([]);
+      const { listDueCheckCallsForOfficer } = await import("./control-room-calls");
+      const due = await listDueCheckCallsForOfficer(employee.id, user.tenantId ?? null);
+      res.json(due);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/my-shifts/:id/check-calls/:callId/take", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const employee = await storage.getEmployeeByUserId(user.id);
+      if (!employee) return res.status(404).json({ message: "Employee profile not found" });
+      const shiftId = parseInt(req.params.id, 10);
+      const callId = parseInt(req.params.callId, 10);
+      if (Number.isNaN(shiftId) || Number.isNaN(callId)) {
+        return res.status(400).json({ message: "Invalid shift or check-call id" });
+      }
+      const { takeCheckCallFromApp } = await import("./control-room-calls");
+      const result = await takeCheckCallFromApp({
+        checkCallId: callId,
+        shiftId,
+        employeeId: employee.id,
+        tenantId: user.tenantId ?? null,
+        userId: user.id,
+        lat: req.body?.lat,
+        lng: req.body?.lng,
+      });
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      await storage.createAuditLog({
+        tenantId: user.tenantId,
+        userId: user.id,
+        action: "employee_self_check_call",
+        entityType: "shift",
+        entityId: String(shiftId),
+        details: {
+          checkCallId: callId,
+          lat: result.geo.lat,
+          lng: result.geo.lng,
+          distanceMetres: result.geo.distanceMetres,
+          withinRange: result.geo.withinRange,
+        },
+      });
+      res.json({
+        ...result.checkCall,
+        distanceFromSite: result.geo.distanceMetres,
+        withinRange: result.geo.withinRange,
+        geofenceRadius: result.geo.geofenceRadius,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -7535,6 +7671,19 @@ export async function registerRoutes(
       const unreadOnly = req.query.unreadOnly === "true";
       const list = await storage.getNotificationsForUser(user.id, { unreadOnly, limit: 50 });
       res.json(list);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+  app.get("/api/employee/notifications", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const list = await storage.getNotificationsForUser(user.id, { limit: 50 });
+      res.json(list.map((n) => ({
+        ...n,
+        message: n.body,
+        isRead: Boolean(n.readAt),
+      })));
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -16035,35 +16184,146 @@ Respond in JSON format:
       const user = (req as any).user as User;
       if (!user.tenantId) return res.json({});
 
+      const tenantId = user.tenantId;
       const now = new Date();
       const todayStr = now.toISOString().split("T")[0];
-      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        .toISOString()
+        .slice(0, 10);
 
-      // Shifts and audit logs are queried as targeted aggregates (not full-table
-      // fetches) because tenants can have hundreds of thousands of historical
-      // shift rows — loading them all into memory just to compute today's
-      // counts or the last 8 activity entries caused OOM/timeout failures
-      // (502s) once real production-scale data was in place.
-      const [allEmployees, allIncidents, allInvoices, allSuppliers, allSites, allUsers, allOnboarding, allVetting, allJobPostings, allApplicants, clientCountResult, todayShiftStatusResult, recentAuditLogsResult] = await Promise.all([
-        storage.getEmployeesByTenant(user.tenantId),
-        storage.getIncidentsByTenant(user.tenantId),
-        storage.getInvoicesByTenant(user.tenantId),
-        storage.getSuppliersByTenant(user.tenantId),
-        storage.getSitesByTenant(user.tenantId),
-        storage.getUsersByTenant(user.tenantId),
-        storage.getOnboardingsByTenant(user.tenantId),
-        storage.getVettingRecordsByTenant(user.tenantId),
-        storage.getJobPostingsByTenant(user.tenantId),
-        storage.getApplicantsByTenant(user.tenantId),
-        pool.query("SELECT COUNT(*) as count FROM clients WHERE tenant_id = $1", [user.tenantId]),
-        pool.query("SELECT status, COUNT(*)::int as count FROM shifts WHERE tenant_id = $1 AND date = $2 GROUP BY status", [user.tenantId, todayStr]),
+      // Aggregate-only queries — never load full employee/invoice/shift tables.
+      // Loading all employees previously took ~6s against remote Postgres with 6k+ rows.
+      const [
+        employeeStats,
+        siteStats,
+        clientCountResult,
+        supplierStats,
+        todayShiftStatusResult,
+        incidentStats,
+        onboardingStats,
+        vettingStats,
+        invoiceStats,
+        recruitmentStats,
+        userStats,
+        absenceStats,
+        recentAuditLogsResult,
+      ] = await Promise.all([
         pool.query(
-          `SELECT id, action, entity_type as "entityType", entity_id as "entityId", details, created_at as "createdAt", user_id as "userId"
-           FROM audit_logs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 8`,
-          [user.tenantId]
+          `SELECT
+             COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE u.is_active = true OR u.id IS NULL)::int AS active,
+             COUNT(*) FILTER (
+               WHERE e.sia_expiry_date IS NOT NULL
+                 AND e.sia_expiry_date >= $2::date AND e.sia_expiry_date <= $3::date
+             )::int AS sia_expiring,
+             COUNT(*) FILTER (
+               WHERE e.first_aid_expiry IS NOT NULL
+                 AND e.first_aid_expiry >= $2::date AND e.first_aid_expiry <= $3::date
+             )::int AS first_aid_expiring,
+             COALESCE(SUM(
+               (CASE WHEN e.sia_expiry_date IS NOT NULL AND e.sia_expiry_date > $2::date THEN 1 ELSE 0 END) +
+               (CASE WHEN e.first_aid_expiry IS NOT NULL AND e.first_aid_expiry > $2::date THEN 1 ELSE 0 END)
+             ), 0)::int AS valid_compliance_slots,
+             (COUNT(*) * 2)::int AS total_compliance_slots
+           FROM employees e
+           LEFT JOIN users u ON e.user_id = u.id
+           WHERE e.tenant_id = $1 AND (e.is_merged IS NULL OR e.is_merged = false)`,
+          [tenantId, todayStr, in30Days],
+        ),
+        pool.query(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE is_active = true)::int AS active
+           FROM sites WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(`SELECT COUNT(*)::int AS count FROM clients WHERE tenant_id = $1`, [tenantId]),
+        pool.query(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE status IN ('active', 'approved'))::int AS active,
+                  COUNT(*) FILTER (WHERE status IN ('draft', 'pending'))::int AS pending
+           FROM suppliers WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT status, COUNT(*)::int AS count
+           FROM shifts WHERE tenant_id = $1 AND date = $2
+           GROUP BY status`,
+          [tenantId, todayStr],
+        ),
+        pool.query(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE status IN ('reported', 'investigating'))::int AS open
+           FROM incidents WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT
+             COUNT(*) FILTER (WHERE status = 'invited')::int AS invited,
+             COUNT(*) FILTER (WHERE status = 'in_progress')::int AS in_progress,
+             COUNT(*) FILTER (WHERE status = 'submitted')::int AS submitted,
+             COUNT(*) FILTER (WHERE status = 'under_review')::int AS under_review,
+             COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
+             COUNT(*) FILTER (WHERE status = 'rejected')::int AS rejected
+           FROM onboarding_records WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE status IN ('pending', 'in_progress'))::int AS in_progress
+           FROM vetting_records WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT
+             COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE status = 'paid')::int AS paid,
+             COALESCE(SUM(CASE
+               WHEN status = 'paid' AND created_at >= $2::timestamp
+               THEN total_amount ELSE 0 END), 0)::text AS revenue_this_month,
+             COALESCE(SUM(CASE
+               WHEN status IN ('pending', 'approved')
+               THEN total_amount ELSE 0 END), 0)::text AS outstanding
+           FROM invoices WHERE tenant_id = $1`,
+          [tenantId, monthStart],
+        ),
+        pool.query(
+          `SELECT
+             (SELECT COUNT(*)::int FROM job_postings
+              WHERE tenant_id = $1 AND is_active = true) AS open_jobs,
+             (SELECT COUNT(*)::int FROM applicants
+              WHERE tenant_id = $1 AND status = 'applied') AS new_applicants`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT COUNT(*) FILTER (WHERE is_active = true)::int AS active
+           FROM users WHERE tenant_id = $1`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT COUNT(*)::int AS currently_absent
+           FROM absence_records
+           WHERE tenant_id = $1 AND status = 'open'`,
+          [tenantId],
+        ),
+        pool.query(
+          `SELECT id, action, entity_type as "entityType", entity_id as "entityId",
+                  details, created_at as "createdAt", user_id as "userId"
+           FROM audit_logs WHERE tenant_id = $1
+           ORDER BY created_at DESC LIMIT 8`,
+          [tenantId],
         ),
       ]);
-      const clientCount = parseInt(clientCountResult.rows[0]?.count || "0");
+
+      const emp = employeeStats.rows[0] || {};
+      const siaExpiring = emp.sia_expiring || 0;
+      const firstAidExpiring = emp.first_aid_expiring || 0;
+      const complianceRate =
+        emp.total_compliance_slots > 0
+          ? Math.round((emp.valid_compliance_slots / emp.total_compliance_slots) * 100)
+          : 100;
 
       const shiftCountsByStatus: Record<string, number> = {};
       let todayTotal = 0;
@@ -16071,104 +16331,59 @@ Respond in JSON format:
         shiftCountsByStatus[row.status] = row.count;
         todayTotal += row.count;
       }
-      const scheduledToday = shiftCountsByStatus["scheduled"] || 0;
-      const activeToday = shiftCountsByStatus["in_progress"] || 0;
-      const completedToday = shiftCountsByStatus["completed"] || 0;
-      const noShowToday = shiftCountsByStatus["no_show"] || 0;
-
-      const siaExpiring = allEmployees.filter(e => {
-        if (!e.siaExpiryDate) return false;
-        const exp = new Date(e.siaExpiryDate);
-        return exp >= now && exp <= in30Days;
-      }).length;
-
-      const dbsExpiring = allEmployees.filter(e => {
-        if (!e.dbsExpiryDate) return false;
-        const exp = new Date(e.dbsExpiryDate);
-        return exp >= now && exp <= in30Days;
-      }).length;
-
-      const firstAidExpiring = allEmployees.filter(e => {
-        if (!e.firstAidExpiry) return false;
-        const exp = new Date(e.firstAidExpiry);
-        return exp >= now && exp <= in30Days;
-      }).length;
-
-      const totalCompliance = allEmployees.length * 3;
-      const validCompliance = allEmployees.reduce((sum, e) => {
-        let valid = 0;
-        if (e.siaExpiryDate && new Date(e.siaExpiryDate) > now) valid++;
-        if (e.dbsExpiryDate && new Date(e.dbsExpiryDate) > now) valid++;
-        if (e.firstAidExpiry && new Date(e.firstAidExpiry) > now) valid++;
-        return sum + valid;
-      }, 0);
-      const complianceRate = totalCompliance > 0 ? Math.round((validCompliance / totalCompliance) * 100) : 100;
 
       const onboardingByStatus = {
-        invited: allOnboarding.filter(o => o.status === "invited").length,
-        inProgress: allOnboarding.filter(o => o.status === "in_progress").length,
-        submitted: allOnboarding.filter(o => o.status === "submitted").length,
-        underReview: allOnboarding.filter(o => o.status === "under_review").length,
-        completed: allOnboarding.filter(o => o.status === "completed").length,
-        rejected: allOnboarding.filter(o => o.status === "rejected").length,
+        invited: onboardingStats.rows[0]?.invited || 0,
+        inProgress: onboardingStats.rows[0]?.in_progress || 0,
+        submitted: onboardingStats.rows[0]?.submitted || 0,
+        underReview: onboardingStats.rows[0]?.under_review || 0,
+        completed: onboardingStats.rows[0]?.completed || 0,
+        rejected: onboardingStats.rows[0]?.rejected || 0,
       };
-      const pendingOnboarding = onboardingByStatus.invited + onboardingByStatus.inProgress + onboardingByStatus.submitted + onboardingByStatus.underReview;
+      const pendingOnboarding =
+        onboardingByStatus.invited +
+        onboardingByStatus.inProgress +
+        onboardingByStatus.submitted +
+        onboardingByStatus.underReview;
 
-      const vettingInProgress = allVetting.filter(v => v.status === "pending" || v.status === "in_progress").length;
-
-      const paidInvoices = allInvoices.filter(i => i.status === "paid");
-      const thisMonth = now.getMonth();
-      const thisYear = now.getFullYear();
-      const revenueThisMonth = paidInvoices
-        .filter(i => { const d = new Date(i.createdAt!); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; })
-        .reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
-      const outstandingAmount = allInvoices
-        .filter(i => i.status === "pending" || i.status === "approved")
-        .reduce((sum, i) => sum + parseFloat(i.totalAmount || "0"), 0);
-
-      const openJobs = allJobPostings.filter(j => j.status === "open" || j.status === "active").length;
-      const newApplicants = allApplicants.filter(a => a.status === "applied" || a.status === "new").length;
-
-      const recentActivity = recentAuditLogsResult.rows;
-
-      const currentlyAbsent = await storage.getAbsencesByTenant(user.tenantId, { status: "open" });
+      const inv = invoiceStats.rows[0] || {};
 
       res.json({
         employees: {
-          active: allEmployees.filter(e => e.status === "active").length,
-          total: allEmployees.length,
+          active: emp.active || 0,
+          total: emp.total || 0,
         },
         absences: {
-          currentlyAbsent: currentlyAbsent.length,
+          currentlyAbsent: absenceStats.rows[0]?.currently_absent || 0,
         },
         sites: {
-          active: allSites.filter(s => s.isActive).length,
-          total: allSites.length,
+          active: siteStats.rows[0]?.active || 0,
+          total: siteStats.rows[0]?.total || 0,
         },
         clients: {
-          total: clientCount,
+          total: parseInt(clientCountResult.rows[0]?.count || "0", 10),
         },
         suppliers: {
-          active: allSuppliers.filter(s => s.status === "active" || s.status === "approved").length,
-          pending: allSuppliers.filter(s => s.status === "draft" || s.status === "pending").length,
-          total: allSuppliers.length,
+          active: supplierStats.rows[0]?.active || 0,
+          pending: supplierStats.rows[0]?.pending || 0,
+          total: supplierStats.rows[0]?.total || 0,
         },
         shifts: {
           todayTotal,
-          scheduled: scheduledToday,
-          active: activeToday,
-          completed: completedToday,
-          noShow: noShowToday,
+          scheduled: shiftCountsByStatus["scheduled"] || 0,
+          active: shiftCountsByStatus["in_progress"] || 0,
+          completed: shiftCountsByStatus["completed"] || 0,
+          noShow: shiftCountsByStatus["no_show"] || 0,
         },
         incidents: {
-          open: allIncidents.filter(i => i.status === "reported" || i.status === "investigating").length,
-          total: allIncidents.length,
+          open: incidentStats.rows[0]?.open || 0,
+          total: incidentStats.rows[0]?.total || 0,
         },
         compliance: {
           siaExpiring,
-          dbsExpiring,
+          dbsExpiring: 0,
           firstAidExpiring,
-          totalAlerts: siaExpiring + dbsExpiring + firstAidExpiring,
+          totalAlerts: siaExpiring + firstAidExpiring,
           rate: complianceRate,
         },
         onboarding: {
@@ -16176,21 +16391,21 @@ Respond in JSON format:
           byStatus: onboardingByStatus,
         },
         vetting: {
-          inProgress: vettingInProgress,
-          total: allVetting.length,
+          inProgress: vettingStats.rows[0]?.in_progress || 0,
+          total: vettingStats.rows[0]?.total || 0,
         },
         financial: {
-          revenueThisMonth: revenueThisMonth.toFixed(2),
-          outstanding: outstandingAmount.toFixed(2),
-          totalInvoices: allInvoices.length,
-          paidInvoices: paidInvoices.length,
+          revenueThisMonth: Number(inv.revenue_this_month || 0).toFixed(2),
+          outstanding: Number(inv.outstanding || 0).toFixed(2),
+          totalInvoices: inv.total || 0,
+          paidInvoices: inv.paid || 0,
         },
         recruitment: {
-          openJobs,
-          newApplicants,
+          openJobs: recruitmentStats.rows[0]?.open_jobs || 0,
+          newApplicants: recruitmentStats.rows[0]?.new_applicants || 0,
         },
-        recentActivity,
-        activeUsers: allUsers.filter(u => u.isActive).length,
+        recentActivity: recentAuditLogsResult.rows,
+        activeUsers: userStats.rows[0]?.active || 0,
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -20767,16 +20982,18 @@ Respond in JSON format:
   app.get("/api/control-room/pending-calls", requireRole(...CONTROL_ROOM_ROLES), async (req, res) => {
     try {
       const user = req.user as User;
-      if (!user.tenantId) return res.json({ pending: [], reversiblePrechecks: [], fromEmail: null, fromName: null });
-      const { listPendingCalls, listReversiblePrechecks } = await import("./control-room-calls");
-      const [pending, reversiblePrechecks] = await Promise.all([
+      if (!user.tenantId) return res.json({ pending: [], reversiblePrechecks: [], takenCheckCalls: [], fromEmail: null, fromName: null });
+      const { listPendingCalls, listReversiblePrechecks, listTakenCheckCalls } = await import("./control-room-calls");
+      const [pending, reversiblePrechecks, takenCheckCalls] = await Promise.all([
         listPendingCalls(user.tenantId),
         listReversiblePrechecks(user.tenantId),
+        listTakenCheckCalls(user.tenantId),
       ]);
       const emailSettings = await storage.getTenantEmailSettings(user.tenantId);
       res.json({
         pending,
         reversiblePrechecks,
+        takenCheckCalls,
         fromEmail: emailSettings?.fromEmail || null,
         fromName: emailSettings?.fromName || null,
       });
@@ -30445,13 +30662,31 @@ Respond in JSON format:
       }
       let distanceMetres: number | null = null;
       let withinRange = true;
+      let siteHasCoords = false;
       if (shift.siteId) {
         const site = await storage.getSite(shift.siteId);
         if ((site as any)?.geofenceRadiusMetres != null) geofenceRadius = (site as any).geofenceRadiusMetres;
         if (site?.latitude && site?.longitude) {
+          siteHasCoords = true;
           distanceMetres = Math.round(haversineDistanceMetres(parsedLat, parsedLng, parseFloat(site.latitude), parseFloat(site.longitude)) * 100) / 100;
           if (distanceMetres > geofenceRadius) withinRange = false;
         }
+      }
+      if (siteHasCoords && !withinRange) {
+        await storage.createAuditLog({
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: "employee_self_checkin_blocked",
+          entityType: "shift",
+          entityId: String(shiftId),
+          details: { employeeId: employee.id, lat: parsedLat, lng: parsedLng, distanceMetres, withinRange: false, geofenceRadius, source: "mobile_app" },
+        });
+        return res.status(400).json({
+          message: `You must be at the site to book on. You are ${Math.round(distanceMetres!)}m away (limit: ${geofenceRadius}m).`,
+          distanceFromSite: distanceMetres,
+          withinRange: false,
+          geofenceRadius,
+        });
       }
 
       const existingOpsChecks = await storage.getOpsChecksForShift(shiftId);
@@ -30490,7 +30725,9 @@ Respond in JSON format:
       const shift = await storage.getShift(shiftId);
       if (!shift) return res.status(404).json({ message: "Shift not found" });
       if (shift.employeeId !== employee.id) return res.status(403).json({ message: "This shift is not assigned to you" });
-      if (shift.status !== "in_progress") return res.status(400).json({ message: "Only in-progress shifts can be checked out of" });
+      if (shift.status !== "in_progress" && shift.status !== "booked_on") {
+        return res.status(400).json({ message: "Only in-progress shifts can be checked out of" });
+      }
 
       const tenant = user.tenantId ? await storage.getTenant(user.tenantId) : null;
       const timeWindowMin = (tenant as any)?.checkinTimeWindowMinutes ?? 10;

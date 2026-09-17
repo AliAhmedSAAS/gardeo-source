@@ -133,6 +133,7 @@ import {
 import { DEFAULT_OFFICER_TYPES } from "@shared/defaultOfficerTypes";
 import { DEFAULT_DUTY_TYPES } from "@shared/defaultDutyTypes";
 import { db, pool } from "./db";
+import { invalidateSessionUser, setCachedSessionUser } from "./session-user-cache";
 import { eq, and, desc, gte, lte, isNotNull, sql, inArray, asc } from "drizzle-orm";
 
 async function nextCode(prefix: string, table: string, column: string, tenantId?: number | null): Promise<string> {
@@ -618,6 +619,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
     const [updated] = await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, id)).returning();
+    if (updated) setCachedSessionUser(id, updated);
+    else invalidateSessionUser(id);
     return updated;
   }
 
@@ -932,6 +935,9 @@ export class DatabaseStorage implements IStorage {
       shift.shiftCode = await nextCode("SHF-", "shifts", "shift_code", shift.tenantId);
     }
     const [created] = await db.insert(shifts).values(shift).returning();
+    void import("./shift-notifications").then(({ queueShiftNotification }) => {
+      queueShiftNotification({ shift: created, action: "created" });
+    }).catch((err) => console.error("[shift-notifications]", err));
     return created;
   }
 
@@ -955,16 +961,61 @@ export class DatabaseStorage implements IStorage {
       const created = await db.insert(shifts).values(chunk).returning();
       allCreated.push(...created);
     }
+    void import("./shift-notifications").then(({ queueShiftNotification }) => {
+      for (const shift of allCreated) {
+        queueShiftNotification({ shift, action: "created" });
+      }
+    }).catch((err) => console.error("[shift-notifications]", err));
     return allCreated;
   }
 
   async updateShift(id: number, data: Partial<InsertShift>): Promise<Shift | undefined> {
+    const patch = data as Record<string, unknown>;
+    const maybeNotify = patch.status === "cancelled"
+      || ["date", "startTime", "endTime", "siteId", "title", "employeeId", "supplierId"]
+        .some((key) => patch[key] !== undefined);
+    const previous = maybeNotify
+      ? (await db.select().from(shifts).where(eq(shifts.id, id)))[0]
+      : undefined;
     const [updated] = await db.update(shifts).set({ ...data, updatedAt: new Date() }).where(eq(shifts.id, id)).returning();
+    if (previous && updated) {
+      void import("./shift-notifications").then(({ classifyShiftUpdate, queueShiftNotification }) => {
+        const action = classifyShiftUpdate(previous, updated);
+        if (action) queueShiftNotification({ shift: updated, previous, action });
+      }).catch((err) => console.error("[shift-notifications]", err));
+    }
     return updated;
   }
 
   async deleteShift(id: number): Promise<void> {
-    await db.delete(shifts).where(eq(shifts.id, id));
+    const [existing] = await db.select().from(shifts).where(eq(shifts.id, id));
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM ops_checks WHERE shift_id = $1", [id]);
+      await client.query("DELETE FROM shift_check_calls WHERE shift_id = $1", [id]);
+      await client.query(
+        "DELETE FROM dispute_messages WHERE dispute_id IN (SELECT id FROM disputes WHERE shift_id = $1)",
+        [id],
+      );
+      await client.query("DELETE FROM disputes WHERE shift_id = $1", [id]);
+      await client.query("DELETE FROM payroll_run_items WHERE shift_id = $1", [id]);
+      await client.query("UPDATE invoice_line_items SET shift_id = NULL WHERE shift_id = $1", [id]);
+      await client.query("UPDATE client_invoice_line_items SET shift_id = NULL WHERE shift_id = $1", [id]);
+      await client.query("UPDATE controller_activity_log SET shift_id = NULL WHERE shift_id = $1", [id]);
+      await client.query("DELETE FROM shifts WHERE id = $1", [id]);
+      await client.query("COMMIT");
+      if (existing) {
+        void import("./shift-notifications").then(({ queueShiftNotification }) => {
+          queueShiftNotification({ shift: existing, action: "cancelled" });
+        }).catch((err) => console.error("[shift-notifications]", err));
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async getIncident(id: number, tenantId?: number): Promise<Incident | undefined> {

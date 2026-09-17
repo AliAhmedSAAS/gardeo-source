@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Clock, MapPin, LogIn, LogOut, Loader2, ShieldCheck,
   FileText, AlertTriangle, Calendar, ChevronRight, Bell,
-  CheckCircle2, MessageSquare, Briefcase, User,
+  CheckCircle2, MessageSquare, Briefcase, User, PhoneCall,
 } from "lucide-react";
 import { OpsCheckDialog } from "@/components/ops-check-dialog";
 import { BookOffDialog } from "@/components/book-off-dialog";
@@ -40,8 +40,10 @@ type NotificationData = {
   id: number;
   type: string;
   title: string;
-  message: string;
-  isRead: boolean;
+  body?: string | null;
+  message?: string;
+  isRead?: boolean;
+  readAt?: string | null;
   createdAt: string;
 };
 
@@ -87,6 +89,30 @@ function getGreeting() {
   return "Good evening";
 }
 
+type CheckCallDue = {
+  id: number;
+  shiftId: number;
+  dueAt: string;
+  siteName: string;
+  canTake?: boolean;
+};
+
+function localToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function shiftDateKey(date: string) {
+  return String(date).slice(0, 10);
+}
+
+function isOnDutyStatus(status: string) {
+  return status === "in_progress" || status === "booked_on";
+}
+
 export default function OfficerHomePage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -94,10 +120,15 @@ export default function OfficerHomePage() {
   const [opsCheckShift, setOpsCheckShift] = useState<ShiftData | null>(null);
   const [bookOffShift, setBookOffShift] = useState<ShiftData | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
 
   const { data: shifts = [], isLoading: shiftsLoading } = useQuery<ShiftData[]>({
     queryKey: ["/api/my-shifts"],
+  });
+
+  const { data: dueCheckCalls = [] } = useQuery<CheckCallDue[]>({
+    queryKey: ["/api/my-shifts/check-calls"],
+    refetchInterval: 30000,
   });
 
   const { data: documents = [] } = useQuery<DocumentData[]>({
@@ -105,24 +136,28 @@ export default function OfficerHomePage() {
   });
 
   const { data: notifications = [] } = useQuery<NotificationData[]>({
-    queryKey: ["/api/employee/notifications"],
+    queryKey: ["/api/notifications"],
   });
 
-  const todayShifts = shifts.filter((s) => s.date === today);
+  const todayShifts = shifts.filter((s) => shiftDateKey(s.date) === today);
   const upcomingShifts = shifts
-    .filter((s) => s.date > today && s.status !== "completed" && s.status !== "cancelled")
-    .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+    .filter((s) => shiftDateKey(s.date) > today && s.status !== "completed" && s.status !== "cancelled")
+    .sort((a, b) => shiftDateKey(a.date).localeCompare(shiftDateKey(b.date)) || a.startTime.localeCompare(b.startTime))
     .slice(0, 3);
 
-  const activeShift = todayShifts.find((s) => s.status === "in_progress");
-  const nextScheduledShift = todayShifts.find((s) => s.status === "scheduled");
+  const activeShift = todayShifts.find((s) => isOnDutyStatus(s.status));
+  const nextScheduledShift =
+    todayShifts.find((s) => s.status === "scheduled") ||
+    upcomingShifts.find((s) => s.status === "scheduled") ||
+    null;
+  const nextShiftIsToday = nextScheduledShift ? shiftDateKey(nextScheduledShift.date) === today : false;
 
   const expiringDocs = documents.filter((doc) => {
     const days = getDaysUntilExpiry(doc.expiryDate);
     return days !== null && days <= 30;
   });
 
-  const unreadNotifications = notifications.filter((n) => !n.isRead);
+  const unreadNotifications = notifications.filter((n) => !n.readAt && !n.isRead);
 
   const performCheckin = useCallback(async (shiftId: number) => {
     setGpsLoading(true);
@@ -131,6 +166,7 @@ export default function OfficerHomePage() {
       const res = await apiRequest("POST", `/api/my-shifts/${shiftId}/checkin`, coords);
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
       if (data.withinRange === false) {
         toast({
           title: "Booked on - Outside geofence",
@@ -157,6 +193,7 @@ export default function OfficerHomePage() {
       });
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
       setBookOffShift(null);
       if (data.withinRange === false) {
         toast({
@@ -188,6 +225,38 @@ export default function OfficerHomePage() {
 
   const handleBookOff = (shift: ShiftData) => {
     setBookOffShift(shift);
+  };
+
+  const nextDueCheckCall = dueCheckCalls.find((c) => c.canTake !== false) || dueCheckCalls[0] || null;
+  const canTakeCheckCall = Boolean(nextDueCheckCall && nextDueCheckCall.canTake !== false);
+
+  const takeCheckCall = async () => {
+    if (!nextDueCheckCall || !canTakeCheckCall) return;
+    setGpsLoading(true);
+    try {
+      const coords = await getGeolocation();
+      const res = await apiRequest(
+        "POST",
+        `/api/my-shifts/${nextDueCheckCall.shiftId}/check-calls/${nextDueCheckCall.id}/take`,
+        coords,
+      );
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
+      if (data.withinRange === false) {
+        toast({
+          title: "Check-call taken — outside geofence",
+          description: `${Math.round(data.distanceFromSite)}m from site (limit: ${data.geofenceRadius}m). Flagged.`,
+          variant: "destructive",
+        });
+      } else {
+        const dist = data.distanceFromSite != null ? ` (${Math.round(data.distanceFromSite)}m from site)` : "";
+        toast({ title: "Check-call taken", description: `Location recorded.${dist}` });
+      }
+    } catch (err: any) {
+      toast({ title: "Check-call failed", description: err.message, variant: "destructive" });
+    } finally {
+      setGpsLoading(false);
+    }
   };
 
   return (
@@ -222,6 +291,20 @@ export default function OfficerHomePage() {
                 <MapPin className="w-3 h-3" /> {activeShift.siteName}
               </div>
             )}
+            {nextDueCheckCall && (
+              <Button
+                className="mt-3 w-full bg-[#1F3A5F] hover:bg-[#1F3A5F]/90 text-white min-h-[44px]"
+                onClick={takeCheckCall}
+                disabled={gpsLoading || !canTakeCheckCall}
+                data-testid="button-take-check-call"
+              >
+                {gpsLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <PhoneCall className="w-4 h-4 mr-1" />}
+                {canTakeCheckCall ? "Take Check-call (GPS)" : "Next Check-call"}
+                <span className="ml-2 text-xs font-normal opacity-80">
+                  due {new Date(nextDueCheckCall.dueAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </Button>
+            )}
             <Button
               className="mt-3 w-full bg-[#FF8C42] hover:bg-[#e67a30] text-white min-h-[44px]"
               onClick={() => handleBookOff(activeShift)}
@@ -253,15 +336,23 @@ export default function OfficerHomePage() {
                 <MapPin className="w-3 h-3" /> {nextScheduledShift.siteName}
               </div>
             )}
-            <Button
-              className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white min-h-[44px]"
-              onClick={() => handleBookOn(nextScheduledShift)}
-              disabled={gpsLoading}
-              data-testid="button-book-on"
-            >
-              {gpsLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogIn className="w-4 h-4 mr-1" />}
-              Book On
-            </Button>
+            <div className="mt-3 rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-3 space-y-2">
+              <p className="text-xs font-medium text-green-800 dark:text-green-300">GPS Book On</p>
+              <p className="text-[11px] text-muted-foreground">
+                {nextShiftIsToday
+                  ? "You must be at the site to book on. GPS is checked against the site location."
+                  : `Book on opens on ${new Date(nextScheduledShift.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} from 10 minutes before ${nextScheduledShift.startTime}. You must be at the site.`}
+              </p>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white min-h-[44px]"
+                onClick={() => handleBookOn(nextScheduledShift)}
+                disabled={gpsLoading || !nextShiftIsToday}
+                data-testid="button-book-on"
+              >
+                {gpsLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogIn className="w-4 h-4 mr-1" />}
+                Book On with GPS
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -457,7 +548,7 @@ export default function OfficerHomePage() {
               <Card key={n.id} data-testid={`card-notification-${n.id}`}>
                 <CardContent className="p-3">
                   <p className="text-xs font-medium">{n.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{n.body || n.message}</p>
                 </CardContent>
               </Card>
             ))}

@@ -664,6 +664,7 @@ export const sites = pgTable("sites", {
   name: text("name").notNull(),
   address: text("address").notNull(),
   city: text("city"),
+  county: text("county"),
   postcode: text("postcode"),
   latitude: text("latitude"),
   longitude: text("longitude"),
@@ -3080,6 +3081,10 @@ export const shiftCheckCalls = pgTable("shift_check_calls", {
   reason: text("reason"),
   reasonOther: text("reason_other"),
   photoUrl: text("photo_url"),
+  lat: text("lat"),
+  lng: text("lng"),
+  distanceMetres: numeric("distance_metres", { precision: 10, scale: 2 }),
+  withinRange: boolean("within_range"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_shift_check_calls_shift").on(table.shiftId),

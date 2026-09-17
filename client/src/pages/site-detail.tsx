@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SiteAddressFields } from "@/components/SiteAddressFields";
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ type SiteDetail = {
   name: string;
   address: string;
   city: string | null;
+  county: string | null;
   postcode: string | null;
   latitude: string | null;
   longitude: string | null;
@@ -207,6 +209,7 @@ export default function SiteDetailPage() {
     name: "",
     address: "",
     city: "",
+    county: "",
     postcode: "",
     latitude: "",
     longitude: "",
@@ -233,6 +236,7 @@ export default function SiteDetailPage() {
       name: site.name || "",
       address: site.address || "",
       city: site.city || "",
+      county: site.county || "",
       postcode: site.postcode || "",
       latitude: site.latitude || "",
       longitude: site.longitude || "",
@@ -259,6 +263,7 @@ export default function SiteDetailPage() {
         name: basicForm.name.trim(),
         address: basicForm.address.trim(),
         city: basicForm.city.trim() || null,
+        county: basicForm.county.trim() || null,
         postcode: basicForm.postcode.trim() || null,
         latitude: basicForm.latitude.trim() || null,
         longitude: basicForm.longitude.trim() || null,
@@ -463,7 +468,7 @@ export default function SiteDetailPage() {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {[site.address, site.city, site.postcode].filter(Boolean).join(", ")}
+                {[site.address, site.city, site.county, site.postcode].filter(Boolean).join(", ")}
               </p>
               {site.clientName && (
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
@@ -499,25 +504,18 @@ export default function SiteDetailPage() {
                   <Label>Name</Label>
                   <Input value={basicForm.name} onChange={(e) => setBasicForm((f) => ({ ...f, name: e.target.value }))} />
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Address</Label>
-                  <Input value={basicForm.address} onChange={(e) => setBasicForm((f) => ({ ...f, address: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>City</Label>
-                  <Input value={basicForm.city} onChange={(e) => setBasicForm((f) => ({ ...f, city: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Postcode</Label>
-                  <Input value={basicForm.postcode} onChange={(e) => setBasicForm((f) => ({ ...f, postcode: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Latitude</Label>
-                  <Input value={basicForm.latitude} onChange={(e) => setBasicForm((f) => ({ ...f, latitude: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Longitude</Label>
-                  <Input value={basicForm.longitude} onChange={(e) => setBasicForm((f) => ({ ...f, longitude: e.target.value }))} />
+                <div className="sm:col-span-2">
+                  <SiteAddressFields
+                    value={{
+                      address: basicForm.address,
+                      county: basicForm.county,
+                      city: basicForm.city,
+                      postcode: basicForm.postcode,
+                      latitude: basicForm.latitude,
+                      longitude: basicForm.longitude,
+                    }}
+                    onChange={(patch) => setBasicForm((f) => ({ ...f, ...patch }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Client</Label>

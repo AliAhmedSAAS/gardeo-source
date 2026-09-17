@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRoute } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2, XCircle, User, Mail, Phone, MapPin, ShieldCheck, Heart, CreditCard, Briefcase, Eraser } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import {
+  Loader2, CheckCircle2, XCircle, User, Mail, Phone, MapPin, ShieldCheck, Heart, CreditCard,
+  Briefcase, Eraser, Check, GraduationCap, FileText, Scale, Ban, ScrollText, ClipboardCheck,
+} from "lucide-react";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
 import { queryClient } from "@/lib/queryClient";
 
@@ -144,17 +148,17 @@ type FormResponse = {
 };
 
 const STEPS = [
-  { id: "personalDetails", label: "Personal Details" },
-  { id: "addressHistory", label: "Address History" },
-  { id: "licencesContact", label: "Licences & Contact" },
-  { id: "bankEmployment", label: "Bank & Employment" },
-  { id: "screeningEducation", label: "Screening & Education" },
-  { id: "declarationsSignature", label: "Declarations & Signature" },
-  { id: "equalOps", label: "Equal Opportunities" },
-  { id: "zeroHours", label: "Zero Hours Contract" },
-  { id: "optOut", label: "OPT OUT Agreement" },
-  { id: "conduct", label: "Code of Conduct" },
-  { id: "review", label: "Review & Submit" },
+  { id: "personalDetails", label: "Personal Details", description: "Your personal information", icon: User },
+  { id: "addressHistory", label: "Address History", description: "Current and previous addresses", icon: MapPin },
+  { id: "licencesContact", label: "Licences & Contact", description: "SIA, driving and emergency contact", icon: ShieldCheck },
+  { id: "bankEmployment", label: "Bank & Employment", description: "Payroll and work history", icon: CreditCard },
+  { id: "screeningEducation", label: "Screening & Education", description: "Declarations and education", icon: GraduationCap },
+  { id: "declarationsSignature", label: "Declarations & Signature", description: "Sign the application form", icon: FileText },
+  { id: "equalOps", label: "Equal Opportunities", description: "Equal ops acknowledgement", icon: Scale },
+  { id: "zeroHours", label: "Zero Hours Contract", description: "Contract acknowledgement", icon: Briefcase },
+  { id: "optOut", label: "OPT OUT Agreement", description: "Working Time opt-out", icon: Ban },
+  { id: "conduct", label: "Code of Conduct", description: "Conduct policy acknowledgement", icon: ScrollText },
+  { id: "review", label: "Review & Submit", description: "Check and submit your application", icon: ClipboardCheck },
 ] as const;
 
 type StepId = typeof STEPS[number]["id"];
@@ -708,7 +712,7 @@ function FieldRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-white shadow-sm px-3 py-2">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
         {icon}
       </div>
       <div className="flex-1 min-w-0">{children}</div>
@@ -716,9 +720,7 @@ function FieldRow({
   );
 }
 
-export default function PublicVettingFormPage() {
-  const [, params] = useRoute("/vetting-form/:token");
-  const token = params?.token ?? "";
+export function VettingApplicationForm({ token, embedded = false }: { token: string; embedded?: boolean }) {
   const [step, setStep] = useState<StepId>(STEPS[0].id);
   const [form, setForm] = useState<VettingFormPayload | null>(null);
   const [ackEqualOps, setAckEqualOps] = useState(false);
@@ -878,15 +880,15 @@ export default function PublicVettingFormPage() {
 
   if (isLoading || !data || !form) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-700" />
+      <div className={embedded ? "flex items-center justify-center py-16" : "min-h-screen flex items-center justify-center bg-background"}>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
+      <div className={embedded ? "p-6" : "min-h-screen flex items-center justify-center bg-background p-6"}>
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -900,24 +902,28 @@ export default function PublicVettingFormPage() {
 
   const showSubmittedBanner = Boolean(data.submittedAt || submitted);
   const currentIdx = STEPS.findIndex((s) => s.id === step);
+  const currentStepMeta = STEPS[currentIdx] || STEPS[0];
+  const StepIcon = currentStepMeta.icon;
+  const progress = ((currentIdx + 1) / STEPS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-4" data-testid="public-vetting-form">
-      <div className="max-w-4xl mx-auto">
+    <div className={embedded ? "" : "min-h-screen bg-background"} data-testid={embedded ? "onboarding-page" : "public-vetting-form"}>
+      <div className="p-4 md:p-6 max-w-5xl mx-auto">
         {showSubmittedBanner && (
-          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 flex items-center gap-2 text-sm text-teal-900">
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/20 px-4 py-3 flex items-center gap-2 text-sm text-green-900 dark:text-green-300">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <span>
               Application submitted. You can still edit and resubmit until {formatExpiry(data.expiresAt)}.
             </span>
           </div>
         )}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">{data?.companyName}</h1>
-            <p className="text-sm text-muted-foreground">Vetting application form</p>
-          </div>
-          <p className="text-xs text-muted-foreground">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-1">Employee Onboarding</h1>
+          <p className="text-muted-foreground text-sm">Complete the application form to finish your onboarding process.</p>
+          {data?.companyName ? (
+            <p className="text-xs text-muted-foreground mt-1">{data.companyName}</p>
+          ) : null}
+          <p className="text-xs text-muted-foreground mt-1">
             Link expires: <strong>{data ? formatExpiry(data.expiresAt) : ""}</strong>
             {lastSavedAt ? (
               <>
@@ -925,25 +931,66 @@ export default function PublicVettingFormPage() {
                 Last saved: <strong>{formatExpiry(lastSavedAt)}</strong>
               </>
             ) : null}
-            {saveMessage ? <span className="ml-2 text-teal-700 font-medium">{saveMessage}</span> : null}
+            {saveMessage ? <span className="ml-2 text-green-700 font-medium">{saveMessage}</span> : null}
           </p>
         </div>
 
-        <div className="mb-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span>Step {currentIdx + 1} of {STEPS.length}</span>
-            <span className="font-medium text-slate-700">{STEPS[currentIdx]?.label}</span>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Step {currentIdx + 1} of {STEPS.length}</span>
+            <span className="text-sm text-muted-foreground">{Math.round(progress)}% complete</span>
           </div>
-          <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-teal-600 transition-all"
-              style={{ width: `${((currentIdx + 1) / STEPS.length) * 100}%` }}
-            />
-          </div>
+          <Progress value={progress} className="h-2" data-testid="progress-onboarding" />
         </div>
 
-        <Card className="shadow-md">
-          <CardContent className="p-4 sm:p-6 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="hidden lg:block">
+            <nav className="space-y-1">
+              {STEPS.map((s, i) => {
+                const isActive = s.id === step;
+                const isComplete = i < currentIdx;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStep(s.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors text-left ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : isComplete
+                          ? "text-foreground/80 hover:bg-muted"
+                          : "text-muted-foreground hover:bg-muted/60"
+                    }`}
+                    data-testid={`step-nav-${s.id}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${
+                      isActive
+                        ? "bg-primary-foreground text-primary"
+                        : isComplete
+                          ? "bg-green-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                    }`}>
+                      {isComplete ? <Check className="w-3 h-3" /> : i + 1}
+                    </div>
+                    <span className="truncate">{s.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="lg:col-span-3">
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <StepIcon className="w-5 h-5 text-accent" />
+                  <div>
+                    <h2 className="text-lg font-semibold">{currentStepMeta.label}</h2>
+                    <p className="text-sm text-muted-foreground">{currentStepMeta.description}</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
             {step === "personalDetails" && (
               <div className="space-y-4">
                 <SectionTitle>Personal information</SectionTitle>
@@ -1596,12 +1643,11 @@ export default function PublicVettingFormPage() {
                   {saveMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
                 </Button>
                 {step !== "review" ? (
-                  <Button className="bg-teal-700 hover:bg-teal-800" onClick={goNext} disabled={saveMut.isPending}>
+                  <Button onClick={goNext} disabled={saveMut.isPending}>
                     Save &amp; continue
                   </Button>
                 ) : (
                   <Button
-                    className="bg-teal-700 hover:bg-teal-800"
                     onClick={() => submitMut.mutate()}
                     disabled={
                       submitMut.isPending ||
@@ -1624,10 +1670,17 @@ export default function PublicVettingFormPage() {
                   </Button>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
+}
+
+export default function PublicVettingFormPage() {
+  const [, params] = useRoute("/vetting-form/:token");
+  return <VettingApplicationForm token={params?.token ?? ""} />;
 }

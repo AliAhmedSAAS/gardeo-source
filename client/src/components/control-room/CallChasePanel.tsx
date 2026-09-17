@@ -93,9 +93,26 @@ type ReversiblePrecheck = {
   reason: string | null;
 };
 
+type TakenCheckCall = {
+  id: string;
+  checkCallId: number;
+  shiftId: number;
+  siteName: string;
+  employeeName: string;
+  startTime: string;
+  endTime: string;
+  status: "taken_app" | "taken_manual";
+  method: string | null;
+  takenAt: string | null;
+  dueAt: string | null;
+  distanceMetres: number | null;
+  withinRange: boolean | null;
+};
+
 type PendingCallsResponse = {
   pending: PendingCall[];
   reversiblePrechecks: ReversiblePrecheck[];
+  takenCheckCalls?: TakenCheckCall[];
   fromEmail: string | null;
   fromName: string | null;
 };
@@ -150,6 +167,7 @@ export function CallChasePanel() {
 
   const pending = data?.pending || [];
   const reversible = data?.reversiblePrechecks || [];
+  const takenCheckCalls = data?.takenCheckCalls || [];
 
   const [precheckRow, setPrecheckRow] = useState<PendingCall | null>(null);
   const [bookOnRow, setBookOnRow] = useState<PendingCall | null>(null);
@@ -464,6 +482,55 @@ export function CallChasePanel() {
               )}
             </CardContent>
           </Card>
+
+          {takenCheckCalls.length > 0 && (
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>Taken Check-calls</span>
+                  <Badge variant="secondary">{takenCheckCalls.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {takenCheckCalls.map((row) => (
+                  <div
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3"
+                    data-testid={`taken-checkcall-${row.checkCallId}`}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          className={
+                            row.status === "taken_app"
+                              ? "bg-green-100 text-green-800 hover:bg-green-100"
+                              : "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                          }
+                        >
+                          {row.status === "taken_app" ? "Taken (app)" : "Taken (manual)"}
+                        </Badge>
+                        <span className="font-medium truncate">{row.employeeName}</span>
+                        <span className="text-muted-foreground text-sm truncate">@ {row.siteName}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                        {row.takenAt && (
+                          <span>
+                            Taken {new Date(row.takenAt).toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
+                          </span>
+                        )}
+                        {row.distanceMetres != null && (
+                          <span>
+                            {Math.round(row.distanceMetres)}m from site
+                            {row.withinRange === false ? " · outside geofence" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {reversible.length > 0 && (
             <Card>

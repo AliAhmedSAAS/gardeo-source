@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { storage } from "./storage";
 import {
@@ -10,6 +10,7 @@ import {
   type ShiftCheckCall,
 } from "@shared/schema";
 import { sendViaTenantEmailSettings } from "./tenant-email-settings";
+import { parseGpsCoords, resolveShiftGeofence, type GeofenceResult } from "./geofence";
 
 const PRECHECK_VISIBLE_MINUTES_BEFORE = 90;
 const BOOK_ON_VISIBLE_MINUTES_BEFORE = 15;
@@ -87,11 +88,13 @@ export async function ensureCheckCallsForShift(shiftId: number, tenantId: number
     .limit(1);
   if (existing.length > 0) return;
 
-  const bookOn = shift.bookedOnAt
+  const bookedAt = shift.bookedOnAt
     ? new Date(shift.bookedOnAt)
     : shift.checkInTime
       ? new Date(shift.checkInTime)
-      : parseTimeOnDate(String(shift.date).slice(0, 10), shift.startTime);
+      : null;
+  const shiftStart = parseTimeOnDate(String(shift.date).slice(0, 10), shift.startTime);
+  const bookOn = bookedAt && bookedAt > shiftStart ? bookedAt : shiftStart;
 
   let end = parseTimeOnDate(String(shift.date).slice(0, 10), shift.endTime);
   if (end <= bookOn) {
@@ -157,6 +160,10 @@ export type PendingCallRow = {
   clientName: string | null;
   precheckTaken: boolean;
   bookOnTaken: boolean;
+  method?: string | null;
+  takenAt?: string | null;
+  distanceMetres?: number | null;
+  withinRange?: boolean | null;
 };
 
 export async function listPendingCalls(tenantId: number): Promise<PendingCallRow[]> {
@@ -546,6 +553,174 @@ export async function takeCheckCall(params: {
     .returning();
 
   return { ok: true as const, checkCall: updated as ShiftCheckCall };
+}
+
+const CHECK_CALL_EARLY_MINUTES = 10;
+
+export type OfficerDueCheckCall = {
+  id: number;
+  shiftId: number;
+  dueAt: string;
+  siteName: string;
+  siteId: number | null;
+  canTake: boolean;
+};
+
+export async function listDueCheckCallsForOfficer(
+  employeeId: number,
+  tenantId: number | null,
+): Promise<OfficerDueCheckCall[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const activeShifts = await db
+    .select({ shift: shifts, siteName: sites.name })
+    .from(shifts)
+    .leftJoin(sites, eq(shifts.siteId, sites.id))
+    .where(and(
+      eq(shifts.employeeId, employeeId),
+      sql`${shifts.date}::text = ${today}`,
+      inArray(shifts.status, ["in_progress", "booked_on"]),
+    ));
+
+  const now = new Date();
+  const earlyWindow = new Date(now.getTime() + CHECK_CALL_EARLY_MINUTES * 60 * 1000);
+  const due: OfficerDueCheckCall[] = [];
+
+  for (const row of activeShifts) {
+    await ensureCheckCallsForShift(row.shift.id, tenantId);
+    const calls = await db
+      .select()
+      .from(shiftCheckCalls)
+      .where(and(
+        eq(shiftCheckCalls.shiftId, row.shift.id),
+        eq(shiftCheckCalls.status, "pending"),
+      ))
+      .orderBy(asc(shiftCheckCalls.dueAt));
+    for (const call of calls) {
+      const dueAt = call.dueAt ? new Date(call.dueAt) : now;
+      due.push({
+        id: call.id,
+        shiftId: row.shift.id,
+        dueAt: dueAt.toISOString(),
+        siteName: row.siteName || "Unassigned",
+        siteId: row.shift.siteId,
+        canTake: dueAt.getTime() <= earlyWindow.getTime(),
+      });
+    }
+  }
+
+  due.sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  return due;
+}
+
+export async function takeCheckCallFromApp(params: {
+  checkCallId: number;
+  shiftId: number;
+  employeeId: number;
+  tenantId: number | null;
+  userId: string;
+  lat: unknown;
+  lng: unknown;
+}): Promise<
+  | { ok: true; checkCall: ShiftCheckCall; geo: GeofenceResult }
+  | { ok: false; status: number; message: string }
+> {
+  const gps = parseGpsCoords(params.lat, params.lng);
+  if (!gps.ok) return { ok: false, status: 400, message: gps.message };
+
+  const shift = await storage.getShift(params.shiftId);
+  if (!shift) return { ok: false, status: 404, message: "Shift not found" };
+  if (shift.employeeId !== params.employeeId) {
+    return { ok: false, status: 403, message: "This shift is not assigned to you" };
+  }
+  if (shift.status !== "in_progress" && shift.status !== "booked_on") {
+    return { ok: false, status: 400, message: "Book on before taking a check-call" };
+  }
+
+  const [call] = await db
+    .select()
+    .from(shiftCheckCalls)
+    .where(and(
+      eq(shiftCheckCalls.id, params.checkCallId),
+      eq(shiftCheckCalls.shiftId, params.shiftId),
+    ))
+    .limit(1);
+  if (!call) return { ok: false, status: 404, message: "Check-call not found" };
+  if (call.status !== "pending") {
+    return { ok: false, status: 400, message: "Check-call already taken" };
+  }
+
+  const now = new Date();
+  const dueAt = call.dueAt ? new Date(call.dueAt) : now;
+  const earliest = new Date(dueAt.getTime() - CHECK_CALL_EARLY_MINUTES * 60 * 1000);
+  if (now < earliest) {
+    return { ok: false, status: 400, message: "This check-call is not due yet" };
+  }
+
+  const tenant = params.tenantId ? await storage.getTenant(params.tenantId) : null;
+  const geo = await resolveShiftGeofence({
+    siteId: shift.siteId,
+    tenantGeofenceRadius: (tenant as any)?.geofenceRadiusMetres,
+    lat: gps.lat,
+    lng: gps.lng,
+  });
+
+  const [updated] = await db
+    .update(shiftCheckCalls)
+    .set({
+      status: "taken_app",
+      takenAt: now,
+      takenBy: params.userId,
+      method: "app",
+      lat: String(geo.lat),
+      lng: String(geo.lng),
+      distanceMetres: geo.distanceMetres != null ? String(geo.distanceMetres) : null,
+      withinRange: geo.withinRange,
+    })
+    .where(eq(shiftCheckCalls.id, params.checkCallId))
+    .returning();
+
+  return { ok: true, checkCall: updated as ShiftCheckCall, geo };
+}
+
+export async function listTakenCheckCalls(tenantId: number) {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = await db
+    .select({
+      call: shiftCheckCalls,
+      shift: shifts,
+      siteName: sites.name,
+      empFirst: users.firstName,
+      empLast: users.lastName,
+    })
+    .from(shiftCheckCalls)
+    .innerJoin(shifts, eq(shiftCheckCalls.shiftId, shifts.id))
+    .leftJoin(sites, eq(shifts.siteId, sites.id))
+    .leftJoin(employees, eq(shifts.employeeId, employees.id))
+    .leftJoin(users, eq(employees.userId, users.id))
+    .where(and(
+      eq(shiftCheckCalls.tenantId, tenantId),
+      inArray(shiftCheckCalls.status, ["taken_app", "taken_manual"]),
+      sql`${shifts.date}::text = ${today}`,
+    ))
+    .orderBy(desc(shiftCheckCalls.takenAt));
+
+  return rows.map((row) => ({
+    id: `checkcall-taken-${row.call.id}`,
+    callType: "check_call" as const,
+    shiftId: row.shift.id,
+    checkCallId: row.call.id,
+    dueAt: row.call.dueAt ? new Date(row.call.dueAt).toISOString() : null,
+    siteName: row.siteName || "Unassigned",
+    employeeName: [row.empFirst, row.empLast].filter(Boolean).join(" ") || "Unassigned",
+    startTime: row.shift.startTime,
+    endTime: row.shift.endTime,
+    date: String(row.shift.date).slice(0, 10),
+    status: row.call.status as "taken_app" | "taken_manual",
+    method: row.call.method,
+    takenAt: row.call.takenAt ? new Date(row.call.takenAt).toISOString() : null,
+    distanceMetres: row.call.distanceMetres != null ? Number(row.call.distanceMetres) : null,
+    withinRange: row.call.withinRange,
+  }));
 }
 
 /** Shifts that have manual precheck taken (for reverse UI). */

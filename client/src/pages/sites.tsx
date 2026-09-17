@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SiteAddressFields } from "@/components/SiteAddressFields";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ type SiteRow = {
   name: string;
   address: string;
   city: string | null;
+  county: string | null;
   postcode: string | null;
   latitude: string | null;
   longitude: string | null;
@@ -55,7 +57,7 @@ type SitesResponse = {
 };
 
 const emptyForm = {
-  name: "", address: "", city: "", postcode: "",
+  name: "", address: "", county: "", city: "", postcode: "",
   latitude: "", longitude: "", clientId: "",
   clientName: "", clientContact: "", clientEmail: "", clientPhone: "",
   managerName: "", managerEmail: "", bookOnEmail: "",
@@ -209,7 +211,7 @@ export default function SitesPage() {
 
   const openEdit = (s: SiteRow) => {
     setForm({
-      name: s.name || "", address: s.address || "", city: s.city || "", postcode: s.postcode || "",
+      name: s.name || "", address: s.address || "", county: s.county || "", city: s.city || "", postcode: s.postcode || "",
       latitude: s.latitude || "", longitude: s.longitude || "",
       clientId: s.clientId ? String(s.clientId) : "",
       clientName: s.clientName || "", clientContact: s.clientContact || "",
@@ -238,19 +240,18 @@ export default function SitesPage() {
           <Label className="text-xs">Site Name *</Label>
           <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Head Office Reception" data-testid="input-site-name" />
         </div>
-        <div className="space-y-1.5 col-span-2">
-          <Label className="text-xs">Address *</Label>
-          <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} data-testid="input-site-address" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">City</Label>
-          <Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} data-testid="input-site-city" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Postcode</Label>
-          <Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="SW1A 1AA" data-testid="input-site-postcode" />
-        </div>
       </div>
+      <SiteAddressFields
+        value={{
+          address: form.address,
+          county: form.county,
+          city: form.city,
+          postcode: form.postcode,
+          latitude: form.latitude,
+          longitude: form.longitude,
+        }}
+        onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+      />
 
       <Separator />
       <h4 className="text-sm font-medium">Client Assignment</h4>
@@ -305,19 +306,6 @@ export default function SitesPage() {
           <p className="text-[11px] text-muted-foreground">
             Optional email for book-on / attendance notifications for this site.
           </p>
-        </div>
-      </div>
-
-      <Separator />
-      <h4 className="text-sm font-medium">Location Coordinates (Optional)</h4>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Latitude</Label>
-          <Input value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="51.5074" data-testid="input-site-lat" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Longitude</Label>
-          <Input value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="-0.1278" data-testid="input-site-lng" />
         </div>
       </div>
 
@@ -484,7 +472,7 @@ export default function SitesPage() {
                           <div className="font-medium text-sm truncate cursor-pointer hover:underline" onClick={() => setLocation(`/sites/${s.id}`)} data-testid={`text-site-name-${s.id}`}>{s.name}</div>
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {[s.address, s.city, s.postcode].filter(Boolean).join(", ")}
+                          {[s.address, s.city, s.county, s.postcode].filter(Boolean).join(", ")}
                         </div>
                         {clientLabel && (
                           <div className="text-xs text-blue-600 flex items-center gap-1 mt-0.5">

@@ -43,6 +43,7 @@ import {
   RightOfWorkTab,
 } from "@/components/employees/StaffProfileHub";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
+import { EmployeeOnboardingApplicationForm } from "@/components/onboarding/EmployeeOnboardingApplicationForm";
 import { SiaLicenceVerify, SiaLicenceVerifyStatus } from "@/components/employees/SiaLicenceVerify";
 import { EmployeePayRatesTab } from "@/components/employees/EmployeePayRatesTab";
 import { ETHNIC_ORIGIN_OPTIONS, isKnownEthnicOrigin } from "@shared/ethnicOriginOptions";
@@ -329,6 +330,7 @@ const EMPLOYEE_DETAIL_TAB_GROUPS = [
   {
     group: "Compliance",
     tabs: [
+      { value: "onboarding", label: "Onboarding", icon: ClipboardCheck, testId: "tab-onboarding" },
       { value: "bs7858", label: "BS7858", icon: Shield, testId: "tab-bs7858" },
       { value: "vetting", label: "Vetting", icon: ShieldCheck, testId: "tab-vetting" },
       { value: "documents", label: "Documents", icon: FileText, testId: "tab-documents" },
@@ -1782,8 +1784,14 @@ export default function EmployeesPage() {
                   )}
                 </TabsContent>
 
+                <TabsContent value="onboarding" className="space-y-4 mt-4" data-testid="employee-onboarding-tab">
+                  <EmployeeOnboardingApplicationForm
+                    tokenEndpoint={`/api/admin/employees/${employeeDetail.id}/application-form`}
+                  />
+                </TabsContent>
+
                 <TabsContent value="vetting" className="space-y-4 mt-4">
-                  <VettingHubTab employee={employeeDetail} />
+                  <VettingHubTab employee={employeeDetail} onOpenApplicationForm={() => setDetailTab("onboarding")} />
                 </TabsContent>
 
                 {/* Documents Tab */}

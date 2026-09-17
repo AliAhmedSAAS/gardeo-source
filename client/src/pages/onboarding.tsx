@@ -18,6 +18,7 @@ import {
   FileText, ShieldCheck, Shirt, ScrollText, PartyPopper, Plus, Trash2,
   Upload, Clock, CheckCircle2, AlertCircle,
 } from "lucide-react";
+import { EmployeeOnboardingApplicationForm } from "@/components/onboarding/EmployeeOnboardingApplicationForm";
 import type { OnboardingRecord, Employee, EmergencyContact, BankDetail } from "@shared/schema";
 
 const STEPS = [
@@ -34,6 +35,10 @@ const STEPS = [
 ];
 
 export default function OnboardingPage() {
+  return <EmployeeOnboardingApplicationForm tokenEndpoint="/api/employee/application-form" />;
+}
+
+function LegacyOnboardingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

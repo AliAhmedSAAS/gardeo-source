@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Calendar, Clock, MapPin, CalendarCheck, CalendarX, LogIn, LogOut, Loader2, Navigation, ChevronLeft, ChevronRight, List,
-  CheckCircle2, XCircle,
+  CheckCircle2, XCircle, PhoneCall,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,7 +37,7 @@ type ShiftData = {
   date: string;
   startTime: string;
   endTime: string;
-  status: "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show";
+  status: "scheduled" | "in_progress" | "booked_on" | "completed" | "cancelled" | "no_show";
   siteName?: string;
   siteAddress?: string;
   notes?: string | null;
@@ -68,7 +68,8 @@ function getShiftStatusBadge(status: string) {
     case "scheduled":
       return <Badge variant="default" className="bg-blue-500 border-blue-500"><Clock className="w-3 h-3 mr-1" /> Scheduled</Badge>;
     case "in_progress":
-      return <Badge variant="default" className="bg-orange-500 border-orange-500"><Clock className="w-3 h-3 mr-1" /> In Progress</Badge>;
+    case "booked_on":
+      return <Badge variant="default" className="bg-orange-500 border-orange-500"><Clock className="w-3 h-3 mr-1" /> On Duty</Badge>;
     case "completed":
       return <Badge variant="default" className="bg-green-600 border-green-600"><CalendarCheck className="w-3 h-3 mr-1" /> Completed</Badge>;
     case "cancelled":
@@ -243,6 +244,11 @@ export default function MyShiftsPage() {
     queryKey: ["/api/my-shifts"],
   });
 
+  const { data: dueCheckCalls = [] } = useQuery<{ id: number; shiftId: number; dueAt: string; canTake?: boolean }[]>({
+    queryKey: ["/api/my-shifts/check-calls"],
+    refetchInterval: 30000,
+  });
+
   useEffect(() => {
     apiRequest("GET", "/api/employee/notifications/trigger").catch(() => {});
   }, []);
@@ -302,6 +308,7 @@ export default function MyShiftsPage() {
       const res = await apiRequest("POST", `/api/my-shifts/${shiftId}/checkin`, coords);
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
       const distMsg = data.distanceFromSite != null ? ` (${Math.round(data.distanceFromSite)}m from site)` : "";
       if (data.withinRange === false) {
         toast({ title: "Checked in - Outside geofence", description: `You checked in ${Math.round(data.distanceFromSite)}m from the site (limit: ${data.geofenceRadius}m). This has been flagged.`, variant: "destructive" });
@@ -329,6 +336,7 @@ export default function MyShiftsPage() {
       const res = await apiRequest("POST", `/api/my-shifts/${shiftId}/checkout`, coords);
       const data = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
       const distMsg = data.distanceFromSite != null ? ` (${Math.round(data.distanceFromSite)}m from site)` : "";
       if (data.withinRange === false) {
         toast({ title: "Checked out - Outside geofence", description: `You checked out ${Math.round(data.distanceFromSite)}m from the site (limit: ${data.geofenceRadius}m). This has been flagged.`, variant: "destructive" });
@@ -349,14 +357,40 @@ export default function MyShiftsPage() {
     }
   }, [toast]);
 
+  const performTakeCheckCall = useCallback(async (shiftId: number, callId: number) => {
+    setGpsLoading(shiftId);
+    try {
+      const coords = await getGeolocation();
+      const res = await apiRequest("POST", `/api/my-shifts/${shiftId}/check-calls/${callId}/take`, coords);
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
+      if (data.withinRange === false) {
+        toast({
+          title: "Check-call taken — outside geofence",
+          description: `You were ${Math.round(data.distanceFromSite)}m from the site (limit: ${data.geofenceRadius}m). This has been flagged.`,
+          variant: "destructive",
+        });
+      } else {
+        const dist = data.distanceFromSite != null ? ` (${Math.round(data.distanceFromSite)}m from site)` : "";
+        toast({ title: "Check-call taken", description: `Location recorded.${dist}` });
+      }
+    } catch (err: any) {
+      toast({ title: "Check-call failed", description: err.message, variant: "destructive" });
+    } finally {
+      setGpsLoading(null);
+    }
+  }, [toast]);
+
   const today = formatDateKey(new Date());
   const upcoming = shifts.filter((s) => s.date >= today && s.status !== "completed" && s.status !== "cancelled");
   const past = shifts.filter((s) => s.date < today || s.status === "completed" || s.status === "cancelled");
 
   function renderShiftCard(shift: ShiftData, section: "upcoming" | "past") {
-    const isToday = shift.date === today;
+    const isToday = String(shift.date).slice(0, 10) === today;
     const canCheckIn = shift.status === "scheduled" && isToday;
-    const canCheckOut = shift.status === "in_progress";
+    const canCheckOut = (shift.status === "in_progress" || shift.status === "booked_on") && isToday;
+    const dueCall = dueCheckCalls.find((c) => c.shiftId === shift.id && c.canTake !== false);
+    const nextCall = dueCheckCalls.find((c) => c.shiftId === shift.id);
     const isLoadingGps = gpsLoading === shift.id;
     const isUpcomingIn24h = section === "upcoming" && (() => {
       const shiftDt = new Date(shift.date);
@@ -427,15 +461,34 @@ export default function MyShiftsPage() {
               )}
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              {canCheckIn && (
+              {shift.status === "scheduled" && (isToday || isUpcomingIn24h) && (
+                <div className="w-full sm:w-auto rounded-md border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-2.5 space-y-1.5">
+                  <p className="text-[11px] font-medium text-green-800 dark:text-green-300">GPS Book On</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {canCheckIn
+                      ? "You must be at the site to book on. GPS is checked against the site location."
+                      : `Opens on the shift day, from 10 minutes before ${shift.startTime}. You must be at the site.`}
+                  </p>
+                  <Button
+                    className="bg-green-600 border-green-600 min-h-[44px] sm:min-h-0 w-full"
+                    disabled={isLoadingGps || !canCheckIn}
+                    data-testid={`button-checkin-${shift.id}`}
+                    onClick={() => setOpsCheckShift({ id: shift.id, title: shift.title })}
+                  >
+                    {isLoadingGps ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogIn className="w-4 h-4 mr-1" />}
+                    {isLoadingGps ? "Getting location..." : "Book On with GPS"}
+                  </Button>
+                </div>
+              )}
+              {canCheckOut && (dueCall || nextCall) && (
                 <Button
-                  className="bg-green-600 border-green-600 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
-                  disabled={isLoadingGps}
-                  data-testid={`button-checkin-${shift.id}`}
-                  onClick={() => setOpsCheckShift({ id: shift.id, title: shift.title })}
+                  className="bg-[#1F3A5F] border-[#1F3A5F] min-h-[44px] sm:min-h-0 w-full sm:w-auto"
+                  disabled={isLoadingGps || !dueCall}
+                  data-testid={`button-check-call-${shift.id}`}
+                  onClick={() => dueCall && performTakeCheckCall(shift.id, dueCall.id)}
                 >
-                  {isLoadingGps ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogIn className="w-4 h-4 mr-1" />}
-                  {isLoadingGps ? "Getting location..." : "Check In"}
+                  {isLoadingGps ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <PhoneCall className="w-4 h-4 mr-1" />}
+                  {isLoadingGps ? "Getting location..." : dueCall ? "Check-call (GPS)" : `Check-call ${nextCall ? new Date(nextCall.dueAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""}`}
                 </Button>
               )}
               {canCheckOut && (
@@ -446,7 +499,7 @@ export default function MyShiftsPage() {
                   onClick={() => setBookOffShift({ id: shift.id, title: shift.title })}
                 >
                   {isLoadingGps ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <LogOut className="w-4 h-4 mr-1" />}
-                  {isLoadingGps ? "Getting location..." : "Check Out"}
+                  {isLoadingGps ? "Getting location..." : "Book Off with GPS"}
                 </Button>
               )}
               <div className="hidden sm:block" data-testid={`badge-shift-status-${shift.id}`}>
@@ -620,6 +673,7 @@ export default function MyShiftsPage() {
               const res = await apiRequest("POST", `/api/my-shifts/${shiftId}/checkout`, { ...coords, handoverNotes });
               const data = await res.json();
               queryClient.invalidateQueries({ queryKey: ["/api/my-shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-shifts/check-calls"] });
               const distMsg = data.distanceFromSite != null ? ` (${Math.round(data.distanceFromSite)}m from site)` : "";
               if (data.withinRange === false) {
                 toast({ title: "Checked out - Outside geofence", description: `You checked out ${Math.round(data.distanceFromSite)}m from the site (limit: ${data.geofenceRadius}m). This has been flagged.`, variant: "destructive" });

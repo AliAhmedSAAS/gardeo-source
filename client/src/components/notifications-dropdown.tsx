@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useState } from "react";
 import { Bell, Loader2, CheckCircle2, FileEdit, AlertCircle, Clock, FileWarning, CreditCard, PoundSterling, X, CalendarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,13 +26,21 @@ type Notification = {
 };
 
 export function NotificationsDropdown() {
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications"],
-  });
+  const [open, setOpen] = useState(false);
+
+  // Badge only — cheap endpoint. Full list loads when the menu opens.
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"],
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   const unreadCount = unreadData?.count ?? 0;
+
+  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    enabled: open,
+    staleTime: 30_000,
+  });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -61,7 +70,7 @@ export function NotificationsDropdown() {
   const read = notifications.filter((n) => n.readAt).slice(0, 5);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
           <Bell className="w-5 h-5" />
@@ -91,7 +100,8 @@ export function NotificationsDropdown() {
             {[...unread, ...read].map((n) => {
               const Icon =
                 n.type === "supplier_change_pending" ? FileEdit
-                : n.type === "shift_reminder" ? Clock
+                : n.type === "shift_assigned" || n.type === "shift_updated" || n.type === "shift_reminder" ? Clock
+                : n.type === "shift_cancelled" ? CalendarOff
                 : n.type === "document_expiry" ? FileWarning
                 : n.type === "bank_change_request" ? CreditCard
                 : n.type === "pay_processed" ? PoundSterling

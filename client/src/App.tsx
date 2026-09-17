@@ -1,110 +1,127 @@
-import { Switch, Route, useLocation, Redirect } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
+import { lazy, Suspense, type ComponentType } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/use-auth";
-import NotFound from "@/pages/not-found";
-import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import DashboardPage from "@/pages/dashboard";
-import OnboardingPage from "@/pages/onboarding";
-import AdminOnboardingPage from "@/pages/admin-onboarding";
-import EmployeesPage from "@/pages/employees";
-import SchedulingPage from "@/pages/scheduling";
-import ControlRoomPage from "@/pages/control-room";
-import CompliancePage from "@/pages/compliance";
-import MyShiftsPage from "@/pages/my-shifts";
-import MyDocumentsPage from "@/pages/my-documents";
-import MyProfilePage from "@/pages/my-profile";
-import DeploymentMapPage from "@/pages/deployment-map";
-import SuppliersPage from "@/pages/suppliers";
-import SupplierDetailPage from "@/pages/supplier-detail";
-import SupplierPortalPage from "@/pages/supplier-portal";
-import SupplierDocumentsPage from "@/pages/supplier-documents";
-import SupplierPoliciesPage from "@/pages/supplier-policies";
-import SupplierTimesheetsPage from "@/pages/supplier-timesheets";
-import SelfBillingAgreementPage from "@/pages/self-billing-agreement";
-import SelfBillingAuditPage from "@/pages/self-billing-audit";
-import AcceptInvitePage from "@/pages/accept-invite";
-import ResetPasswordPage from "@/pages/reset-password";
-import FinancePage from "@/pages/finance";
-import FinanceApprovalPage from "@/pages/finance-approval";
-import RecruitmentPage from "@/pages/recruitment";
-import AuditTrailPage from "@/pages/audit-trail";
-import InvoiceNumberAuditPage from "@/pages/invoice-number-audit";
-import ReportsPage from "@/pages/reports";
-import SettingsPage from "@/pages/settings";
-import VettingPage from "@/pages/vetting";
-import AISchedulingPage from "@/pages/ai-scheduling";
-import EmailCommandCentrePage from "@/pages/email-command-centre";
-import DataImportPage from "@/pages/data-import";
-import AddOnsPage from "@/pages/addons";
-import TenantManagementPage from "@/pages/tenant-management";
-import RoleManagementPage from "@/pages/role-management";
-import CompanyProfilePage from "@/pages/company-profile";
-import LandingPage from "@/pages/landing";
-import TenantOnboardingPage from "@/pages/tenant-onboarding";
-import PrivacySettingsPage from "@/pages/privacy-settings";
-import TimesheetsPage from "@/pages/timesheets";
-import ComplianceSettingsPage from "@/pages/compliance-settings";
-import AIAnalyticsPage from "@/pages/ai-analytics";
-import CommunicationsPage from "@/pages/communications";
-import AdminSupplierTimesheetsPage from "@/pages/admin-supplier-timesheets";
-import DisputeManagementPage from "@/pages/dispute-management";
-import SelfBillingPage from "@/pages/self-billing";
-import SupplierInvoicesPage from "@/pages/supplier-invoices";
-import MyOfficersPage from "@/pages/my-officers";
-import MyPayPage from "@/pages/my-pay";
-import SupplierHmrcAuditPage from "@/pages/supplier-hmrc-audit";
-import SupplierAuditPortalPage from "@/pages/supplier-audit-portal";
-import ClientsPage from "@/pages/clients";
-import SitesPage from "@/pages/sites";
-import SiteDetailPage from "@/pages/site-detail";
-import PayrollPage from "@/pages/payroll";
-import ReAuditPage from "@/pages/re-audit";
-import BatchInvoicesPage from "@/pages/batch-invoices";
-import DownloadAuditPackPage from "@/pages/download-audit-pack";
-import AccountingPage from "@/pages/accounting";
-import DataSyncPage from "@/pages/data-sync";
-import RemittanceSummaryPage from "@/pages/remittance-summary";
-import FinancialDocumentsPage from "@/pages/financial-documents";
-import PreAuditCheckPage from "@/pages/pre-audit-check";
-import PurchaseLedgerPage from "@/pages/purchase-ledger";
-import OfficerHomePage from "@/pages/officer-home";
-import OfficerIdPage from "@/pages/officer-id";
-import MyCompliancePage from "@/pages/my-compliance";
-import MyEmploymentHistoryPage from "@/pages/my-employment-history";
-import TimeOffRequestPage from "@/pages/time-off-request";
-import LeaveRequestsPage from "@/pages/leave-requests";
-import HrDashboardPage from "@/pages/hr-dashboard";
-import ProbationPage from "@/pages/probation";
-import HrCasesPage from "@/pages/hr-cases";
-import AbsencesPage from "@/pages/absences";
-import TrainingMatrixPage from "@/pages/training-matrix";
-import OfferResponsePage from "@/pages/offer-response";
-import EmploymentVerifyPage from "@/pages/employment-verify";
-import PersonalReferenceVerifyPage from "@/pages/personal-reference-verify";
-import PublicVettingFormPage from "@/pages/public-vetting-form";
-import FmDashboardPage from "@/pages/fm-dashboard";
-import FmWorkersPage from "@/pages/fm-workers";
-import FmJobsPage from "@/pages/fm-jobs";
-import FmSuppliersPage from "@/pages/fm-suppliers";
-import FmPpmPage from "@/pages/fm-ppm";
-import FmSchedulerPage from "@/pages/fm-scheduler";
-import FmReportsPage from "@/pages/fm-reports";
-import FmSettingsPage from "@/pages/fm-settings";
-import FmBillingPage from "@/pages/fm-billing";
-import FmWorkerPortalPage from "@/pages/fm-worker-portal";
-import FmWorkerJobPage from "@/pages/fm-worker-job";
-import WagesLedgerPage from "@/pages/wages-ledger";
 import { Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const LoginPage = lazy(() => import("@/pages/login"));
+const RegisterPage = lazy(() => import("@/pages/register"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding"));
+const AdminOnboardingPage = lazy(() => import("@/pages/admin-onboarding"));
+const EmployeesPage = lazy(() => import("@/pages/employees"));
+const SchedulingPage = lazy(() => import("@/pages/scheduling"));
+const ControlRoomPage = lazy(() => import("@/pages/control-room"));
+const CompliancePage = lazy(() => import("@/pages/compliance"));
+const MyShiftsPage = lazy(() => import("@/pages/my-shifts"));
+const MyDocumentsPage = lazy(() => import("@/pages/my-documents"));
+const MyProfilePage = lazy(() => import("@/pages/my-profile"));
+const DeploymentMapPage = lazy(() => import("@/pages/deployment-map"));
+const SuppliersPage = lazy(() => import("@/pages/suppliers"));
+const SupplierDetailPage = lazy(() => import("@/pages/supplier-detail"));
+const SupplierPortalPage = lazy(() => import("@/pages/supplier-portal"));
+const SupplierDocumentsPage = lazy(() => import("@/pages/supplier-documents"));
+const SupplierPoliciesPage = lazy(() => import("@/pages/supplier-policies"));
+const SupplierTimesheetsPage = lazy(() => import("@/pages/supplier-timesheets"));
+const SelfBillingAgreementPage = lazy(() => import("@/pages/self-billing-agreement"));
+const SelfBillingAuditPage = lazy(() => import("@/pages/self-billing-audit"));
+const AcceptInvitePage = lazy(() => import("@/pages/accept-invite"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const FinancePage = lazy(() => import("@/pages/finance"));
+const FinanceApprovalPage = lazy(() => import("@/pages/finance-approval"));
+const RecruitmentPage = lazy(() => import("@/pages/recruitment"));
+const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
+const InvoiceNumberAuditPage = lazy(() => import("@/pages/invoice-number-audit"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const VettingPage = lazy(() => import("@/pages/vetting"));
+const AISchedulingPage = lazy(() => import("@/pages/ai-scheduling"));
+const EmailCommandCentrePage = lazy(() => import("@/pages/email-command-centre"));
+const DataImportPage = lazy(() => import("@/pages/data-import"));
+const AddOnsPage = lazy(() => import("@/pages/addons"));
+const TenantManagementPage = lazy(() => import("@/pages/tenant-management"));
+const RoleManagementPage = lazy(() => import("@/pages/role-management"));
+const CompanyProfilePage = lazy(() => import("@/pages/company-profile"));
+const LandingPage = lazy(() => import("@/pages/landing"));
+const TenantOnboardingPage = lazy(() => import("@/pages/tenant-onboarding"));
+const PrivacySettingsPage = lazy(() => import("@/pages/privacy-settings"));
+const TimesheetsPage = lazy(() => import("@/pages/timesheets"));
+const ComplianceSettingsPage = lazy(() => import("@/pages/compliance-settings"));
+const AIAnalyticsPage = lazy(() => import("@/pages/ai-analytics"));
+const CommunicationsPage = lazy(() => import("@/pages/communications"));
+const AdminSupplierTimesheetsPage = lazy(() => import("@/pages/admin-supplier-timesheets"));
+const DisputeManagementPage = lazy(() => import("@/pages/dispute-management"));
+const SelfBillingPage = lazy(() => import("@/pages/self-billing"));
+const SupplierInvoicesPage = lazy(() => import("@/pages/supplier-invoices"));
+const MyOfficersPage = lazy(() => import("@/pages/my-officers"));
+const MyPayPage = lazy(() => import("@/pages/my-pay"));
+const SupplierHmrcAuditPage = lazy(() => import("@/pages/supplier-hmrc-audit"));
+const SupplierAuditPortalPage = lazy(() => import("@/pages/supplier-audit-portal"));
+const ClientsPage = lazy(() => import("@/pages/clients"));
+const SitesPage = lazy(() => import("@/pages/sites"));
+const SiteDetailPage = lazy(() => import("@/pages/site-detail"));
+const PayrollPage = lazy(() => import("@/pages/payroll"));
+const ReAuditPage = lazy(() => import("@/pages/re-audit"));
+const BatchInvoicesPage = lazy(() => import("@/pages/batch-invoices"));
+const DownloadAuditPackPage = lazy(() => import("@/pages/download-audit-pack"));
+const AccountingPage = lazy(() => import("@/pages/accounting"));
+const DataSyncPage = lazy(() => import("@/pages/data-sync"));
+const RemittanceSummaryPage = lazy(() => import("@/pages/remittance-summary"));
+const FinancialDocumentsPage = lazy(() => import("@/pages/financial-documents"));
+const PreAuditCheckPage = lazy(() => import("@/pages/pre-audit-check"));
+const PurchaseLedgerPage = lazy(() => import("@/pages/purchase-ledger"));
+const OfficerHomePage = lazy(() => import("@/pages/officer-home"));
+const OfficerIdPage = lazy(() => import("@/pages/officer-id"));
+const MyCompliancePage = lazy(() => import("@/pages/my-compliance"));
+const MyEmploymentHistoryPage = lazy(() => import("@/pages/my-employment-history"));
+const TimeOffRequestPage = lazy(() => import("@/pages/time-off-request"));
+const LeaveRequestsPage = lazy(() => import("@/pages/leave-requests"));
+const HrDashboardPage = lazy(() => import("@/pages/hr-dashboard"));
+const ProbationPage = lazy(() => import("@/pages/probation"));
+const HrCasesPage = lazy(() => import("@/pages/hr-cases"));
+const AbsencesPage = lazy(() => import("@/pages/absences"));
+const TrainingMatrixPage = lazy(() => import("@/pages/training-matrix"));
+const OfferResponsePage = lazy(() => import("@/pages/offer-response"));
+const EmploymentVerifyPage = lazy(() => import("@/pages/employment-verify"));
+const PersonalReferenceVerifyPage = lazy(() => import("@/pages/personal-reference-verify"));
+const PublicVettingFormPage = lazy(() => import("@/pages/public-vetting-form"));
+const FmDashboardPage = lazy(() => import("@/pages/fm-dashboard"));
+const FmWorkersPage = lazy(() => import("@/pages/fm-workers"));
+const FmJobsPage = lazy(() => import("@/pages/fm-jobs"));
+const FmSuppliersPage = lazy(() => import("@/pages/fm-suppliers"));
+const FmPpmPage = lazy(() => import("@/pages/fm-ppm"));
+const FmSchedulerPage = lazy(() => import("@/pages/fm-scheduler"));
+const FmReportsPage = lazy(() => import("@/pages/fm-reports"));
+const FmSettingsPage = lazy(() => import("@/pages/fm-settings"));
+const FmBillingPage = lazy(() => import("@/pages/fm-billing"));
+const FmWorkerPortalPage = lazy(() => import("@/pages/fm-worker-portal"));
+const FmWorkerJobPage = lazy(() => import("@/pages/fm-worker-job"));
+const WagesLedgerPage = lazy(() => import("@/pages/wages-ledger"));
+
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[40vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+function FullScreenSpinner() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -123,7 +140,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <NotificationsDropdown />
           </header>
           <main className="flex-1 overflow-auto pb-16 md:pb-0">
-            {children}
+            <Suspense fallback={<PageSpinner />}>{children}</Suspense>
           </main>
         </div>
       </div>
@@ -133,98 +150,41 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Redirect to="/landing" />;
-  }
-
-  return (
-    <AuthenticatedLayout>
-      <Component />
-    </AuthenticatedLayout>
-  );
+  if (isLoading) return <FullScreenSpinner />;
+  if (!isAuthenticated) return <Redirect to="/landing" />;
+  return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
 }
 
-function FmGatedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const { data, isLoading: addonLoading } = useQuery<{ active: boolean }>({
+function RequireEmployee({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== "employee") return <Redirect to="/dashboard" />;
+  return <>{children}</>;
+}
+
+function RequireFm({ children }: { children: React.ReactNode }) {
+  const { data, isLoading } = useQuery<{ active: boolean }>({
     queryKey: ["/api/addons/check/fm_services"],
-    enabled: isAuthenticated,
     staleTime: 1000 * 60 * 5,
   });
-
-  if (isLoading || (isAuthenticated && addonLoading)) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  if (!isAuthenticated) return <Redirect to="/landing" />;
+  if (isLoading) return <PageSpinner />;
   if (!data?.active) return <Redirect to="/addons" />;
-
-  return (
-    <AuthenticatedLayout>
-      <Component />
-    </AuthenticatedLayout>
-  );
+  return <>{children}</>;
 }
 
-function EmployeeRoute({ component: Component }: { component: React.ComponentType }) {
+function PublicOnly({ component: Component }: { component: ComponentType }) {
   const { isAuthenticated, isLoading, user } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Redirect to="/landing" />;
-  }
-
-  if (user?.role !== "employee") {
-    return <Redirect to="/dashboard" />;
-  }
-
-  return (
-    <AuthenticatedLayout>
-      <Component />
-    </AuthenticatedLayout>
-  );
-}
-
-function PublicRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  if (isLoading) return <FullScreenSpinner />;
   if (isAuthenticated) {
-    if (user?.role === "employee") {
-      return <Redirect to="/officer" />;
-    }
+    if (user?.role === "employee") return <Redirect to="/officer" />;
     return <Redirect to="/dashboard" />;
   }
-
-  return <Component />;
+  return (
+    <Suspense fallback={<FullScreenSpinner />}>
+      <Component />
+    </Suspense>
+  );
 }
 
 function RoleBasedHome() {
@@ -242,11 +202,7 @@ function RoleBasedHome() {
   });
 
   if (isLoading || (fmAddon?.active && fmMeLoading)) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (fmWorker && fmWorker.id) {
@@ -260,105 +216,127 @@ function RoleBasedHome() {
   return <DashboardPage />;
 }
 
+function AuthenticatedRoutes() {
+  return (
+    <RequireAuth>
+      <Switch>
+        <Route path="/" component={RoleBasedHome} />
+        <Route path="/dashboard" component={RoleBasedHome} />
+        <Route path="/onboarding" component={OnboardingPage} />
+        <Route path="/admin/onboarding" component={AdminOnboardingPage} />
+        <Route path="/admin/employees" component={EmployeesPage} />
+        <Route path="/admin/employees/:id" component={EmployeesPage} />
+        <Route path="/scheduling" component={SchedulingPage} />
+        <Route path="/control-room" component={ControlRoomPage} />
+        <Route path="/compliance" component={CompliancePage} />
+        <Route path="/my-shifts" component={MyShiftsPage} />
+        <Route path="/my-documents" component={MyDocumentsPage} />
+        <Route path="/my-pay" component={MyPayPage} />
+        <Route path="/my-profile" component={MyProfilePage} />
+        <Route path="/deployment-map" component={DeploymentMapPage} />
+        <Route path="/supplier-portal" component={SupplierPortalPage} />
+        <Route path="/my-officers" component={MyOfficersPage} />
+        <Route path="/supplier-documents" component={SupplierDocumentsPage} />
+        <Route path="/supplier-policies" component={SupplierPoliciesPage} />
+        <Route path="/supplier-timesheets" component={SupplierTimesheetsPage} />
+        <Route path="/self-billing-agreement" component={SelfBillingAgreementPage} />
+        <Route path="/suppliers/:id" component={SupplierDetailPage} />
+        <Route path="/suppliers" component={SuppliersPage} />
+        <Route path="/finance" component={FinancePage} />
+        <Route path="/finance-approval" component={FinanceApprovalPage} />
+        <Route path="/recruitment" component={RecruitmentPage} />
+        <Route path="/reports" component={ReportsPage} />
+        <Route path="/audit-trail" component={AuditTrailPage} />
+        <Route path="/invoice-number-audit" component={InvoiceNumberAuditPage} />
+        <Route path="/vetting" component={VettingPage} />
+        <Route path="/ai-scheduling" component={AISchedulingPage} />
+        <Route path="/email-command-centre" component={EmailCommandCentrePage} />
+        <Route path="/data-import" component={DataImportPage} />
+        <Route path="/data-sync" component={DataSyncPage} />
+        <Route path="/addons" component={AddOnsPage} />
+        <Route path="/admin/tenants" component={TenantManagementPage} />
+        <Route path="/admin/roles" component={RoleManagementPage} />
+        <Route path="/company-profile" component={CompanyProfilePage} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route path="/privacy-settings" component={PrivacySettingsPage} />
+        <Route path="/compliance-settings" component={ComplianceSettingsPage} />
+        <Route path="/re-audit" component={ReAuditPage} />
+        <Route path="/batch-invoices" component={BatchInvoicesPage} />
+        <Route path="/download-audit-pack" component={DownloadAuditPackPage} />
+        <Route path="/ai-analytics" component={AIAnalyticsPage} />
+        <Route path="/communications" component={CommunicationsPage} />
+        <Route path="/admin/supplier-timesheets" component={AdminSupplierTimesheetsPage} />
+        <Route path="/disputes" component={DisputeManagementPage} />
+        <Route path="/self-billing" component={SelfBillingPage} />
+        <Route path="/self-billing-audit" component={SelfBillingAuditPage} />
+        <Route path="/supplier-hmrc-audit" component={SupplierHmrcAuditPage} />
+        <Route path="/supplier-audit-portal" component={SupplierAuditPortalPage} />
+        <Route path="/supplier-invoices" component={SupplierInvoicesPage} />
+        <Route path="/clients" component={ClientsPage} />
+        <Route path="/sites/:id" component={SiteDetailPage} />
+        <Route path="/sites" component={SitesPage} />
+        <Route path="/payroll" component={PayrollPage} />
+        <Route path="/accounting" component={AccountingPage} />
+        <Route path="/remittance-summary" component={RemittanceSummaryPage} />
+        <Route path="/financial-documents" component={FinancialDocumentsPage} />
+        <Route path="/pre-audit-check" component={PreAuditCheckPage} />
+        <Route path="/purchase-ledger" component={PurchaseLedgerPage} />
+        <Route path="/timesheets" component={TimesheetsPage} />
+        <Route path="/officer" component={() => <RequireEmployee><OfficerHomePage /></RequireEmployee>} />
+        <Route path="/officer/id" component={() => <RequireEmployee><OfficerIdPage /></RequireEmployee>} />
+        <Route path="/my-compliance" component={() => <RequireEmployee><MyCompliancePage /></RequireEmployee>} />
+        <Route path="/my-employment-history" component={() => <RequireEmployee><MyEmploymentHistoryPage /></RequireEmployee>} />
+        <Route path="/time-off-request" component={TimeOffRequestPage} />
+        <Route path="/admin/leave-requests" component={LeaveRequestsPage} />
+        <Route path="/hr-dashboard" component={HrDashboardPage} />
+        <Route path="/probation" component={ProbationPage} />
+        <Route path="/admin/hr-cases" component={HrCasesPage} />
+        <Route path="/admin/absences" component={AbsencesPage} />
+        <Route path="/training-matrix" component={TrainingMatrixPage} />
+        <Route path="/fm-dashboard" component={() => <RequireFm><FmDashboardPage /></RequireFm>} />
+        <Route path="/fm-workers" component={() => <RequireFm><FmWorkersPage /></RequireFm>} />
+        <Route path="/fm-jobs" component={() => <RequireFm><FmJobsPage /></RequireFm>} />
+        <Route path="/fm-scheduler" component={() => <RequireFm><FmSchedulerPage /></RequireFm>} />
+        <Route path="/fm-reports" component={() => <RequireFm><FmReportsPage /></RequireFm>} />
+        <Route path="/fm-suppliers" component={() => <RequireFm><FmSuppliersPage /></RequireFm>} />
+        <Route path="/fm-ppm" component={() => <RequireFm><FmPpmPage /></RequireFm>} />
+        <Route path="/fm-settings" component={() => <RequireFm><FmSettingsPage /></RequireFm>} />
+        <Route path="/fm-billing" component={() => <RequireFm><FmBillingPage /></RequireFm>} />
+        <Route path="/fm-worker" component={FmWorkerPortalPage} />
+        <Route path="/fm-worker/jobs/:id" component={FmWorkerJobPage} />
+        <Route path="/wages-ledger" component={WagesLedgerPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </RequireAuth>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/landing" component={() => <PublicRoute component={LandingPage} />} />
-      <Route path="/get-started" component={() => <PublicRoute component={TenantOnboardingPage} />} />
-      <Route path="/login" component={() => <PublicRoute component={LoginPage} />} />
-      <Route path="/register" component={() => <PublicRoute component={RegisterPage} />} />
-      <Route path="/accept-invite" component={AcceptInvitePage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/" component={() => <ProtectedRoute component={RoleBasedHome} />} />
-      <Route path="/dashboard" component={() => <ProtectedRoute component={RoleBasedHome} />} />
-      <Route path="/onboarding" component={() => <ProtectedRoute component={OnboardingPage} />} />
-      <Route path="/admin/onboarding" component={() => <ProtectedRoute component={AdminOnboardingPage} />} />
-      <Route path="/admin/employees" component={() => <ProtectedRoute component={EmployeesPage} />} />
-      <Route path="/admin/employees/:id" component={() => <ProtectedRoute component={EmployeesPage} />} />
-      <Route path="/scheduling" component={() => <ProtectedRoute component={SchedulingPage} />} />
-      <Route path="/control-room" component={() => <ProtectedRoute component={ControlRoomPage} />} />
-      <Route path="/compliance" component={() => <ProtectedRoute component={CompliancePage} />} />
-      <Route path="/my-shifts" component={() => <ProtectedRoute component={MyShiftsPage} />} />
-      <Route path="/my-documents" component={() => <ProtectedRoute component={MyDocumentsPage} />} />
-      <Route path="/my-pay" component={() => <ProtectedRoute component={MyPayPage} />} />
-      <Route path="/my-profile" component={() => <ProtectedRoute component={MyProfilePage} />} />
-      <Route path="/deployment-map" component={() => <ProtectedRoute component={DeploymentMapPage} />} />
-      <Route path="/supplier-portal" component={() => <ProtectedRoute component={SupplierPortalPage} />} />
-      <Route path="/my-officers" component={() => <ProtectedRoute component={MyOfficersPage} />} />
-      <Route path="/supplier-documents" component={() => <ProtectedRoute component={SupplierDocumentsPage} />} />
-      <Route path="/supplier-policies" component={() => <ProtectedRoute component={SupplierPoliciesPage} />} />
-      <Route path="/supplier-timesheets" component={() => <ProtectedRoute component={SupplierTimesheetsPage} />} />
-      <Route path="/self-billing-agreement" component={() => <ProtectedRoute component={SelfBillingAgreementPage} />} />
-      <Route path="/suppliers/:id" component={() => <ProtectedRoute component={SupplierDetailPage} />} />
-      <Route path="/suppliers" component={() => <ProtectedRoute component={SuppliersPage} />} />
-      <Route path="/finance" component={() => <ProtectedRoute component={FinancePage} />} />
-      <Route path="/finance-approval" component={() => <ProtectedRoute component={FinanceApprovalPage} />} />
-      <Route path="/recruitment" component={() => <ProtectedRoute component={RecruitmentPage} />} />
-      <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
-      <Route path="/audit-trail" component={() => <ProtectedRoute component={AuditTrailPage} />} />
-      <Route path="/invoice-number-audit" component={() => <ProtectedRoute component={InvoiceNumberAuditPage} />} />
-      <Route path="/vetting" component={() => <ProtectedRoute component={VettingPage} />} />
-      <Route path="/ai-scheduling" component={() => <ProtectedRoute component={AISchedulingPage} />} />
-      <Route path="/email-command-centre" component={() => <ProtectedRoute component={EmailCommandCentrePage} />} />
-      <Route path="/data-import" component={() => <ProtectedRoute component={DataImportPage} />} />
-      <Route path="/data-sync" component={() => <ProtectedRoute component={DataSyncPage} />} />
-      <Route path="/addons" component={() => <ProtectedRoute component={AddOnsPage} />} />
-      <Route path="/admin/tenants" component={() => <ProtectedRoute component={TenantManagementPage} />} />
-      <Route path="/admin/roles" component={() => <ProtectedRoute component={RoleManagementPage} />} />
-      <Route path="/company-profile" component={() => <ProtectedRoute component={CompanyProfilePage} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
-      <Route path="/privacy-settings" component={() => <ProtectedRoute component={PrivacySettingsPage} />} />
-      <Route path="/compliance-settings" component={() => <ProtectedRoute component={ComplianceSettingsPage} />} />
-      <Route path="/re-audit" component={() => <ProtectedRoute component={ReAuditPage} />} />
-      <Route path="/batch-invoices" component={() => <ProtectedRoute component={BatchInvoicesPage} />} />
-      <Route path="/download-audit-pack" component={() => <ProtectedRoute component={DownloadAuditPackPage} />} />
-      <Route path="/ai-analytics" component={() => <ProtectedRoute component={AIAnalyticsPage} />} />
-      <Route path="/communications" component={() => <ProtectedRoute component={CommunicationsPage} />} />
-      <Route path="/admin/supplier-timesheets" component={() => <ProtectedRoute component={AdminSupplierTimesheetsPage} />} />
-      <Route path="/disputes" component={() => <ProtectedRoute component={DisputeManagementPage} />} />
-      <Route path="/self-billing" component={() => <ProtectedRoute component={SelfBillingPage} />} />
-      <Route path="/self-billing-audit" component={() => <ProtectedRoute component={SelfBillingAuditPage} />} />
-      <Route path="/supplier-hmrc-audit" component={() => <ProtectedRoute component={SupplierHmrcAuditPage} />} />
-      <Route path="/supplier-audit-portal" component={() => <ProtectedRoute component={SupplierAuditPortalPage} />} />
-      <Route path="/supplier-invoices" component={() => <ProtectedRoute component={SupplierInvoicesPage} />} />
-      <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
-      <Route path="/sites/:id" component={() => <ProtectedRoute component={SiteDetailPage} />} />
-      <Route path="/sites" component={() => <ProtectedRoute component={SitesPage} />} />
-      <Route path="/payroll" component={() => <ProtectedRoute component={PayrollPage} />} />
-      <Route path="/accounting" component={() => <ProtectedRoute component={AccountingPage} />} />
-      <Route path="/remittance-summary" component={() => <ProtectedRoute component={RemittanceSummaryPage} />} />
-      <Route path="/financial-documents" component={() => <ProtectedRoute component={FinancialDocumentsPage} />} />
-      <Route path="/pre-audit-check" component={() => <ProtectedRoute component={PreAuditCheckPage} />} />
-      <Route path="/purchase-ledger" component={() => <ProtectedRoute component={PurchaseLedgerPage} />} />
-      <Route path="/timesheets" component={() => <ProtectedRoute component={TimesheetsPage} />} />
-      <Route path="/officer" component={() => <EmployeeRoute component={OfficerHomePage} />} />
-      <Route path="/officer/id" component={() => <EmployeeRoute component={OfficerIdPage} />} />
-      <Route path="/my-compliance" component={() => <EmployeeRoute component={MyCompliancePage} />} />
-      <Route path="/my-employment-history" component={() => <EmployeeRoute component={MyEmploymentHistoryPage} />} />
-      <Route path="/time-off-request" component={() => <ProtectedRoute component={TimeOffRequestPage} />} />
-      <Route path="/admin/leave-requests" component={() => <ProtectedRoute component={LeaveRequestsPage} />} />
-      <Route path="/hr-dashboard" component={() => <ProtectedRoute component={HrDashboardPage} />} />
-      <Route path="/probation" component={() => <ProtectedRoute component={ProbationPage} />} />
-      <Route path="/admin/hr-cases" component={() => <ProtectedRoute component={HrCasesPage} />} />
-      <Route path="/admin/absences" component={() => <ProtectedRoute component={AbsencesPage} />} />
-      <Route path="/training-matrix" component={() => <ProtectedRoute component={TrainingMatrixPage} />} />
-      <Route path="/offer-response/:token" component={OfferResponsePage} />
-      <Route path="/verify/employment/:token" component={EmploymentVerifyPage} />
-      <Route path="/verify/personal/:token" component={PersonalReferenceVerifyPage} />
-      <Route path="/vetting-form/:token" component={PublicVettingFormPage} />
-      <Route path="/fm-dashboard" component={() => <FmGatedRoute component={FmDashboardPage} />} />
-      <Route path="/fm-workers" component={() => <FmGatedRoute component={FmWorkersPage} />} />
-      <Route path="/fm-jobs" component={() => <FmGatedRoute component={FmJobsPage} />} />
-      <Route path="/fm-scheduler" component={() => <FmGatedRoute component={FmSchedulerPage} />} />
-      <Route path="/fm-reports" component={() => <FmGatedRoute component={FmReportsPage} />} />
-      <Route path="/fm-suppliers" component={() => <FmGatedRoute component={FmSuppliersPage} />} />
-      <Route path="/fm-ppm" component={() => <FmGatedRoute component={FmPpmPage} />} />
-      <Route path="/fm-settings" component={() => <FmGatedRoute component={FmSettingsPage} />} />
-      <Route path="/fm-billing" component={() => <FmGatedRoute component={FmBillingPage} />} />
-      <Route path="/fm-worker" component={() => <ProtectedRoute component={FmWorkerPortalPage} />} />
-      <Route path="/fm-worker/jobs/:id" component={() => <ProtectedRoute component={FmWorkerJobPage} />} />
-      <Route path="/wages-ledger" component={() => <ProtectedRoute component={WagesLedgerPage} />} />
-      <Route component={NotFound} />
+      <Route path="/landing" component={() => <PublicOnly component={LandingPage} />} />
+      <Route path="/get-started" component={() => <PublicOnly component={TenantOnboardingPage} />} />
+      <Route path="/login" component={() => <PublicOnly component={LoginPage} />} />
+      <Route path="/register" component={() => <PublicOnly component={RegisterPage} />} />
+      <Route path="/accept-invite">
+        <Suspense fallback={<FullScreenSpinner />}><AcceptInvitePage /></Suspense>
+      </Route>
+      <Route path="/reset-password">
+        <Suspense fallback={<FullScreenSpinner />}><ResetPasswordPage /></Suspense>
+      </Route>
+      <Route path="/offer-response/:token">
+        <Suspense fallback={<FullScreenSpinner />}><OfferResponsePage /></Suspense>
+      </Route>
+      <Route path="/verify/employment/:token">
+        <Suspense fallback={<FullScreenSpinner />}><EmploymentVerifyPage /></Suspense>
+      </Route>
+      <Route path="/verify/personal/:token">
+        <Suspense fallback={<FullScreenSpinner />}><PersonalReferenceVerifyPage /></Suspense>
+      </Route>
+      <Route path="/vetting-form/:token">
+        <Suspense fallback={<FullScreenSpinner />}><PublicVettingFormPage /></Suspense>
+      </Route>
+      <Route component={AuthenticatedRoutes} />
     </Switch>
   );
 }

@@ -419,6 +419,13 @@ app.use((req, res, next) => {
   }
 
   try {
+    await pool.query(`ALTER TABLE sites ADD COLUMN IF NOT EXISTS county text`);
+    log("Ensured sites.county exists");
+  } catch (e) {
+    log("Could not add sites.county: " + (e as Error).message);
+  }
+
+  try {
     await pool.query(`
       ALTER TABLE sites
         ADD COLUMN IF NOT EXISTS book_on_email_enabled boolean DEFAULT true,
@@ -530,6 +537,10 @@ app.use((req, res, next) => {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_shift ON shift_check_calls (shift_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_tenant_status ON shift_check_calls (tenant_id, status)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_due ON shift_check_calls (due_at)`);
+    await pool.query(`ALTER TABLE shift_check_calls ADD COLUMN IF NOT EXISTS lat text`);
+    await pool.query(`ALTER TABLE shift_check_calls ADD COLUMN IF NOT EXISTS lng text`);
+    await pool.query(`ALTER TABLE shift_check_calls ADD COLUMN IF NOT EXISTS distance_metres numeric(10, 2)`);
+    await pool.query(`ALTER TABLE shift_check_calls ADD COLUMN IF NOT EXISTS within_range boolean`);
     log("Ensured shift call-taken columns/tables exist");
   } catch (e) {
     log("Could not ensure shift call-taken schema: " + (e as Error).message);

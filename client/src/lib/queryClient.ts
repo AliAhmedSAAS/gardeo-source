@@ -97,8 +97,9 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: true,
-      staleTime: 30 * 1000,
+      // Avoid a burst of refetches on every tab focus (hurts remote-DB setups).
+      refetchOnWindowFocus: false,
+      staleTime: 2 * 60 * 1000,
       retry: false,
     },
     mutations: {
