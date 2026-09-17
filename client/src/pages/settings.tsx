@@ -29,21 +29,28 @@ import {
 } from "lucide-react";
 import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
 import { TenantOfficerTypesSettingsCard } from "@/components/settings/TenantOfficerTypesSettingsCard";
+import { TenantDutyTypesSettingsCard } from "@/components/settings/TenantDutyTypesSettingsCard";
+import { Switch } from "@/components/ui/switch";
+import {
+  DEFAULT_DEPLOYMENT_GATE_SETTINGS,
+  type DeploymentGateSettings,
+} from "@shared/schema";
 
 type SafeUser = Omit<User, "password">;
 
-const ROLES = [
+/** Office / team roles shown in User Management (excludes field officers & suppliers). */
+const OFFICE_ROLES = [
   "super_admin", "tenant_admin", "ceo", "operations_manager",
   "regional_manager", "admin", "controller", "scheduler",
   "hr_manager", "compliance_manager", "accountant", "payroll_manager",
-  "training_manager", "supplier", "employee",
+  "training_manager",
 ] as const;
 
 const INVITE_ROLES = [
   "tenant_admin", "ceo", "operations_manager", "regional_manager",
   "admin", "controller", "scheduler", "hr_manager",
   "compliance_manager", "accountant", "payroll_manager",
-  "training_manager", "employee",
+  "training_manager",
 ] as const;
 
 const ROLE_CONFIG: Record<string, { label: string; className: string; description?: string }> = {
@@ -302,6 +309,96 @@ function GeofenceSettingsCard() {
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+const DEPLOYMENT_GATE_CHECKS: Array<{
+  key: Exclude<keyof DeploymentGateSettings, "enabled">;
+  label: string;
+  description: string;
+}> = [
+  { key: "requireOfficerStep", label: "Officer step", description: "Officer must reach step 5 or higher" },
+  { key: "requireNiNumber", label: "NI number", description: "National Insurance number must be on file" },
+  { key: "requirePassportId", label: "Passport / ID", description: "Passport or identity document required" },
+  { key: "requireShareCode", label: "Share code", description: "Share code required when visa/BRP needed" },
+  { key: "requireProofOfAddress", label: "Proof of address", description: "Utility bill or bank statement required" },
+  { key: "requireSiaLicence", label: "SIA licence", description: "Only when the shift duty type requires a licence" },
+  { key: "requireApplicationForm", label: "Application form", description: "Submitted application form required" },
+];
+
+function DeploymentValidationSettingsCard() {
+  const { toast } = useToast();
+  const { data: settings, isLoading } = useQuery<DeploymentGateSettings>({
+    queryKey: ["/api/tenant/deployment-validation-settings"],
+  });
+  const values = settings ?? DEFAULT_DEPLOYMENT_GATE_SETTINGS;
+
+  const updateMutation = useMutation({
+    mutationFn: async (patch: Partial<DeploymentGateSettings>) => {
+      const res = await apiRequest("PATCH", "/api/tenant/deployment-validation-settings", patch);
+      return res.json() as Promise<DeploymentGateSettings>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/tenant/deployment-validation-settings"], data);
+      toast({ title: "Deployment validation updated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const setFlag = (key: keyof DeploymentGateSettings, checked: boolean) => {
+    updateMutation.mutate({ [key]: checked });
+  };
+
+  return (
+    <Card data-testid="card-deployment-validation-settings">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-sm">Deployment Validation</h3>
+              <p className="text-xs text-muted-foreground">
+                Control which checks block assigning officers to shifts in Scheduling and Control Room.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Label htmlFor="deployment-gate-enabled" className="text-xs text-muted-foreground whitespace-nowrap">
+              {values.enabled ? "Active" : "Inactive"}
+            </Label>
+            <Switch
+              id="deployment-gate-enabled"
+              checked={values.enabled}
+              disabled={isLoading || updateMutation.isPending}
+              onCheckedChange={(checked) => setFlag("enabled", checked)}
+              data-testid="switch-deployment-validation-enabled"
+            />
+          </div>
+        </div>
+
+        <div className={`space-y-3 ${!values.enabled ? "opacity-50 pointer-events-none" : ""}`}>
+          {DEPLOYMENT_GATE_CHECKS.map((check) => (
+            <div
+              key={check.key}
+              className="flex items-center justify-between gap-3 py-1.5 border-t border-border/60 first:border-t-0 first:pt-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{check.label}</p>
+                <p className="text-xs text-muted-foreground">{check.description}</p>
+              </div>
+              <Switch
+                checked={values[check.key]}
+                disabled={isLoading || updateMutation.isPending || !values.enabled}
+                onCheckedChange={(checked) => setFlag(check.key, checked)}
+                data-testid={`switch-deployment-validation-${check.key}`}
+              />
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -1147,7 +1244,7 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteFirstName, setInviteFirstName] = useState("");
   const [inviteLastName, setInviteLastName] = useState("");
-  const [inviteRole, setInviteRole] = useState("employee");
+  const [inviteRole, setInviteRole] = useState("admin");
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [companyForm, setCompanyForm] = useState({
     name: "", tradingName: "", industry: "", email: "", phone: "",
@@ -1376,7 +1473,7 @@ export default function SettingsPage() {
       setInviteEmail("");
       setInviteFirstName("");
       setInviteLastName("");
-      setInviteRole("employee");
+      setInviteRole("admin");
       toast({ title: "Invitation sent", description: "Team member has been invited successfully." });
     },
     onError: (err: Error) => {
@@ -1398,6 +1495,7 @@ export default function SettingsPage() {
   });
 
   const filtered = users.filter((u) => {
+    if (u.role === "employee" || u.role === "supplier") return false;
     const search = searchTerm.toLowerCase();
     const matchesSearch =
       `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) ||
@@ -1512,7 +1610,7 @@ export default function SettingsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                {ROLES.map((role) => (
+                {OFFICE_ROLES.map((role) => (
                   <SelectItem key={role} value={role}>
                     {ROLE_CONFIG[role].label}
                   </SelectItem>
@@ -2205,7 +2303,7 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm text-muted-foreground">Active Users</span>
                     <span className="text-sm font-medium" data-testid="text-active-users">
-                      {users.filter((u) => u.isActive).length}
+                      {users.filter((u) => u.isActive && u.role !== "employee" && u.role !== "supplier").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
@@ -2221,7 +2319,9 @@ export default function SettingsPage() {
 
           <LeaveEntitlementSettingsCard />
           <TenantOfficerTypesSettingsCard />
+          <TenantDutyTypesSettingsCard />
           <GeofenceSettingsCard />
+          <DeploymentValidationSettingsCard />
           <SupplierVisibilitySettingsCard />
           <ProbationSettingsCard />
         </div>
@@ -2471,7 +2571,7 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.map((role) => (
+                      {OFFICE_ROLES.map((role) => (
                         <SelectItem key={role} value={role}>
                           {ROLE_CONFIG[role].label}
                         </SelectItem>

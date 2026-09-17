@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,6 +44,7 @@ import {
 } from "@/components/employees/StaffProfileHub";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
 import { SiaLicenceVerify, SiaLicenceVerifyStatus } from "@/components/employees/SiaLicenceVerify";
+import { EmployeePayRatesTab } from "@/components/employees/EmployeePayRatesTab";
 import { ETHNIC_ORIGIN_OPTIONS, isKnownEthnicOrigin } from "@shared/ethnicOriginOptions";
 
 type EnrichedEmployee = {
@@ -220,6 +222,14 @@ type EmployeeDetail = EnrichedEmployee & {
   certificates?: any[];
   siaLicences?: any[];
   pForm?: any;
+  applicationForm?: {
+    status: "not_sent" | "sent" | "in_progress" | "submitted";
+    submittedAt?: string | null;
+    lastSavedAt?: string | null;
+    expiresAt?: string | null;
+    recipientEmail?: string | null;
+    createdAt?: string | null;
+  };
   vettingAudit?: any[];
   rightOfWorkChecks?: any[];
   addressHistory?: any[];
@@ -396,15 +406,29 @@ export default function EmployeesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPolicyDialog, setShowPolicyDialog] = useState(false);
   const [addForm, setAddForm] = useState({
-    firstName: "", lastName: "", email: "", username: "", phone: "",
-    jobTitle: "", department: "", employmentType: "full_time", supplierId: "",
-    startDate: "", dateOfBirth: "", nationalInsurance: "", gender: "",
-    nationality: "British", addressLine1: "", addressLine2: "", city: "", county: "", postcode: "", country: "United Kingdom",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    supplierId: "",
+    jobTitle: "",
+    gender: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    county: "",
+    postcode: "",
+    country: "United Kingdom",
+    siaLicenseNumber: "",
+    siaLicenseType: "",
+    siaExpiryDate: "",
+    siaRegisterStatus: "",
+    siaRegisterHolderName: "",
+    siaLastVerifiedAt: "",
   });
+  const [addFieldErrors, setAddFieldErrors] = useState<Record<string, string>>({});
+  const [checkingUnique, setCheckingUnique] = useState(false);
   const [policyForm, setPolicyForm] = useState({ policyName: "", policyType: "policy", version: "1.0", notes: "" });
-  const [showPayRateForm, setShowPayRateForm] = useState(false);
-  const [editingPayRate, setEditingPayRate] = useState<any>(null);
-  const [payRateForm, setPayRateForm] = useState({ hourlyRate: "", effectiveFrom: "", effectiveTo: "", reason: "" });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
@@ -462,6 +486,33 @@ export default function EmployeesPage() {
     enabled: !!selectedEmployeeId,
   });
 
+  const { data: dutyTypes = [] } = useQuery<Array<{ id: number; name: string; requiresLicense?: boolean }>>({
+    queryKey: ["/api/tenant/duty-types"],
+    enabled: showAddDialog,
+  });
+
+  const selectedDutyType = dutyTypes.find((d) => d.name === addForm.jobTitle);
+  const licenceRequired = Boolean(selectedDutyType?.requiresLicense);
+
+  const mapSiaSectorToType = (sector: string | null | undefined, fallback = "") => {
+    if (!sector?.trim()) return fallback;
+    const norm = sector.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const aliases: Record<string, string[]> = {
+      "door supervisor": ["door supervision", "door supervisor"],
+      "security guard": ["security guarding", "security guard"],
+      "cctv operator": ["public space surveillance", "cctv", "cctv operator"],
+      "close protection": ["close protection"],
+    };
+    const licensed = dutyTypes.filter((d) => d.requiresLicense);
+    for (const d of licensed) {
+      const key = d.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const aliasList = aliases[key] || [key];
+      if (aliasList.some((a) => norm.includes(a) || a.includes(norm))) return d.name;
+    }
+    const exact = licensed.find((d) => d.name.toLowerCase() === sector.toLowerCase());
+    return exact?.name || sector;
+  };
+
   const officerTypeNames = officerTypes.map((t) => t.name);
   const hasLegacyOfficerType =
     !!editForm.officerType &&
@@ -477,59 +528,6 @@ export default function EmployeesPage() {
     enabled: !!selectedEmployeeId,
   });
 
-  const { data: payRates = [] } = useQuery<any[]>({
-    queryKey: ["/api/admin/employees", selectedEmployeeId, "pay-rates"],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/employees/${selectedEmployeeId}/pay-rates`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!selectedEmployeeId,
-  });
-
-  const createPayRateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", `/api/admin/employees/${selectedEmployeeId}/pay-rates`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Pay rate added" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees", selectedEmployeeId, "pay-rates"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
-      setShowPayRateForm(false);
-      setPayRateForm({ hourlyRate: "", effectiveFrom: "", effectiveTo: "", reason: "" });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
-  const updatePayRateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await apiRequest("PATCH", `/api/employee-pay-rates/${id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Pay rate updated" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees", selectedEmployeeId, "pay-rates"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
-      setEditingPayRate(null);
-      setPayRateForm({ hourlyRate: "", effectiveFrom: "", effectiveTo: "", reason: "" });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
-  const deletePayRateMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/employee-pay-rates/${id}`);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Pay rate deleted" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees", selectedEmployeeId, "pay-rates"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
   const createEmployeeMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/admin/employees", data);
@@ -539,17 +537,112 @@ export default function EmployeesPage() {
       toast({ title: "Employee added", description: "New employee has been created successfully. Default password: Password123!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
       setShowAddDialog(false);
+      setAddFieldErrors({});
       setAddForm({
-        firstName: "", lastName: "", email: "", username: "", phone: "",
-        jobTitle: "", department: "", employmentType: "full_time", supplierId: "",
-        startDate: "", dateOfBirth: "", nationalInsurance: "", gender: "",
-        nationality: "British", addressLine1: "", addressLine2: "", city: "", county: "", postcode: "", country: "United Kingdom",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        supplierId: "",
+        jobTitle: "",
+        gender: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        county: "",
+        postcode: "",
+        country: "United Kingdom",
+        siaLicenseNumber: "",
+        siaLicenseType: "",
+        siaExpiryDate: "",
+        siaRegisterStatus: "",
+        siaRegisterHolderName: "",
+        siaLastVerifiedAt: "",
       });
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const isValidEmailFormat = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const isValidPhoneFormat = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    return !value.trim() || digits.length >= 10;
+  };
+  const isValidSiaFormat = (value: string) => /^\d{16}$/.test(value.replace(/\D/g, ""));
+
+  const validateAddFormLocal = () => {
+    const errors: Record<string, string> = {};
+    if (!addForm.firstName.trim()) errors.firstName = "First name is required";
+    if (!addForm.lastName.trim()) errors.lastName = "Last name is required";
+    if (!addForm.email.trim()) errors.email = "Email is required";
+    else if (!isValidEmailFormat(addForm.email)) errors.email = "Enter a valid email address";
+    if (addForm.phone.trim() && !isValidPhoneFormat(addForm.phone)) {
+      errors.phone = "Enter a valid phone number (at least 10 digits)";
+    }
+    if (licenceRequired) {
+      if (!addForm.siaLicenseNumber.trim()) errors.siaLicenseNumber = "SIA licence number is required";
+      else if (!isValidSiaFormat(addForm.siaLicenseNumber)) {
+        errors.siaLicenseNumber = "SIA licence number must be 16 digits";
+      }
+    } else if (addForm.siaLicenseNumber.trim() && !isValidSiaFormat(addForm.siaLicenseNumber)) {
+      errors.siaLicenseNumber = "SIA licence number must be 16 digits";
+    }
+    return errors;
+  };
+
+  const checkUniqueFields = async (fields?: { email?: string; phone?: string; siaLicenseNumber?: string }) => {
+    const params = new URLSearchParams();
+    const email = fields?.email ?? addForm.email;
+    const phone = fields?.phone ?? addForm.phone;
+    const sia = fields?.siaLicenseNumber ?? addForm.siaLicenseNumber;
+    if (email?.trim() && isValidEmailFormat(email)) params.set("email", email.trim());
+    if (phone?.trim() && isValidPhoneFormat(phone)) params.set("phone", phone.trim());
+    if (sia?.trim()) params.set("siaLicenseNumber", sia.replace(/\D/g, ""));
+    if (![...params.keys()].length) return {} as Record<string, string>;
+
+    setCheckingUnique(true);
+    try {
+      const res = await fetch(`/api/admin/employees/check-unique?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) return {} as Record<string, string>;
+      const data = await res.json() as { conflicts?: { field: string; message: string }[] };
+      const next: Record<string, string> = {};
+      for (const c of data.conflicts || []) next[c.field] = c.message;
+      return next;
+    } finally {
+      setCheckingUnique(false);
+    }
+  };
+
+  const submitAddEmployee = async () => {
+    const localErrors = validateAddFormLocal();
+    if (Object.keys(localErrors).length) {
+      setAddFieldErrors(localErrors);
+      return;
+    }
+    const uniqueErrors = await checkUniqueFields();
+    if (Object.keys(uniqueErrors).length) {
+      setAddFieldErrors((prev) => ({ ...prev, ...uniqueErrors }));
+      toast({
+        title: "Duplicate found",
+        description: Object.values(uniqueErrors)[0],
+        variant: "destructive",
+      });
+      return;
+    }
+    setAddFieldErrors({});
+    createEmployeeMutation.mutate({
+      ...addForm,
+      officerType: addForm.jobTitle || null,
+      siaLicenseNumber: licenceRequired ? addForm.siaLicenseNumber : "",
+      siaLicenseType: licenceRequired ? addForm.siaLicenseType : "",
+      siaExpiryDate: licenceRequired ? addForm.siaExpiryDate : "",
+      siaRegisterStatus: licenceRequired ? addForm.siaRegisterStatus : "",
+      siaRegisterHolderName: licenceRequired ? addForm.siaRegisterHolderName : "",
+      siaLastVerifiedAt: licenceRequired ? addForm.siaLastVerifiedAt : "",
+    });
+  };
 
   const updateEmployeeMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1389,13 +1482,19 @@ export default function EmployeesPage() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Employer</Label>
-                          <Select value={editForm.supplierId || "in_house"} onValueChange={v => setEditForm(f => ({ ...f, supplierId: v === "in_house" ? "" : v }))}>
-                            <SelectTrigger data-testid="select-edit-employer"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="in_house">In-House</SelectItem>
-                              {supplierOptions.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>))}
-                            </SelectContent>
-                          </Select>
+                          <SearchableSelect
+                            value={editForm.supplierId || "in_house"}
+                            onValueChange={v => setEditForm(f => ({ ...f, supplierId: v === "in_house" ? "" : v }))}
+                            options={supplierOptions.map(s => ({
+                              value: String(s.id),
+                              label: s.companyName,
+                            }))}
+                            noneValue="in_house"
+                            noneLabel="In-House"
+                            placeholder="In-House"
+                            searchPlaceholder="Search suppliers…"
+                            data-testid="select-edit-employer"
+                          />
                         </div>
                       </div>
                       <Separator />
@@ -1539,13 +1638,14 @@ export default function EmployeesPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1 col-span-2 sm:col-span-1">
+                        <div className="space-y-1 col-span-2">
                           <Label className="text-xs">SIA License Number</Label>
                           <div className="flex items-center gap-2">
                             <Input
-                              className="flex-1 min-w-0"
+                              className="flex-1 min-w-[12rem] font-mono tracking-wide"
                               value={editForm.siaLicenseNumber}
                               onChange={e => setEditForm(f => ({ ...f, siaLicenseNumber: e.target.value }))}
+                              placeholder="16-digit SIA licence number"
                               data-testid="input-edit-sia-number"
                             />
                             <SiaLicenceVerify
@@ -1570,6 +1670,15 @@ export default function EmployeesPage() {
                           lastVerifiedAt={employeeDetail?.siaLastVerifiedAt}
                           registerStatus={employeeDetail?.siaRegisterStatus}
                           registerHolderName={employeeDetail?.siaRegisterHolderName}
+                          currentFirstName={editForm.firstName}
+                          currentLastName={editForm.lastName}
+                          onApplyRegisterName={({ firstName, lastName }) => {
+                            setEditForm((f) => ({
+                              ...f,
+                              firstName: firstName || f.firstName,
+                              lastName: lastName || f.lastName,
+                            }));
+                          }}
                         />
                         <div className="space-y-1">
                           <Label className="text-xs">DBS Certificate Number</Label>
@@ -1878,157 +1987,10 @@ export default function EmployeesPage() {
                 </TabsContent>
 
                 <TabsContent value="pay-rates" className="space-y-4 mt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <PoundSterling className="w-4 h-4 text-[#FF8C42]" />
-                        Pay Rate History
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Current rate: <strong>£{employeeDetail.hourlyRate || "0.00"}/hr</strong> — Rates are matched to shifts by date for accurate payroll
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setShowPayRateForm(true);
-                        setEditingPayRate(null);
-                        setPayRateForm({ hourlyRate: "", effectiveFrom: "", effectiveTo: "", reason: "" });
-                      }}
-                      data-testid="button-add-pay-rate"
-                      className="bg-[#FF8C42] hover:bg-[#e87d38]"
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> Add Rate
-                    </Button>
-                  </div>
-
-                  {showPayRateForm && (
-                    <div className="p-3 rounded-lg border border-[#FF8C42]/30 bg-orange-50 space-y-3" data-testid="pay-rate-form">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Hourly Rate (£) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="12.50"
-                            value={payRateForm.hourlyRate}
-                            onChange={(e) => setPayRateForm(f => ({ ...f, hourlyRate: e.target.value }))}
-                            data-testid="input-pay-rate-hourly"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Reason</Label>
-                          <Input
-                            placeholder="e.g. Annual review, Promotion"
-                            value={payRateForm.reason}
-                            onChange={(e) => setPayRateForm(f => ({ ...f, reason: e.target.value }))}
-                            data-testid="input-pay-rate-reason"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Effective From *</Label>
-                          <Input
-                            type="date"
-                            value={payRateForm.effectiveFrom}
-                            onChange={(e) => setPayRateForm(f => ({ ...f, effectiveFrom: e.target.value }))}
-                            data-testid="input-pay-rate-from"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Effective To</Label>
-                          <Input
-                            type="date"
-                            value={payRateForm.effectiveTo}
-                            onChange={(e) => setPayRateForm(f => ({ ...f, effectiveTo: e.target.value }))}
-                            data-testid="input-pay-rate-to"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" onClick={() => { setShowPayRateForm(false); setEditingPayRate(null); }}>Cancel</Button>
-                        <Button
-                          size="sm"
-                          className="bg-[#FF8C42] hover:bg-[#e87d38]"
-                          disabled={!payRateForm.hourlyRate || !payRateForm.effectiveFrom || createPayRateMutation.isPending || updatePayRateMutation.isPending}
-                          data-testid="button-save-pay-rate"
-                          onClick={() => {
-                            if (editingPayRate) {
-                              updatePayRateMutation.mutate({ id: editingPayRate.id, data: payRateForm });
-                            } else {
-                              createPayRateMutation.mutate(payRateForm);
-                            }
-                          }}
-                        >
-                          {(createPayRateMutation.isPending || updatePayRateMutation.isPending) && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-                          {editingPayRate ? "Update" : "Save"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {payRates.length > 0 ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Hourly Rate</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Effective From</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Effective To</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Reason</th>
-                            <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {payRates.map((pr: any, idx: number) => (
-                            <tr key={pr.id} className={idx === 0 ? "bg-orange-50/50" : ""} data-testid={`row-pay-rate-${pr.id}`}>
-                              <td className="px-3 py-2 font-medium">
-                                £{parseFloat(pr.hourly_rate).toFixed(2)}/hr
-                                {idx === 0 && <Badge className="ml-2 bg-[#FF8C42] text-white text-[10px]">Current</Badge>}
-                              </td>
-                              <td className="px-3 py-2 text-muted-foreground">{pr.effective_from}</td>
-                              <td className="px-3 py-2 text-muted-foreground">{pr.effective_to || "Ongoing"}</td>
-                              <td className="px-3 py-2 text-muted-foreground">{pr.reason || "—"}</td>
-                              <td className="px-3 py-2 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0"
-                                  data-testid={`button-edit-pay-rate-${pr.id}`}
-                                  onClick={() => {
-                                    setEditingPayRate(pr);
-                                    setPayRateForm({
-                                      hourlyRate: pr.hourly_rate,
-                                      effectiveFrom: pr.effective_from,
-                                      effectiveTo: pr.effective_to || "",
-                                      reason: pr.reason || "",
-                                    });
-                                    setShowPayRateForm(true);
-                                  }}
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                                  data-testid={`button-delete-pay-rate-${pr.id}`}
-                                  onClick={() => deletePayRateMutation.mutate(pr.id)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <PoundSterling className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">No pay rate history recorded</p>
-                      <p className="text-xs mt-1">Click "Add Rate" to set up pay rate history for accurate date-based payroll calculations</p>
-                    </div>
-                  )}
+                  <EmployeePayRatesTab
+                    employeeId={employeeDetail.id}
+                    currentHourlyRate={employeeDetail.hourlyRate}
+                  />
                 </TabsContent>
 
                 <TabsContent value="bank-details" className="space-y-4 mt-4" data-testid="bank-details-tab">
@@ -2056,7 +2018,7 @@ export default function EmployeesPage() {
 
       {/* Add Employee Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5" /> Add New Employee
@@ -2065,10 +2027,10 @@ export default function EmployeesPage() {
 
           <div className="space-y-4 mt-2">
             <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800">
-              The employee will be created with the default password <strong>Password123!</strong> and can change it on first login.
+              Default password is <strong>Password123!</strong>. Username is created from the email address.
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">First Name *</Label>
                 <Input
@@ -2090,112 +2052,106 @@ export default function EmployeesPage() {
                 <Input
                   type="email"
                   value={addForm.email}
-                  onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
+                  onChange={(e) => {
+                    setAddForm(f => ({ ...f, email: e.target.value }));
+                    setAddFieldErrors((prev) => ({ ...prev, email: "" }));
+                  }}
+                  onBlur={async () => {
+                    if (!addForm.email.trim()) {
+                      setAddFieldErrors((prev) => ({ ...prev, email: "Email is required" }));
+                      return;
+                    }
+                    if (!isValidEmailFormat(addForm.email)) {
+                      setAddFieldErrors((prev) => ({ ...prev, email: "Enter a valid email address" }));
+                      return;
+                    }
+                    const unique = await checkUniqueFields({ email: addForm.email });
+                    setAddFieldErrors((prev) => ({ ...prev, email: unique.email || "" }));
+                  }}
+                  className={addFieldErrors.email ? "border-red-500" : undefined}
                   data-testid="input-add-email"
                 />
+                {addFieldErrors.email && <p className="text-[11px] text-red-600">{addFieldErrors.email}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Username *</Label>
-                <Input
-                  value={addForm.username}
-                  onChange={(e) => setAddForm(f => ({ ...f, username: e.target.value }))}
-                  data-testid="input-add-username"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Phone</Label>
+                <Label className="text-xs">Phone Number</Label>
                 <Input
                   value={addForm.phone}
-                  onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))}
+                  onChange={(e) => {
+                    setAddForm(f => ({ ...f, phone: e.target.value }));
+                    setAddFieldErrors((prev) => ({ ...prev, phone: "" }));
+                  }}
+                  onBlur={async () => {
+                    if (addForm.phone.trim() && !isValidPhoneFormat(addForm.phone)) {
+                      setAddFieldErrors((prev) => ({ ...prev, phone: "Enter a valid phone number (at least 10 digits)" }));
+                      return;
+                    }
+                    if (!addForm.phone.trim()) {
+                      setAddFieldErrors((prev) => ({ ...prev, phone: "" }));
+                      return;
+                    }
+                    const unique = await checkUniqueFields({ phone: addForm.phone });
+                    setAddFieldErrors((prev) => ({ ...prev, phone: unique.phone || "" }));
+                  }}
                   placeholder="07xxx xxxxxx"
+                  className={addFieldErrors.phone ? "border-red-500" : undefined}
                   data-testid="input-add-phone"
                 />
+                {addFieldErrors.phone && <p className="text-[11px] text-red-600">{addFieldErrors.phone}</p>}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Date of Birth</Label>
-                <Input
-                  type="date"
-                  value={addForm.dateOfBirth}
-                  onChange={(e) => setAddForm(f => ({ ...f, dateOfBirth: e.target.value }))}
-                  data-testid="input-add-dob"
-                />
-              </div>
-            </div>
-
-            <Separator />
-            <h4 className="text-sm font-medium">Employment Details</h4>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Employer</Label>
-                <Select value={addForm.supplierId || "in_house"} onValueChange={(v) => setAddForm(f => ({ ...f, supplierId: v === "in_house" ? "" : v }))}>
-                  <SelectTrigger data-testid="select-add-employer">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_house">In-House</SelectItem>
-                    {supplierOptions.map(s => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Job Title</Label>
-                <Input
-                  value={addForm.jobTitle}
-                  onChange={(e) => setAddForm(f => ({ ...f, jobTitle: e.target.value }))}
-                  placeholder="Security Officer"
-                  data-testid="input-add-job-title"
+                <SearchableSelect
+                  value={addForm.supplierId || "in_house"}
+                  onValueChange={(v) => setAddForm(f => ({ ...f, supplierId: v === "in_house" ? "" : v }))}
+                  options={supplierOptions.map(s => ({
+                    value: String(s.id),
+                    label: s.companyName,
+                  }))}
+                  noneValue="in_house"
+                  noneLabel="In-House"
+                  placeholder="In-House"
+                  searchPlaceholder="Search suppliers…"
+                  data-testid="select-add-employer"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Department</Label>
-                <Input
-                  value={addForm.department}
-                  onChange={(e) => setAddForm(f => ({ ...f, department: e.target.value }))}
-                  data-testid="input-add-department"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Employment Type</Label>
-                <Select value={addForm.employmentType} onValueChange={(v) => setAddForm(f => ({ ...f, employmentType: v }))}>
-                  <SelectTrigger data-testid="select-add-employment-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full_time">Full Time</SelectItem>
-                    <SelectItem value="part_time">Part Time</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                    <SelectItem value="zero_hours">Zero Hours</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Start Date</Label>
-                <Input
-                  type="date"
-                  value={addForm.startDate}
-                  onChange={(e) => setAddForm(f => ({ ...f, startDate: e.target.value }))}
-                  data-testid="input-add-start-date"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">NI Number</Label>
-                <Input
-                  value={addForm.nationalInsurance}
-                  onChange={(e) => setAddForm(f => ({ ...f, nationalInsurance: e.target.value }))}
-                  placeholder="QQ 12 34 56 C"
-                  data-testid="input-add-ni"
+                <Label className="text-xs">Job Title (Duty Type)</Label>
+                <SearchableSelect
+                  value={addForm.jobTitle || "none"}
+                  onValueChange={(v) => {
+                    const name = v === "none" ? "" : v;
+                    const duty = dutyTypes.find((d) => d.name === name);
+                    setAddForm((f) => ({
+                      ...f,
+                      jobTitle: name,
+                      siaLicenseType: duty?.requiresLicense ? (f.siaLicenseType || name) : "",
+                      siaLicenseNumber: duty?.requiresLicense ? f.siaLicenseNumber : "",
+                      siaExpiryDate: duty?.requiresLicense ? f.siaExpiryDate : "",
+                      siaRegisterStatus: duty?.requiresLicense ? f.siaRegisterStatus : "",
+                      siaRegisterHolderName: duty?.requiresLicense ? f.siaRegisterHolderName : "",
+                      siaLastVerifiedAt: duty?.requiresLicense ? f.siaLastVerifiedAt : "",
+                    }));
+                  }}
+                  options={dutyTypes.map((d) => ({
+                    value: d.name,
+                    label: d.name,
+                  }))}
+                  noneValue="none"
+                  noneLabel="Not selected"
+                  placeholder="Select duty type"
+                  searchPlaceholder="Search duty types…"
+                  data-testid="select-add-job-title"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Gender</Label>
-                <Select value={addForm.gender} onValueChange={(v) => setAddForm(f => ({ ...f, gender: v }))}>
+                <Select value={addForm.gender || "none"} onValueChange={(v) => setAddForm(f => ({ ...f, gender: v === "none" ? "" : v }))}>
                   <SelectTrigger data-testid="select-add-gender">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Not selected</SelectItem>
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="female">Female</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
@@ -2219,14 +2175,122 @@ export default function EmployeesPage() {
               }}
               onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
             />
-            <div className="space-y-1.5">
-              <Label className="text-xs">Nationality</Label>
-              <Input
-                value={addForm.nationality}
-                onChange={(e) => setAddForm(f => ({ ...f, nationality: e.target.value }))}
-                data-testid="input-add-nationality"
-              />
-            </div>
+
+            {licenceRequired && (
+              <>
+                <Separator />
+                <h4 className="text-sm font-medium">Licences</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">SIA Type</Label>
+                    <Select
+                      value={addForm.siaLicenseType || "none"}
+                      onValueChange={(v) => setAddForm((f) => ({ ...f, siaLicenseType: v === "none" ? "" : v }))}
+                    >
+                      <SelectTrigger data-testid="select-add-sia-type">
+                        <SelectValue placeholder="Select SIA type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not selected</SelectItem>
+                        {dutyTypes
+                          .filter((d) => d.requiresLicense)
+                          .map((d) => (
+                            <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                          ))}
+                        {!!addForm.siaLicenseType &&
+                          addForm.siaLicenseType !== "none" &&
+                          !dutyTypes.some((d) => d.name === addForm.siaLicenseType) && (
+                            <SelectItem value={addForm.siaLicenseType}>{addForm.siaLicenseType}</SelectItem>
+                          )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">SIA Expiry</Label>
+                    <Input
+                      type="date"
+                      value={addForm.siaExpiryDate}
+                      onChange={(e) => setAddForm(f => ({ ...f, siaExpiryDate: e.target.value }))}
+                      data-testid="input-add-sia-expiry"
+                    />
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-xs">SIA Licence Number</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className={`flex-1 min-w-[12rem] font-mono tracking-wide ${addFieldErrors.siaLicenseNumber ? "border-red-500" : ""}`}
+                        value={addForm.siaLicenseNumber}
+                        onChange={(e) => {
+                          setAddForm(f => ({
+                            ...f,
+                            siaLicenseNumber: e.target.value,
+                            siaRegisterStatus: "",
+                            siaRegisterHolderName: "",
+                            siaLastVerifiedAt: "",
+                          }));
+                          setAddFieldErrors((prev) => ({ ...prev, siaLicenseNumber: "" }));
+                        }}
+                        onBlur={async () => {
+                          const raw = addForm.siaLicenseNumber.trim();
+                          if (!raw) {
+                            setAddFieldErrors((prev) => ({
+                              ...prev,
+                              siaLicenseNumber: licenceRequired ? "SIA licence number is required" : "",
+                            }));
+                            return;
+                          }
+                          if (!isValidSiaFormat(raw)) {
+                            setAddFieldErrors((prev) => ({ ...prev, siaLicenseNumber: "SIA licence number must be 16 digits" }));
+                            return;
+                          }
+                          const unique = await checkUniqueFields({ siaLicenseNumber: raw });
+                          setAddFieldErrors((prev) => ({ ...prev, siaLicenseNumber: unique.siaLicenseNumber || "" }));
+                        }}
+                        placeholder="16-digit SIA licence number"
+                        data-testid="input-add-sia-number"
+                      />
+                      <SiaLicenceVerify
+                        inline
+                        licenceNumber={addForm.siaLicenseNumber}
+                        employeeName={`${addForm.firstName} ${addForm.lastName}`.trim()}
+                        lastVerifiedAt={addForm.siaLastVerifiedAt || null}
+                        registerStatus={addForm.siaRegisterStatus || null}
+                        registerHolderName={addForm.siaRegisterHolderName || null}
+                        onResult={(result) => {
+                          setAddForm((f) => ({
+                            ...f,
+                            siaLicenseNumber: result.licenceNumber || f.siaLicenseNumber,
+                            siaLicenseType: mapSiaSectorToType(result.licenceSector, f.siaLicenseType),
+                            siaExpiryDate: result.expiryDate || f.siaExpiryDate,
+                            siaRegisterStatus: result.status || "",
+                            siaRegisterHolderName: result.holderName || "",
+                            siaLastVerifiedAt: result.checkedAt || new Date().toISOString(),
+                          }));
+                          setAddFieldErrors((prev) => ({ ...prev, siaLicenseNumber: "" }));
+                        }}
+                      />
+                    </div>
+                    {addFieldErrors.siaLicenseNumber && (
+                      <p className="text-[11px] text-red-600">{addFieldErrors.siaLicenseNumber}</p>
+                    )}
+                  </div>
+                  <SiaLicenceVerifyStatus
+                    lastVerifiedAt={addForm.siaLastVerifiedAt || null}
+                    registerStatus={addForm.siaRegisterStatus || null}
+                    registerHolderName={addForm.siaRegisterHolderName || null}
+                    currentFirstName={addForm.firstName}
+                    currentLastName={addForm.lastName}
+                    onApplyRegisterName={({ firstName, lastName }) => {
+                      setAddForm((f) => ({
+                        ...f,
+                        firstName: firstName || f.firstName,
+                        lastName: lastName || f.lastName,
+                      }));
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
@@ -2234,12 +2298,12 @@ export default function EmployeesPage() {
               Cancel
             </Button>
             <Button
-              onClick={() => createEmployeeMutation.mutate(addForm)}
-              disabled={createEmployeeMutation.isPending || !addForm.firstName || !addForm.lastName || !addForm.email || !addForm.username}
+              onClick={() => void submitAddEmployee()}
+              disabled={createEmployeeMutation.isPending || checkingUnique || !addForm.firstName || !addForm.lastName || !addForm.email || Object.values(addFieldErrors).some(Boolean)}
               className="bg-[#1F3A5F] hover:bg-[#1F3A5F]/90"
               data-testid="button-submit-add-employee"
             >
-              {createEmployeeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+              {createEmployeeMutation.isPending || checkingUnique ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Add Employee
             </Button>
           </DialogFooter>

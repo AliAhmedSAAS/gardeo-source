@@ -12,6 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -474,22 +475,18 @@ export default function VettingPage() {
           >
             <div className="space-y-2">
               <Label>Employee *</Label>
-              <Select
+              <SearchableSelect
                 value={createForm.employeeId}
                 onValueChange={(v) => setCreateForm((f) => ({ ...f, employeeId: v }))}
-              >
-                <SelectTrigger data-testid="select-employee">
-                  <SelectValue placeholder="Select an employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>
-                      {emp.firstName} {emp.lastName}
-                      {emp.employeeNumber ? ` (#${emp.employeeNumber})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={employees.map((emp) => ({
+                  value: String(emp.id),
+                  label: `${emp.firstName} ${emp.lastName}${emp.employeeNumber ? ` (#${emp.employeeNumber})` : ""}`,
+                  keywords: emp.employeeNumber || undefined,
+                }))}
+                placeholder="Select an employee"
+                searchPlaceholder="Search officers…"
+                data-testid="select-employee"
+              />
             </div>
             <div className="space-y-2">
               <Label>Check Type *</Label>

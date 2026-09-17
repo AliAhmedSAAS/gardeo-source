@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -344,17 +345,20 @@ export default function FinanceApprovalPage() {
               <Label className="text-xs text-muted-foreground whitespace-nowrap">To:</Label>
               <Input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); resetPage(); }} className="w-36" data-testid="input-date-to" />
             </div>
-            <Select value={filterSite} onValueChange={(val) => { setFilterSite(val); resetPage(); }}>
-              <SelectTrigger className="w-44" data-testid="select-site-filter">
-                <SelectValue placeholder="All Sites" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sites</SelectItem>
-                {sites.map((site) => (
-                  <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={filterSite}
+              onValueChange={(val) => { setFilterSite(val); resetPage(); }}
+              options={sites.map((site) => ({
+                value: String(site.id),
+                label: site.name,
+              }))}
+              noneValue="all"
+              noneLabel="All Sites"
+              placeholder="All Sites"
+              searchPlaceholder="Search sites…"
+              triggerClassName="w-44"
+              data-testid="select-site-filter"
+            />
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input

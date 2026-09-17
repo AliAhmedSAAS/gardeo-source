@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   BarChart3, Users, Calendar, ShieldCheck, PoundSterling,
   TrendingUp, AlertTriangle, Building2, Clock, FileText, CheckCircle,
@@ -292,17 +292,20 @@ function CustomReports() {
           {(tab === "site" || tab === "employee") && (
             <div className="space-y-1">
               <Label className="text-xs">Supplier</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger className="w-48 text-sm" data-testid="select-report-supplier">
-                  <SelectValue placeholder="All Suppliers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Suppliers</SelectItem>
-                  {supplierList.map(s => (
-                    <SelectItem key={s.supplier_id} value={String(s.supplier_id)}>{s.supplier_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={supplierId}
+                onValueChange={setSupplierId}
+                options={supplierList.map(s => ({
+                  value: String(s.supplier_id),
+                  label: s.supplier_name,
+                }))}
+                noneValue="all"
+                noneLabel="All Suppliers"
+                placeholder="All Suppliers"
+                searchPlaceholder="Search suppliers…"
+                className="w-48 text-sm"
+                data-testid="select-report-supplier"
+              />
             </div>
           )}
           {(startDate || endDate || supplierId !== "all") && (

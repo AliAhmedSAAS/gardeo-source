@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" ADD COLUMN IF NOT EXISTS "deployment_gate_settings" jsonb DEFAULT '{"enabled":true,"requireOfficerStep":true,"requireNiNumber":true,"requirePassportId":true,"requireShareCode":true,"requireProofOfAddress":true,"requireSiaLicence":true,"requireApplicationForm":true}'::jsonb;

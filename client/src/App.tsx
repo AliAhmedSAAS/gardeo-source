@@ -62,6 +62,7 @@ import SupplierHmrcAuditPage from "@/pages/supplier-hmrc-audit";
 import SupplierAuditPortalPage from "@/pages/supplier-audit-portal";
 import ClientsPage from "@/pages/clients";
 import SitesPage from "@/pages/sites";
+import SiteDetailPage from "@/pages/site-detail";
 import PayrollPage from "@/pages/payroll";
 import ReAuditPage from "@/pages/re-audit";
 import BatchInvoicesPage from "@/pages/batch-invoices";
@@ -321,6 +322,7 @@ function Router() {
       <Route path="/supplier-audit-portal" component={() => <ProtectedRoute component={SupplierAuditPortalPage} />} />
       <Route path="/supplier-invoices" component={() => <ProtectedRoute component={SupplierInvoicesPage} />} />
       <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
+      <Route path="/sites/:id" component={() => <ProtectedRoute component={SiteDetailPage} />} />
       <Route path="/sites" component={() => <ProtectedRoute component={SitesPage} />} />
       <Route path="/payroll" component={() => <ProtectedRoute component={PayrollPage} />} />
       <Route path="/accounting" component={() => <ProtectedRoute component={AccountingPage} />} />

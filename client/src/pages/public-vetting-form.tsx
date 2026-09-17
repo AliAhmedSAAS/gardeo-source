@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2, XCircle, User, Mail, Phone, MapPin, ShieldCheck, Heart, CreditCard, Briefcase, Eraser } from "lucide-react";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
+import { queryClient } from "@/lib/queryClient";
 
 type VettingFormPayload = {
   firstName: string;
@@ -751,7 +752,15 @@ export default function PublicVettingFormPage() {
 
   useEffect(() => {
     if (!data || formHydrated) return;
-    setForm({ ...data.form });
+    const nextForm = { ...data.form };
+    if (!nextForm.signaturePrintName?.trim()) {
+      const fullName = `${nextForm.firstName || ""} ${nextForm.lastName || ""}`.trim();
+      if (fullName) nextForm.signaturePrintName = fullName;
+    }
+    if (!nextForm.signatureDate) {
+      nextForm.signatureDate = new Date().toISOString().slice(0, 10);
+    }
+    setForm(nextForm);
     setAckEqualOps(data.acknowledgements.equalOps);
     setAckZeroHours(data.acknowledgements.zeroHours);
     setAckOptOut(!!data.acknowledgements.optOut);
@@ -795,11 +804,23 @@ export default function PublicVettingFormPage() {
 
   const submitMut = useMutation({
     mutationFn: async () => {
+      if (!form) throw new Error("Form not loaded");
+      const printName =
+        form.signaturePrintName.trim() ||
+        `${form.firstName || ""} ${form.lastName || ""}`.trim();
+      if (!printName) throw new Error("Print full name is required before submitting");
+      if (!form.signatureData.trim()) throw new Error("Signature is required before submitting");
+      const payloadForm = {
+        ...form,
+        signaturePrintName: printName,
+        signatureDate: form.signatureDate || new Date().toISOString().slice(0, 10),
+      };
+      setForm(payloadForm);
       const res = await fetch(`/api/public/vetting-form/${token}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          form,
+          form: payloadForm,
           acknowledgeEqualOps: ackEqualOps,
           acknowledgeZeroHours: ackZeroHours,
           acknowledgeCodeOfConduct: ackConduct,
@@ -807,10 +828,13 @@ export default function PublicVettingFormPage() {
         }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.message || "Failed to submit");
+      if (!res.ok) throw new Error(body.message || body.error || "Failed to submit");
       return body;
     },
-    onSuccess: () => setSubmitted(true),
+    onSuccess: () => {
+      setSubmitted(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/public/vetting-form", token] });
+    },
   });
 
   const update = (key: keyof VettingFormPayload, value: string) => {
@@ -1495,6 +1519,12 @@ export default function PublicVettingFormPage() {
 
             {step === "review" && (
               <div className="space-y-3 text-sm">
+                {!showSubmittedBanner && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950 text-xs sm:text-sm">
+                    Saving only stores a draft. Click <strong>Submit application</strong> below to complete the form —
+                    shifts cannot be assigned until this is submitted.
+                  </div>
+                )}
                 <p className="font-medium">Review your details before final submission.</p>
                 <div className="grid sm:grid-cols-2 gap-2 text-muted-foreground">
                   <p><strong>Name:</strong> {form.firstName} {form.lastName}</p>
@@ -1546,6 +1576,17 @@ export default function PublicVettingFormPage() {
               </p>
             )}
 
+            {step === "review" && !showSubmittedBanner && (
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 space-y-1">
+                <p className="font-medium">Submit is enabled when all of these are done:</p>
+                <p>{form.signatureData ? "✓" : "✗"} Signature on Application Form step</p>
+                <p>{ackEqualOps ? "✓" : "✗"} Equal Ops Review acknowledged</p>
+                <p>{ackZeroHours ? "✓" : "✗"} Zero Hours Contract acknowledged</p>
+                <p>{ackOptOut ? "✓" : "✗"} OPT OUT Agreement acknowledged</p>
+                <p>{ackConduct ? "✓" : "✗"} Code of Conduct acknowledged</p>
+              </div>
+            )}
+
             <div className="flex flex-wrap justify-between gap-2 pt-4 border-t">
               <Button variant="outline" onClick={goBack} disabled={currentIdx === 0}>
                 Back
@@ -1568,8 +1609,14 @@ export default function PublicVettingFormPage() {
                       !ackZeroHours ||
                       !ackOptOut ||
                       !ackConduct ||
-                      !form.signatureData ||
-                      !form.signaturePrintName.trim()
+                      !form.signatureData
+                    }
+                    title={
+                      !form.signatureData
+                        ? "Add your signature on the Application Form step"
+                        : !(ackEqualOps && ackZeroHours && ackOptOut && ackConduct)
+                          ? "Tick all acknowledgement checkboxes on the previous steps"
+                          : "Submit application"
                     }
                   >
                     {submitMut.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}

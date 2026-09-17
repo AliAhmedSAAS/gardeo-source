@@ -150,16 +150,47 @@ function parseSiaCheckerResponse(
 }
 
 type SiaRegisterRecord = {
-  FirstName?: string;
-  Surname?: string;
-  LicenceNumber?: string;
-  ExpiryDate?: string;
-  Status?: string;
-  Role?: string;
-  LicenceSector?: string;
-  StatusExplanation?: string;
+  FirstName?: string | null;
+  Surname?: string | null;
+  LicenceNumber?: string | null;
+  ExpiryDate?: string | null;
+  Status?: string | null;
+  Role?: string | null;
+  LicenceSector?: string | null;
+  StatusExplanation?: string | null;
   ErrorMessage?: string | null;
+  LicenceId?: string | null;
 };
+
+function isEmptySiaRegisterRecord(record: SiaRegisterRecord | undefined | null): boolean {
+  if (!record) return true;
+  const licenceId = String(record.LicenceId || "").trim();
+  const hasZeroId = !licenceId || /^0{8}-0{4}-0{4}-0{4}-0{12}$/i.test(licenceId);
+  const hasAnyField = Boolean(
+    record.FirstName ||
+      record.Surname ||
+      record.LicenceNumber ||
+      record.ExpiryDate ||
+      record.Status ||
+      record.Role ||
+      record.LicenceSector,
+  );
+  return hasZeroId && !hasAnyField;
+}
+
+function isUsableSiaApiKey(value: string | undefined | null): boolean {
+  const key = value?.trim() || "";
+  if (!key) return false;
+  const placeholders = new Set([
+    "your_key_here",
+    "your-api-key",
+    "changeme",
+    "xxx",
+    "test",
+    "placeholder",
+  ]);
+  return !placeholders.has(key.toLowerCase());
+}
 
 function formatRegisterHolderName(record: SiaRegisterRecord): string | null {
   const first = record.FirstName?.trim();
@@ -189,7 +220,8 @@ function parseSiaRegisterResponse(
   }
 
   const record = data.Records?.[0];
-  if (!record) {
+  if (!record || isEmptySiaRegisterRecord(record)) {
+    // Official ROLH often returns a zero-GUID stub with null fields when there is no match.
     return buildResult(licenceNumber, "sia_register", {
       valid: false,
       found: false,
@@ -345,18 +377,24 @@ export async function verifySiaLicence(
     });
   }
 
-  const apiKey = process.env.SIA_CHECK_API_KEY?.trim();
+  // Primary: official SIA Register of Licence Holders API
+  // https://api.sia.gov.uk/external/rolh/api/searchbylicencenumber
+  try {
+    return await verifyViaSiaRegisterProxy(licenceNumber, options?.employeeName);
+  } catch (rolhErr) {
+    console.warn("[SIA] Official ROLH API failed:", (rolhErr as Error).message);
 
-  if (apiKey) {
-    try {
-      return await verifyViaSiaChecker(licenceNumber, options?.employeeName);
-    } catch (err) {
-      // Fall through to official register proxy if third-party API fails
-      console.warn("[SIA] Third-party API failed, falling back to official register:", (err as Error).message);
+    const apiKey = process.env.SIA_CHECK_API_KEY?.trim();
+    if (isUsableSiaApiKey(apiKey)) {
+      try {
+        return await verifyViaSiaChecker(licenceNumber, options?.employeeName);
+      } catch (err) {
+        console.warn("[SIA] Third-party API also failed:", (err as Error).message);
+      }
     }
-  }
 
-  return verifyViaSiaRegisterProxy(licenceNumber, options?.employeeName);
+    throw rolhErr;
+  }
 }
 
 export function isEmployeeSiaRegisterValid(employee: {

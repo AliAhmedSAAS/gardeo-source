@@ -843,6 +843,9 @@ export async function submitVettingFormByToken(
       status: 400,
     };
   }
+  if (!merged.signaturePrintName.trim()) {
+    merged.signaturePrintName = `${merged.firstName || ""} ${merged.lastName || ""}`.trim();
+  }
   if (!merged.signaturePrintName.trim() || !merged.signatureData.trim()) {
     return {
       ok: false as const,

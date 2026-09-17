@@ -43,6 +43,27 @@ function stripEntityPrefix(id: string): string {
   return String(id).replace(/^(SUP|CLT|SITE|EMP|SHIFT)-/i, "");
 }
 
+/** Bypass HTTP/CDN/browser caches when calling external sync APIs. */
+function noCacheFetchInit(extraHeaders: Record<string, string> = {}, timeoutMs = 60000): RequestInit {
+  return {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      ...extraHeaders,
+    },
+    signal: AbortSignal.timeout(timeoutMs),
+  };
+}
+
+function withCacheBust(params: URLSearchParams): URLSearchParams {
+  params.set("_t", String(Date.now()));
+  params.set("_nocache", "1");
+  return params;
+}
+
 const VALID_SHIFT_STATUSES = new Set([
   "scheduled", "in_progress", "completed", "cancelled", "no_show",
   "booked_on", "booked_off", "verified", "missed"
@@ -71,20 +92,17 @@ async function fetchFromRestPhpApi(
   const perPage = 200;
 
   while (true) {
-    const params = new URLSearchParams({
+    const params = withCacheBust(new URLSearchParams({
       api_key: apiKey,
       date_from: dateFrom,
       date_to: dateTo,
       page: String(page),
       per_page: String(perPage),
-    });
+    }));
     if (supplierId) params.set("supplier_id", supplierId);
 
     const fullUrl = `${url.replace(/\/$/, "")}?${params.toString()}`;
-    const response = await fetch(fullUrl, {
-      headers: { "Accept": "application/json" },
-      signal: AbortSignal.timeout(60000),
-    });
+    const response = await fetch(fullUrl, noCacheFetchInit());
 
     if (!response.ok) {
       throw new Error(`API error ${response.status}: ${await response.text()}`);
@@ -206,18 +224,15 @@ async function fetchFromPhpApi(
   dateTo: string,
   supplierId?: string
 ): Promise<any[]> {
-  const params = new URLSearchParams({
+  const params = withCacheBust(new URLSearchParams({
     api_key: apiKey,
     shift_from: dateFrom,
     shift_to: dateTo,
-  });
+  }));
   if (supplierId) params.set("contractor_id", supplierId);
 
   const fullUrl = `${url.replace(/\/$/, "")}?${params.toString()}`;
-  const response = await fetch(fullUrl, {
-    headers: { "Accept": "application/json" },
-    signal: AbortSignal.timeout(60000),
-  });
+  const response = await fetch(fullUrl, noCacheFetchInit());
 
   if (!response.ok) {
     throw new Error(`API error ${response.status}: ${await response.text()}`);
@@ -526,13 +541,10 @@ async function fetchPaginated(
       }
     }
 
-    const url = `${baseUrl.replace(/\/$/, "")}${endpoint}?${params.toString()}`;
-    const response = await fetch(url, {
-      headers: {
-        "X-API-Key": apiKey,
-        "Accept": "application/json",
-      },
-    });
+    const url = `${baseUrl.replace(/\/$/, "")}${endpoint}?${withCacheBust(params).toString()}`;
+    const response = await fetch(url, noCacheFetchInit({
+      "X-API-Key": apiKey,
+    }));
 
     if (!response.ok) {
       throw new Error(`API error ${response.status}: ${await response.text()}`);
@@ -1262,8 +1274,8 @@ export async function runSync(
         while (retries > 0) {
           try {
             if (empPage > startPage) await new Promise(r => setTimeout(r, 300));
-            const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${empPage}&per_page=200`;
-            const response = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(60000) });
+            const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${empPage}&per_page=200&_t=${Date.now()}&_nocache=1`;
+            const response = await fetch(url, noCacheFetchInit());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const text = await response.text();
             if (!text || text.length < 2) throw new Error("Empty response");
@@ -2065,8 +2077,8 @@ export async function runDrySync(
     while (currentPage <= maxPage) {
       try {
         if (currentPage > startPage) await new Promise(r => setTimeout(r, 300));
-        const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${currentPage}&per_page=200`;
-        const response = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(30000) });
+        const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${currentPage}&per_page=200&_t=${Date.now()}&_nocache=1`;
+        const response = await fetch(url, noCacheFetchInit({}, 30000));
         if (!response.ok) throw new Error(`Employees API returned status ${response.status}`);
         const body = await response.json();
         const pageData: any[] = body.data || body;

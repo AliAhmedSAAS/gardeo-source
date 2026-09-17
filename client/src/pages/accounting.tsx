@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Upload, Search, Trash2, LinkIcon, Tag, Download, ArrowUpDown, Building2, FileText, Calculator, PoundSterling, TrendingUp, TrendingDown, Minus, Users, Sparkles, Check, X, Zap, Store, Plus, Pencil, CreditCard, FileDown, ChevronDown, ChevronRight, RefreshCw, CheckCircle2, AlertCircle, Link2, Clock, Activity } from "lucide-react";
@@ -819,14 +820,18 @@ function BankStatementsTab() {
           )}
           {bulkMode === "supplier" && (
             <div className="flex items-center gap-2">
-              <Select value={bulkSupplierId} onValueChange={setBulkSupplierId}>
-                <SelectTrigger className="w-[220px] h-8 text-xs" data-testid="select-bulk-supplier"><SelectValue placeholder="Choose supplier..." /></SelectTrigger>
-                <SelectContent>
-                  {(suppliersQuery.data as any[] || []).map((s: any) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.company_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={bulkSupplierId}
+                onValueChange={setBulkSupplierId}
+                options={(suppliersQuery.data as any[] || []).map((s: any) => ({
+                  value: String(s.id),
+                  label: s.company_name,
+                }))}
+                placeholder="Choose supplier..."
+                searchPlaceholder="Search suppliers…"
+                triggerClassName="w-[220px] h-8 text-xs"
+                data-testid="select-bulk-supplier"
+              />
               <Button size="sm" disabled={!bulkSupplierId || bulkAssignSupplierMutation.isPending} onClick={() => bulkAssignSupplierMutation.mutate({ transactionIds: Array.from(selectedTxnIds), supplierId: parseInt(bulkSupplierId) })} data-testid="button-bulk-confirm-supplier">
                 {bulkAssignSupplierMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
                 Apply
@@ -838,14 +843,18 @@ function BankStatementsTab() {
           )}
           {bulkMode === "client" && (
             <div className="flex items-center gap-2">
-              <Select value={bulkClientId} onValueChange={setBulkClientId}>
-                <SelectTrigger className="w-[220px] h-8 text-xs" data-testid="select-bulk-client"><SelectValue placeholder="Choose client..." /></SelectTrigger>
-                <SelectContent>
-                  {(clientsQuery.data as any[] || []).map((c: any) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={bulkClientId}
+                onValueChange={setBulkClientId}
+                options={(clientsQuery.data as any[] || []).map((c: any) => ({
+                  value: String(c.id),
+                  label: c.company_name,
+                }))}
+                placeholder="Choose client..."
+                searchPlaceholder="Search clients…"
+                triggerClassName="w-[220px] h-8 text-xs"
+                data-testid="select-bulk-client"
+              />
               <Button size="sm" disabled={!bulkClientId || bulkAssignClientMutation.isPending} onClick={() => bulkAssignClientMutation.mutate({ transactionIds: Array.from(selectedTxnIds), clientId: parseInt(bulkClientId) })} data-testid="button-bulk-confirm-client">
                 {bulkAssignClientMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
                 Apply
@@ -1014,35 +1023,37 @@ function BankStatementsTab() {
                           {editingSuggestionId === sug.id ? (
                             <div className="space-y-1">
                               {(sug.entity_type === 'supplier') && (
-                                <Select
+                                <SearchableSelect
                                   value={sug.entity_id ? String(sug.entity_id) : ""}
                                   onValueChange={(val) => {
                                     const supplier = (suppliersQuery.data as any[] || []).find((s: any) => String(s.id) === val);
                                     updateSuggestionMutation.mutate({ id: sug.id, entityType: 'supplier', entityId: parseInt(val), vendorId: null, expenseCategory: null });
                                   }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs" data-testid={`select-edit-supplier-${sug.id}`}><SelectValue placeholder="Choose supplier..." /></SelectTrigger>
-                                  <SelectContent>
-                                    {(suppliersQuery.data as any[] || []).map((s: any) => (
-                                      <SelectItem key={s.id} value={String(s.id)}>{s.company_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  options={(suppliersQuery.data as any[] || []).map((s: any) => ({
+                                    value: String(s.id),
+                                    label: s.company_name,
+                                  }))}
+                                  placeholder="Choose supplier..."
+                                  searchPlaceholder="Search suppliers…"
+                                  triggerClassName="h-8 text-xs"
+                                  data-testid={`select-edit-supplier-${sug.id}`}
+                                />
                               )}
                               {(sug.entity_type === 'client') && (
-                                <Select
+                                <SearchableSelect
                                   value={sug.entity_id ? String(sug.entity_id) : ""}
                                   onValueChange={(val) => {
                                     updateSuggestionMutation.mutate({ id: sug.id, entityType: 'client', entityId: parseInt(val), vendorId: null, expenseCategory: null });
                                   }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs" data-testid={`select-edit-client-${sug.id}`}><SelectValue placeholder="Choose client..." /></SelectTrigger>
-                                  <SelectContent>
-                                    {(clientsQuery.data as any[] || []).map((c: any) => (
-                                      <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  options={(clientsQuery.data as any[] || []).map((c: any) => ({
+                                    value: String(c.id),
+                                    label: c.company_name,
+                                  }))}
+                                  placeholder="Choose client..."
+                                  searchPlaceholder="Search clients…"
+                                  triggerClassName="h-8 text-xs"
+                                  data-testid={`select-edit-client-${sug.id}`}
+                                />
                               )}
                               {(sug.entity_type === 'purchase' || sug.entity_type === 'vendor') && (
                                 <>
@@ -1281,14 +1292,17 @@ function BankStatementsTab() {
 
               <div>
                 <Label>Select Supplier</Label>
-                <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                  <SelectTrigger data-testid="select-supplier"><SelectValue placeholder="Choose supplier..." /></SelectTrigger>
-                  <SelectContent>
-                    {(suppliersQuery.data as any[] || []).map((s: any) => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedSupplier}
+                  onValueChange={setSelectedSupplier}
+                  options={(suppliersQuery.data as any[] || []).map((s: any) => ({
+                    value: String(s.id),
+                    label: s.company_name,
+                  }))}
+                  placeholder="Choose supplier..."
+                  searchPlaceholder="Search suppliers…"
+                  data-testid="select-supplier"
+                />
               </div>
 
               {selectedSupplier && (
@@ -1344,14 +1358,17 @@ function BankStatementsTab() {
             <div className="space-y-4">
               <div>
                 <Label>Select Client</Label>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger data-testid="select-client"><SelectValue placeholder="Choose client..." /></SelectTrigger>
-                  <SelectContent>
-                    {(clientsQuery.data as any[] || []).map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedClient}
+                  onValueChange={setSelectedClient}
+                  options={(clientsQuery.data as any[] || []).map((c: any) => ({
+                    value: String(c.id),
+                    label: c.company_name,
+                  }))}
+                  placeholder="Choose client..."
+                  searchPlaceholder="Search clients…"
+                  data-testid="select-client"
+                />
               </div>
 
               {selectedClient && (
@@ -1705,15 +1722,20 @@ function AllocationOverviewTab() {
               Recent Allocations {showRecentAllocs ? <ChevronDown className="h-4 w-4 inline ml-1" /> : <ChevronRight className="h-4 w-4 inline ml-1" />}
             </Button>
             {showRecentAllocs && (
-              <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                <SelectTrigger className="w-[200px]" data-testid="select-alloc-supplier-filter"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Suppliers</SelectItem>
-                  {allSuppliers.map((s: any) => (
-                    <SelectItem key={s.supplierId} value={String(s.supplierId)}>{s.companyName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={supplierFilter}
+                onValueChange={setSupplierFilter}
+                options={allSuppliers.map((s: any) => ({
+                  value: String(s.supplierId),
+                  label: s.companyName,
+                }))}
+                noneValue="all"
+                noneLabel="All Suppliers"
+                placeholder="All Suppliers"
+                searchPlaceholder="Search suppliers…"
+                triggerClassName="w-[200px]"
+                data-testid="select-alloc-supplier-filter"
+              />
             )}
           </div>
         </CardHeader>
@@ -1948,15 +1970,20 @@ function ClientInvoicesTab() {
                 {showTxns ? <X className="h-3 w-3 ml-1" /> : <Plus className="h-3 w-3 ml-1" />}
               </Button>
               {showTxns && (
-                <Select value={txnClientFilter} onValueChange={(v) => { setTxnClientFilter(v); setSelectedTxns(new Set()); }}>
-                  <SelectTrigger className="w-[200px] h-8 text-xs" data-testid="select-txn-client-filter"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Clients</SelectItem>
-                    {txnClients.map(([id, name]) => (
-                      <SelectItem key={id} value={id}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={txnClientFilter}
+                  onValueChange={(v) => { setTxnClientFilter(v); setSelectedTxns(new Set()); }}
+                  options={txnClients.map(([id, name]) => ({
+                    value: id,
+                    label: name,
+                  }))}
+                  noneValue="all"
+                  noneLabel="All Clients"
+                  placeholder="All Clients"
+                  searchPlaceholder="Search clients…"
+                  triggerClassName="w-[200px] h-8 text-xs"
+                  data-testid="select-txn-client-filter"
+                />
               )}
             </div>
             {showTxns && selectedTxns.size > 0 && (
@@ -2113,14 +2140,17 @@ function ClientInvoicesTab() {
           <div className="space-y-4">
             <div>
               <Label>Client</Label>
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger data-testid="select-invoice-client"><SelectValue placeholder="Select client..." /></SelectTrigger>
-                <SelectContent>
-                  {((clientsQuery.data || []) as any[]).map((c: any) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={selectedClient}
+                onValueChange={setSelectedClient}
+                options={((clientsQuery.data || []) as any[]).map((c: any) => ({
+                  value: String(c.id),
+                  label: c.company_name,
+                }))}
+                placeholder="Select client..."
+                searchPlaceholder="Search clients…"
+                data-testid="select-invoice-client"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

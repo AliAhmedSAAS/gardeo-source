@@ -109,6 +109,8 @@ import {
   tenantEmailSettings,
   type TenantOfficerType, type InsertTenantOfficerType,
   tenantOfficerTypes,
+  type TenantDutyType, type InsertTenantDutyType,
+  tenantDutyTypes,
   type TenantXeroConnection, type InsertTenantXeroConnection,
   tenantXeroConnections,
   type XeroSyncRecord, type InsertXeroSyncRecord,
@@ -129,6 +131,7 @@ import {
   trainingRecords,
 } from "@shared/schema";
 import { DEFAULT_OFFICER_TYPES } from "@shared/defaultOfficerTypes";
+import { DEFAULT_DUTY_TYPES } from "@shared/defaultDutyTypes";
 import { db, pool } from "./db";
 import { eq, and, desc, gte, lte, isNotNull, sql, inArray, asc } from "drizzle-orm";
 
@@ -522,6 +525,14 @@ export interface IStorage {
   deleteTenantOfficerType(tenantId: number, id: number): Promise<boolean>;
 
   backfillDefaultOfficerTypesForAllTenants(): Promise<void>;
+
+  getTenantDutyTypes(tenantId: number): Promise<TenantDutyType[]>;
+  getTenantDutyType(tenantId: number, id: number): Promise<TenantDutyType | undefined>;
+  ensureDefaultDutyTypes(tenantId: number): Promise<TenantDutyType[]>;
+  createTenantDutyType(tenantId: number, name: string, requiresLicense?: boolean): Promise<TenantDutyType>;
+  updateTenantDutyType(tenantId: number, id: number, data: { name?: string; requiresLicense?: boolean }): Promise<TenantDutyType | undefined>;
+  deleteTenantDutyType(tenantId: number, id: number): Promise<boolean>;
+  backfillDefaultDutyTypesForAllTenants(): Promise<void>;
 
   getEmployeeImmigration(employeeId: number): Promise<EmployeeImmigration | undefined>;
   upsertEmployeeImmigration(employeeId: number, data: Partial<InsertEmployeeImmigration>): Promise<EmployeeImmigration>;
@@ -2286,6 +2297,96 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(tenantOfficerTypes)
       .where(and(eq(tenantOfficerTypes.id, id), eq(tenantOfficerTypes.tenantId, tenantId)))
       .returning({ id: tenantOfficerTypes.id });
+    return result.length > 0;
+  }
+
+  async getTenantDutyTypes(tenantId: number): Promise<TenantDutyType[]> {
+    return db.select().from(tenantDutyTypes)
+      .where(eq(tenantDutyTypes.tenantId, tenantId))
+      .orderBy(asc(tenantDutyTypes.sortOrder), asc(tenantDutyTypes.name));
+  }
+
+  async getTenantDutyType(tenantId: number, id: number): Promise<TenantDutyType | undefined> {
+    const [row] = await db.select().from(tenantDutyTypes)
+      .where(and(eq(tenantDutyTypes.id, id), eq(tenantDutyTypes.tenantId, tenantId)))
+      .limit(1);
+    return row;
+  }
+
+  async ensureDefaultDutyTypes(tenantId: number): Promise<TenantDutyType[]> {
+    const existing = await this.getTenantDutyTypes(tenantId);
+    const existingNames = new Set(existing.map((t) => t.name.toLowerCase()));
+    const missing = DEFAULT_DUTY_TYPES.filter((t) => !existingNames.has(t.name.toLowerCase()));
+
+    if (missing.length > 0) {
+      const maxSort = existing.reduce((max, t) => Math.max(max, t.sortOrder ?? 0), 0);
+      const rows = missing.map((t, index) => ({
+        tenantId,
+        name: t.name,
+        requiresLicense: t.requiresLicense,
+        sortOrder: maxSort + index + 1,
+      }));
+      await db.insert(tenantDutyTypes)
+        .values(rows)
+        .onConflictDoNothing({ target: [tenantDutyTypes.tenantId, tenantDutyTypes.name] });
+    }
+
+    return this.getTenantDutyTypes(tenantId);
+  }
+
+  async backfillDefaultDutyTypesForAllTenants(): Promise<void> {
+    const allTenants = await this.getAllTenants();
+    for (const tenant of allTenants) {
+      await this.ensureDefaultDutyTypes(tenant.id);
+    }
+  }
+
+  async createTenantDutyType(tenantId: number, name: string, requiresLicense = false): Promise<TenantDutyType> {
+    const normalized = name.trim().replace(/\s+/g, " ");
+    if (!normalized) throw new Error("Duty type name is required");
+
+    const existing = await this.getTenantDutyTypes(tenantId);
+    const duplicate = existing.find((t) => t.name.toLowerCase() === normalized.toLowerCase());
+    if (duplicate) return duplicate;
+
+    const maxSort = existing.reduce((max, t) => Math.max(max, t.sortOrder ?? 0), 0);
+    const [created] = await db.insert(tenantDutyTypes).values({
+      tenantId,
+      name: normalized,
+      requiresLicense: Boolean(requiresLicense),
+      sortOrder: maxSort + 1,
+    }).returning();
+    return created;
+  }
+
+  async updateTenantDutyType(
+    tenantId: number,
+    id: number,
+    data: { name?: string; requiresLicense?: boolean },
+  ): Promise<TenantDutyType | undefined> {
+    const patch: Partial<InsertTenantDutyType> = {};
+    if (typeof data.name === "string") {
+      const normalized = data.name.trim().replace(/\s+/g, " ");
+      if (!normalized) throw new Error("Duty type name is required");
+      patch.name = normalized;
+    }
+    if (typeof data.requiresLicense === "boolean") {
+      patch.requiresLicense = data.requiresLicense;
+    }
+    if (Object.keys(patch).length === 0) {
+      return this.getTenantDutyType(tenantId, id);
+    }
+    const [updated] = await db.update(tenantDutyTypes)
+      .set(patch)
+      .where(and(eq(tenantDutyTypes.id, id), eq(tenantDutyTypes.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteTenantDutyType(tenantId: number, id: number): Promise<boolean> {
+    const result = await db.delete(tenantDutyTypes)
+      .where(and(eq(tenantDutyTypes.id, id), eq(tenantDutyTypes.tenantId, tenantId)))
+      .returning({ id: tenantDutyTypes.id });
     return result.length > 0;
   }
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, MapPinned, Plus, MapPin, Building, Loader2, Edit, Trash2, CheckCircle2, X,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye,
 } from "lucide-react";
 
 interface ShiftPattern { period: string; hours: number }
@@ -33,6 +35,9 @@ type SiteRow = {
   clientContact: string | null;
   clientEmail: string | null;
   clientPhone: string | null;
+  managerName: string | null;
+  managerEmail: string | null;
+  bookOnEmail: string | null;
   contractRef: string | null;
   isActive: boolean;
   notes: string | null;
@@ -53,11 +58,13 @@ const emptyForm = {
   name: "", address: "", city: "", postcode: "",
   latitude: "", longitude: "", clientId: "",
   clientName: "", clientContact: "", clientEmail: "", clientPhone: "",
+  managerName: "", managerEmail: "", bookOnEmail: "",
   contractRef: "", notes: "", geofenceRadiusMetres: "",
 };
 
 export default function SitesPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
@@ -103,7 +110,13 @@ export default function SitesPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const payload = { ...data, clientId: data.clientId ? parseInt(data.clientId) : null };
+      const payload = {
+        ...data,
+        clientId: data.clientId && data.clientId !== "none" ? parseInt(data.clientId) : null,
+        managerName: data.managerName?.trim() || null,
+        managerEmail: data.managerEmail?.trim() || null,
+        bookOnEmail: data.bookOnEmail?.trim() || null,
+      };
       const res = await apiRequest("POST", "/api/sites", payload);
       return res.json();
     },
@@ -118,7 +131,13 @@ export default function SitesPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const payload = { ...data, clientId: data.clientId ? parseInt(data.clientId) : null };
+      const payload = {
+        ...data,
+        clientId: data.clientId && data.clientId !== "none" ? parseInt(data.clientId) : null,
+        managerName: data.managerName?.trim() || null,
+        managerEmail: data.managerEmail?.trim() || null,
+        bookOnEmail: data.bookOnEmail?.trim() || null,
+      };
       const res = await apiRequest("PATCH", `/api/sites/${id}`, payload);
       return res.json();
     },
@@ -195,6 +214,8 @@ export default function SitesPage() {
       clientId: s.clientId ? String(s.clientId) : "",
       clientName: s.clientName || "", clientContact: s.clientContact || "",
       clientEmail: s.clientEmail || "", clientPhone: s.clientPhone || "",
+      managerName: s.managerName || "", managerEmail: s.managerEmail || "",
+      bookOnEmail: s.bookOnEmail || "",
       contractRef: s.contractRef || "", notes: s.notes || "",
       geofenceRadiusMetres: s.geofenceRadiusMetres != null ? String(s.geofenceRadiusMetres) : "",
     });
@@ -235,17 +256,56 @@ export default function SitesPage() {
       <h4 className="text-sm font-medium">Client Assignment</h4>
       <div className="space-y-1.5">
         <Label className="text-xs">Assign to Client</Label>
-        <Select value={form.clientId} onValueChange={v => setForm(f => ({ ...f, clientId: v }))}>
-          <SelectTrigger data-testid="select-site-client">
-            <SelectValue placeholder="Select a client (optional)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No client</SelectItem>
-            {clientOptions.map(c => (
-              <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={form.clientId}
+          onValueChange={v => setForm(f => ({ ...f, clientId: v }))}
+          options={clientOptions.map(c => ({
+            value: String(c.id),
+            label: c.company_name,
+          }))}
+          noneValue="none"
+          noneLabel="No client"
+          placeholder="Select a client (optional)"
+          searchPlaceholder="Search clients…"
+          data-testid="select-site-client"
+        />
+      </div>
+
+      <Separator />
+      <h4 className="text-sm font-medium">Site Contacts</h4>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Manager Name</Label>
+          <Input
+            value={form.managerName}
+            onChange={e => setForm(f => ({ ...f, managerName: e.target.value }))}
+            placeholder="Site manager name"
+            data-testid="input-site-manager-name"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Manager Email</Label>
+          <Input
+            type="email"
+            value={form.managerEmail}
+            onChange={e => setForm(f => ({ ...f, managerEmail: e.target.value }))}
+            placeholder="manager@example.com"
+            data-testid="input-site-manager-email"
+          />
+        </div>
+        <div className="space-y-1.5 col-span-2">
+          <Label className="text-xs">Book-on Email</Label>
+          <Input
+            type="email"
+            value={form.bookOnEmail}
+            onChange={e => setForm(f => ({ ...f, bookOnEmail: e.target.value }))}
+            placeholder="bookon@example.com"
+            data-testid="input-site-bookon-email"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Optional email for book-on / attendance notifications for this site.
+          </p>
+        </div>
       </div>
 
       <Separator />
@@ -365,19 +425,23 @@ export default function SitesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search sites..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" data-testid="input-search-sites" />
         </div>
-        <Select value={clientFilter} onValueChange={v => { setClientFilter(v); setPage(1); setSelectedIds(new Set()); }}>
-          <SelectTrigger className="w-56" data-testid="select-client-filter">
-            <Building className="w-4 h-4 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Filter by client" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {clientOptions.sort((a, b) => a.company_name.localeCompare(b.company_name)).map(c => (
-              <SelectItem key={c.id} value={String(c.id)}>{c.company_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={clientFilter}
+          onValueChange={v => { setClientFilter(v); setPage(1); setSelectedIds(new Set()); }}
+          options={[
+            { value: "unassigned", label: "Unassigned" },
+            ...clientOptions.sort((a, b) => a.company_name.localeCompare(b.company_name)).map(c => ({
+              value: String(c.id),
+              label: c.company_name,
+            })),
+          ]}
+          noneValue="all"
+          noneLabel="All Clients"
+          placeholder="Filter by client"
+          searchPlaceholder="Search clients…"
+          triggerClassName="w-56"
+          data-testid="select-client-filter"
+        />
         {sites.length > 0 && (
           <Button variant="outline" size="sm" onClick={selectAllOnPage} data-testid="button-select-all-sites">
             {sites.every(s => selectedIds.has(s.id)) ? "Deselect Page" : "Select Page"}
@@ -417,7 +481,7 @@ export default function SitesPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           {s.siteCode && <span className="text-xs text-muted-foreground font-mono" data-testid={`text-site-code-${s.id}`}>{s.siteCode}</span>}
-                          <div className="font-medium text-sm truncate" data-testid={`text-site-name-${s.id}`}>{s.name}</div>
+                          <div className="font-medium text-sm truncate cursor-pointer hover:underline" onClick={() => setLocation(`/sites/${s.id}`)} data-testid={`text-site-name-${s.id}`}>{s.name}</div>
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
                           {[s.address, s.city, s.postcode].filter(Boolean).join(", ")}
@@ -425,6 +489,20 @@ export default function SitesPage() {
                         {clientLabel && (
                           <div className="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
                             <Building className="w-3 h-3" /> {clientLabel}
+                          </div>
+                        )}
+                        {(s.managerName || s.managerEmail || s.bookOnEmail) && (
+                          <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                            {(s.managerName || s.managerEmail) && (
+                              <div data-testid={`text-site-manager-${s.id}`}>
+                                Manager: {[s.managerName, s.managerEmail].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
+                            {s.bookOnEmail && (
+                              <div data-testid={`text-site-bookon-${s.id}`}>
+                                Book-on: {s.bookOnEmail}
+                              </div>
+                            )}
                           </div>
                         )}
                         {s.shiftPatterns && s.shiftPatterns.length > 0 && (
@@ -440,6 +518,10 @@ export default function SitesPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge variant={s.isActive ? "default" : "destructive"}>{s.isActive ? "Active" : "Inactive"}</Badge>
+                      <Button size="sm" variant="outline" className="h-7" onClick={() => setLocation(`/sites/${s.id}`)} data-testid={`button-view-site-${s.id}`}>
+                        <Eye className="w-3.5 h-3.5 mr-1" />
+                        Open
+                      </Button>
                       <Button size="sm" variant="outline" className="h-7" onClick={() => openEdit(s)} data-testid={`button-edit-site-${s.id}`}>
                         <Edit className="w-3.5 h-3.5" />
                       </Button>

@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -797,23 +798,20 @@ export default function DataImportPage() {
               </CardHeader>
               <CardContent>
                 <div className="max-w-md">
-                  <Select
-                    value={selectedSupplierId}
+                  <SearchableSelect
+                    value={selectedSupplierId || "__none__"}
                     onValueChange={(val) => setSelectedSupplierId(val === "__none__" ? "" : val)}
+                    options={suppliers.map(s => ({
+                      value: String(s.id),
+                      label: s.companyName,
+                    }))}
+                    noneValue="__none__"
+                    noneLabel="— No supplier override (use CSV data) —"
+                    placeholder={isSuppliersLoading ? "Loading suppliers..." : "— No supplier override (use CSV data) —"}
+                    searchPlaceholder="Search suppliers…"
                     disabled={isSuppliersLoading}
-                  >
-                    <SelectTrigger data-testid="select-override-supplier">
-                      <SelectValue placeholder={isSuppliersLoading ? "Loading suppliers..." : "— No supplier override (use CSV data) —"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">— No supplier override (use CSV data) —</SelectItem>
-                      {suppliers.map(s => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          {s.companyName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    data-testid="select-override-supplier"
+                  />
                   {selectedSupplierId && (
                     <p className="text-sm text-muted-foreground mt-2">
                       All shifts will be assigned to <span className="font-medium">{suppliers.find(s => String(s.id) === selectedSupplierId)?.companyName}</span>, ignoring any supplier columns in the CSV.
@@ -1251,24 +1249,21 @@ export default function DataImportPage() {
                     {isUsingExisting && dup.matches.length > 1 && (
                       <div className="mt-2">
                         <p className="text-xs text-muted-foreground mb-1.5">Select which existing site to use:</p>
-                        <Select
+                        <SearchableSelect
                           value={String(decision?.siteId || dup.matches[0].siteId)}
                           onValueChange={(val) => setSiteDecisions(prev => ({
                             ...prev,
                             [dup.incomingSiteName]: { action: "use_existing", siteId: parseInt(val) },
                           }))}
-                        >
-                          <SelectTrigger className="w-full" data-testid={`select-existing-site-${idx}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {dup.matches.map((match) => (
-                              <SelectItem key={match.siteId} value={String(match.siteId)}>
-                                {match.siteName} — {match.matchReason} ({match.score}%)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={dup.matches.map((match) => ({
+                            value: String(match.siteId),
+                            label: `${match.siteName} — ${match.matchReason} (${match.score}%)`,
+                            keywords: match.siteName,
+                          }))}
+                          placeholder="Select site…"
+                          searchPlaceholder="Search sites…"
+                          data-testid={`select-existing-site-${idx}`}
+                        />
                       </div>
                     )}
 

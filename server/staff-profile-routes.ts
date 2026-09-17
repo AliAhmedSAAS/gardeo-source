@@ -290,6 +290,22 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
     }
   });
 
+  app.post("/api/admin/sia/verify", guard, async (req, res) => {
+    try {
+      const licenceInput = String(req.body.licenceNumber || "").trim();
+      if (!licenceInput) {
+        return res.status(400).json({ message: "SIA licence number is required" });
+      }
+      const employeeName = typeof req.body.employeeName === "string" ? req.body.employeeName.trim() : "";
+      const result = await verifySiaLicence(licenceInput, {
+        employeeName: employeeName || undefined,
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/admin/employees/:id/sia/verify", guard, async (req, res) => {
     try {
       const ctx = await loadEmployeeScoped(req, res);

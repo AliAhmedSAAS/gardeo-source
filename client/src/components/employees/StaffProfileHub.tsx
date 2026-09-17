@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -16,16 +17,28 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Trash2, User, Phone, Mail, FileText,
-  CheckCircle2, Clock, Unlock, FileCheck, ExternalLink, Send, Pencil, Upload, CreditCard, AlertTriangle,
+  CheckCircle2, Clock, ExternalLink, Send, Pencil, Upload, CreditCard, AlertTriangle,
   Download, Loader2, ShieldCheck,
 } from "lucide-react";
 
 function invalidateEmployee(employeeId: number) {
-  queryClient.invalidateQueries({ queryKey: ["/api/admin/employees", employeeId] });
-  queryClient.invalidateQueries({ queryKey: ["/api/admin/employees", String(employeeId)] });
+  const idKey = ["/api/admin/employees", employeeId] as const;
+  const idKeyStr = ["/api/admin/employees", String(employeeId)] as const;
+  queryClient.invalidateQueries({ queryKey: idKey });
+  queryClient.invalidateQueries({ queryKey: idKeyStr });
   queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
-  queryClient.refetchQueries({ queryKey: ["/api/admin/employees", employeeId] });
-  queryClient.refetchQueries({ queryKey: ["/api/admin/employees", String(employeeId)] });
+  void queryClient.refetchQueries({ queryKey: idKey, type: "active" });
+  void queryClient.refetchQueries({ queryKey: idKeyStr, type: "active" });
+}
+
+function patchEmployeeDocuments(employeeId: number, updater: (docs: any[]) => any[]) {
+  const patch = (old: any) => {
+    if (!old || typeof old !== "object") return old;
+    const docs = Array.isArray(old.documents) ? old.documents : [];
+    return { ...old, documents: updater(docs) };
+  };
+  queryClient.setQueryData(["/api/admin/employees", employeeId], patch);
+  queryClient.setQueryData(["/api/admin/employees", String(employeeId)], patch);
 }
 
 function looksLikeEmail(value: string | null | undefined): boolean {
@@ -361,14 +374,16 @@ export function PreferredSitesTab({ employeeId, rows }: { employeeId: number; ro
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add {subTab} site</DialogTitle></DialogHeader>
-          <Select value={siteId} onValueChange={setSiteId}>
-            <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
-            <SelectContent>
-              {sites.map((s: any) => (
-                <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={siteId}
+            onValueChange={setSiteId}
+            options={sites.map((s: any) => ({
+              value: String(s.id),
+              label: s.name,
+            }))}
+            placeholder="Select site"
+            searchPlaceholder="Search sites…"
+          />
           <DialogFooter>
             <Button onClick={() => createMut.mutate()} disabled={!siteId || createMut.isPending}>Save</Button>
           </DialogFooter>
@@ -1049,15 +1064,6 @@ export function HealthTab({ employeeId, health }: { employeeId: number; health: 
 export function VettingHubTab({ employee }: { employee: any }) {
   const employeeId = employee.id;
   const { toast } = useToast();
-  const handlers = useEmpMutation(employeeId, "Updated");
-  const unlockMut = useMutation({
-    mutationFn: async () => apiRequest("POST", `/api/admin/employees/${employeeId}/p-form/unlock`),
-    ...handlers,
-  });
-  const finishMut = useMutation({
-    mutationFn: async () => apiRequest("POST", `/api/admin/employees/${employeeId}/p-form/finish`),
-    ...handlers,
-  });
 
   const [veOpen, setVeOpen] = useState(false);
   const [veTarget, setVeTarget] = useState<any>(null);
@@ -1273,6 +1279,7 @@ export function VettingHubTab({ employee }: { employee: any }) {
       return res.json();
     },
     onSuccess: (data: { expiresAt: string; sentTo: string; formUrl?: string }) => {
+      invalidateEmployee(employeeId);
       setFormLinkOpen(false);
       const expiry = formatDate(data.expiresAt);
       toast({
@@ -1325,17 +1332,30 @@ export function VettingHubTab({ employee }: { employee: any }) {
 
   const records = employee.vettingRecords || [];
   const audit = employee.vettingAudit || [];
-  const pForm = employee.pForm;
+  const applicationForm = employee.applicationForm || { status: "not_sent" };
   const personalRefs = (employee.references || []).filter((r: any) => (r.referenceKind || "personal") === "personal");
   const employment = employee.employmentHistory || [];
+
+  const appFormStatusLabel =
+    applicationForm.status === "submitted"
+      ? "Submitted"
+      : applicationForm.status === "in_progress"
+        ? "In progress"
+        : applicationForm.status === "sent"
+          ? "Link sent"
+          : "Not sent";
+
+  const appFormBadgeClass =
+    applicationForm.status === "submitted"
+      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+      : applicationForm.status === "in_progress" || applicationForm.status === "sent"
+        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+        : "bg-muted text-muted-foreground";
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-border/70 bg-card p-3 sm:p-4 shadow-sm">
         <div className="flex flex-wrap gap-2 flex-1">
-          <Button size="sm" variant="outline" onClick={() => unlockMut.mutate()} disabled={unlockMut.isPending}>
-            <Unlock className="w-3.5 h-3.5 mr-1" /> Unlock PForm
-          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -1348,7 +1368,7 @@ export function VettingHubTab({ employee }: { employee: any }) {
             ) : (
               <FileText className="w-3.5 h-3.5 mr-1" />
             )}
-            Application Form
+            Download Application Form
           </Button>
           <Button
             size="sm"
@@ -1380,11 +1400,38 @@ export function VettingHubTab({ employee }: { employee: any }) {
             <Mail className="w-3.5 h-3.5 mr-1" /> Email Application Form
           </Button>
         </div>
-        <div className="flex items-center gap-2 sm:ml-auto shrink-0">
-          <Badge variant="secondary" className="capitalize">P Form: {pForm?.status || "locked"}</Badge>
-          <Button size="sm" onClick={() => finishMut.mutate()} disabled={finishMut.isPending}>
-            <FileCheck className="w-3.5 h-3.5 mr-1" /> Mark P Form Finished
-          </Button>
+        <div className="flex flex-col items-start sm:items-end gap-1 sm:ml-auto shrink-0">
+          <div className="flex items-center gap-2">
+            <Badge
+              className={`no-default-hover-elevate no-default-active-elevate capitalize ${appFormBadgeClass}`}
+              data-testid="badge-application-form-status"
+            >
+              {applicationForm.status === "submitted" ? (
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+              ) : (
+                <Clock className="w-3 h-3 mr-1" />
+              )}
+              Application Form: {appFormStatusLabel}
+            </Badge>
+          </div>
+          {applicationForm.status === "submitted" && applicationForm.submittedAt ? (
+            <p className="text-[11px] text-muted-foreground">
+              Submitted {formatDate(applicationForm.submittedAt)}
+              {applicationForm.recipientEmail ? ` · ${applicationForm.recipientEmail}` : ""}
+            </p>
+          ) : applicationForm.lastSavedAt ? (
+            <p className="text-[11px] text-muted-foreground">
+              Last saved {formatDate(applicationForm.lastSavedAt)} — applicant must click Submit
+            </p>
+          ) : applicationForm.status === "sent" ? (
+            <p className="text-[11px] text-muted-foreground">
+              Link sent{applicationForm.recipientEmail ? ` to ${applicationForm.recipientEmail}` : ""} — awaiting completion
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Email the application form link for the officer to complete and submit
+            </p>
+          )}
         </div>
       </div>
 
@@ -2028,8 +2075,20 @@ export function DocsHubTab({ employeeId, documents, employeeEmail }: { employeeI
 
   const handlers = useEmpMutation(employeeId, "Document verified");
   const verifyMut = useMutation({
-    mutationFn: async (docId: number) => apiRequest("POST", `/api/admin/employees/${employeeId}/documents/${docId}/verify`),
-    ...handlers,
+    mutationFn: async (docId: number) => {
+      const res = await apiRequest("POST", `/api/admin/employees/${employeeId}/documents/${docId}/verify`);
+      return res.json();
+    },
+    onSuccess: (updated: any) => {
+      if (updated?.id) {
+        patchEmployeeDocuments(employeeId, (docs) =>
+          docs.map((d) => (d.id === updated.id ? { ...d, ...updated } : d)),
+        );
+      }
+      invalidateEmployee(employeeId);
+      toast({ title: "Document verified" });
+    },
+    onError: handlers.onError,
   });
 
   const uploadMut = useMutation({
@@ -2037,7 +2096,7 @@ export function DocsHubTab({ employeeId, documents, employeeEmail }: { employeeI
       if (!selectedFile) throw new Error("No file selected");
       if (!documentType) throw new Error("Document type required");
       const objectPath = await uploadFileToStorage(selectedFile);
-      await apiRequest("POST", `/api/admin/employees/${employeeId}/documents`, {
+      const res = await apiRequest("POST", `/api/admin/employees/${employeeId}/documents`, {
         documentType,
         fileName: selectedFile.name,
         fileUrl: objectPath,
@@ -2045,8 +2104,14 @@ export function DocsHubTab({ employeeId, documents, employeeEmail }: { employeeI
         fileSize: selectedFile.size,
         expiryDate: expiryDate || null,
       });
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (doc: any) => {
+      if (doc?.id) {
+        patchEmployeeDocuments(employeeId, (docs) =>
+          docs.some((d) => d.id === doc.id) ? docs : [doc, ...docs],
+        );
+      }
       invalidateEmployee(employeeId);
       setOpen(false);
       setDocumentType("");

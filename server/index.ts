@@ -377,6 +377,165 @@ app.use((req, res, next) => {
   }
 
   try {
+    await pool.query(`
+      ALTER TABLE tenants
+      ADD COLUMN IF NOT EXISTS deployment_gate_settings jsonb
+      DEFAULT '{"enabled":true,"requireOfficerStep":true,"requireNiNumber":true,"requirePassportId":true,"requireShareCode":true,"requireProofOfAddress":true,"requireSiaLicence":true,"requireApplicationForm":true}'::jsonb
+    `);
+    log("Ensured tenants.deployment_gate_settings exists");
+  } catch (e) {
+    log("Could not add tenants.deployment_gate_settings: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenant_duty_types (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        requires_license boolean NOT NULL DEFAULT false,
+        sort_order integer NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_duty_types_tenant_name ON tenant_duty_types (tenant_id, name)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tenant_duty_types_tenant ON tenant_duty_types (tenant_id)`);
+    await pool.query(`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS duty_type_id integer`);
+    log("Ensured tenant_duty_types and shifts.duty_type_id exist");
+  } catch (e) {
+    log("Could not ensure tenant_duty_types: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE sites
+        ADD COLUMN IF NOT EXISTS manager_name text,
+        ADD COLUMN IF NOT EXISTS manager_email text,
+        ADD COLUMN IF NOT EXISTS book_on_email text
+    `);
+    log("Ensured sites manager/book-on email columns exist");
+  } catch (e) {
+    log("Could not add sites manager/book-on columns: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE sites
+        ADD COLUMN IF NOT EXISTS book_on_email_enabled boolean DEFAULT true,
+        ADD COLUMN IF NOT EXISTS check_call_enabled boolean DEFAULT true,
+        ADD COLUMN IF NOT EXISTS check_call_interval_minutes integer DEFAULT 60,
+        ADD COLUMN IF NOT EXISTS check_call_schedule_mode text DEFAULT 'full_day'
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS site_charge_rates (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        site_id integer NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        duty_type_id integer NOT NULL,
+        hourly_charge_rate numeric(10, 2) NOT NULL,
+        effective_from date NOT NULL,
+        effective_to date,
+        notes text,
+        created_at timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_site_charge_rates_site ON site_charge_rates (site_id)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_site_charge_rates_site_duty ON site_charge_rates (site_id, duty_type_id, effective_from)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS site_documents (
+        id serial PRIMARY KEY,
+        tenant_id integer REFERENCES tenants(id),
+        site_id integer NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        document_type text DEFAULT 'other' NOT NULL,
+        display_name text,
+        file_name text NOT NULL,
+        file_url text NOT NULL,
+        file_size integer,
+        mime_type text,
+        uploaded_by varchar,
+        notes text,
+        created_at timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_site_documents_site ON site_documents (site_id)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS site_notes (
+        id serial PRIMARY KEY,
+        tenant_id integer REFERENCES tenants(id),
+        site_id integer NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+        body text NOT NULL,
+        created_by varchar,
+        created_at timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_site_notes_site ON site_notes (site_id)`);
+    log("Ensured site detail settings/rates/docs/notes exist");
+  } catch (e) {
+    log("Could not ensure site detail schema: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employee_pay_rates ADD COLUMN IF NOT EXISTS duty_type_id integer`);
+    log("Ensured employee_pay_rates.duty_type_id exists");
+  } catch (e) {
+    log("Could not ensure employee_pay_rates.duty_type_id: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS charge_rate numeric(10, 2)`);
+    log("Ensured shifts.charge_rate exists");
+  } catch (e) {
+    log("Could not ensure shifts.charge_rate: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS employee_charge_rates (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        employee_id integer NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        duty_type_id integer NOT NULL,
+        hourly_charge_rate numeric(10, 2) NOT NULL,
+        effective_from date NOT NULL,
+        effective_to date,
+        notes text,
+        created_at timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_employee_charge_rates_employee ON employee_charge_rates (employee_id)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_charge_rates_emp_duty ON employee_charge_rates (employee_id, duty_type_id, effective_from)`);
+    log("Ensured employee_charge_rates exists");
+  } catch (e) {
+    log("Could not ensure employee_charge_rates: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS book_on_call_data jsonb`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shift_check_calls (
+        id serial PRIMARY KEY,
+        tenant_id integer REFERENCES tenants(id) ON DELETE CASCADE,
+        shift_id integer NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+        due_at timestamp NOT NULL,
+        status text DEFAULT 'pending' NOT NULL,
+        taken_at timestamp,
+        taken_by varchar,
+        method text,
+        reason text,
+        reason_other text,
+        photo_url text,
+        created_at timestamp DEFAULT now() NOT NULL
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_shift ON shift_check_calls (shift_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_tenant_status ON shift_check_calls (tenant_id, status)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_shift_check_calls_due ON shift_check_calls (due_at)`);
+    log("Ensured shift call-taken columns/tables exist");
+  } catch (e) {
+    log("Could not ensure shift call-taken schema: " + (e as Error).message);
+  }
+
+  try {
     await pool.query("UPDATE users SET role = 'admin' WHERE username = 'testadmin' AND role != 'admin'");
     log("Ensured testadmin has admin role");
   } catch (e) {
@@ -471,8 +630,10 @@ app.use((req, res, next) => {
     const { storage } = await import("./storage");
     await storage.backfillDefaultOfficerTypesForAllTenants();
     log("Officer types: default types ensured for all tenants");
+    await storage.backfillDefaultDutyTypesForAllTenants();
+    log("Duty types: default types ensured for all tenants");
   } catch (e) {
-    log("Officer types backfill skipped: " + (e as Error).message);
+    log("Officer/duty types backfill skipped: " + (e as Error).message);
   }
 
   const appBaseUrl = process.env.REPLIT_DOMAINS

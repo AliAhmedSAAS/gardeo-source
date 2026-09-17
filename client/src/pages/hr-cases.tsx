@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -881,18 +882,18 @@ export default function HrCasesPage() {
           <div className="space-y-4">
             <div>
               <Label>Employee <span className="text-destructive">*</span></Label>
-              <Select value={createForm.employeeId} onValueChange={v => setCreateForm(f => ({ ...f, employeeId: v }))}>
-                <SelectTrigger data-testid="select-employee">
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map(e => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.firstName} {e.lastName}{e.employeeNumber ? ` (${e.employeeNumber})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={createForm.employeeId}
+                onValueChange={v => setCreateForm(f => ({ ...f, employeeId: v }))}
+                options={employees.map(e => ({
+                  value: String(e.id),
+                  label: `${e.firstName} ${e.lastName}${e.employeeNumber ? ` (${e.employeeNumber})` : ""}`,
+                  keywords: e.employeeNumber || undefined,
+                }))}
+                placeholder="Select employee"
+                searchPlaceholder="Search officers…"
+                data-testid="select-employee"
+              />
             </div>
             <div>
               <Label>Case Type <span className="text-destructive">*</span></Label>

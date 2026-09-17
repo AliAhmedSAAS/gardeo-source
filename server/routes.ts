@@ -10,7 +10,7 @@ import { storage } from "./storage";
 import { safeFilename } from "./utils";
 import { emailService } from "./email";
 import { generateInvoicePdf, generateCreditNotePdf, generateDebitNotePdf, generateSelfBillingAgreementPdf, generateRemittancePdf, generateRemittanceSummaryPdf, generateTimesheetPdf, generatePreAuditPdf, generateOfferLetterPdf, generatePurchaseLedgerPdf, generatePurchaseLedgerAccountingPdf, generateVatReturnPdf, type PreAuditCheckResult } from "./pdf-service";
-import { isEmployeeSiaRegisterValid } from "./sia-check-service";
+import { isEmployeeSiaRegisterValid, isValidSiaLicenceFormat, normalizeSiaLicenceNumber } from "./sia-check-service";
 import archiver from "archiver";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -446,16 +446,69 @@ export async function registerRoutes(
   app.use(jwtAuthMiddleware);
 
   // Upload routes (register early so /api/uploads/* is always JSON, never HTML fallback)
-  try {
-    const { registerObjectStorageRoutes } = await import("./replit_integrations/object_storage");
-    registerObjectStorageRoutes(app);
-  } catch {
-    app.post("/api/uploads/request-url", (_req, res) => {
-      res.status(503).json({ error: "Presigned upload not available", useDirectUpload: true });
-    });
-  }
   const uploadsDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+  const hasObjectStorage = Boolean(process.env.PRIVATE_OBJECT_DIR?.trim());
+  if (hasObjectStorage) {
+    try {
+      const { registerObjectStorageRoutes } = await import("./replit_integrations/object_storage");
+      registerObjectStorageRoutes(app);
+    } catch (err) {
+      console.warn("Object storage routes unavailable:", (err as Error).message);
+    }
+  }
+
+  // Local / non-Replit: request-url returns a same-origin PUT target so existing clients keep working
+  if (!hasObjectStorage) {
+    app.post("/api/uploads/request-url", requireAuth, (req, res) => {
+      const { name, size, contentType } = req.body || {};
+      if (!name || typeof name !== "string") {
+        return res.status(400).json({ error: "Missing required field: name" });
+      }
+      const safeOriginal = name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const ext = path.extname(safeOriginal) || "";
+      const safeName = `${crypto.randomUUID()}${ext}`;
+      res.json({
+        uploadURL: `/api/uploads/put/${safeName}`,
+        objectPath: `/objects/uploads/${safeName}`,
+        metadata: {
+          name: safeOriginal,
+          size: typeof size === "number" ? size : undefined,
+          contentType: contentType || "application/octet-stream",
+        },
+      });
+    });
+
+    app.put(
+      "/api/uploads/put/:fileName",
+      requireAuth,
+      express.raw({ type: "*/*", limit: "15mb" }),
+      (req: Request, res: Response) => {
+        const rawName = String(req.params.fileName || "");
+        const safeName = path.basename(rawName).replace(/[^a-zA-Z0-9._-]/g, "_");
+        if (!safeName) return res.status(400).json({ error: "Invalid file name" });
+        const rawBody = (req as any).body;
+        if (!rawBody || !(rawBody instanceof Buffer)) {
+          return res.status(400).json({ error: "Missing file body" });
+        }
+        try {
+          fs.writeFileSync(path.join(uploadsDir, safeName), rawBody);
+        } catch (err: any) {
+          return res.status(500).json({ error: err?.message || "Failed to save file" });
+        }
+        res.status(200).json({
+          objectPath: `/objects/uploads/${safeName}`,
+          metadata: {
+            name: safeName,
+            size: rawBody.length,
+            contentType: req.get("Content-Type") || "application/octet-stream",
+          },
+        });
+      },
+    );
+  }
+
   app.post(
     "/api/uploads/upload",
     requireAuth,
@@ -1710,6 +1763,40 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/tenant/deployment-validation-settings", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      res.json(schema.resolveDeploymentGateSettings(tenant.deploymentGateSettings));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/tenant/deployment-validation-settings", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+      const current = schema.resolveDeploymentGateSettings(tenant.deploymentGateSettings);
+      const keys = Object.keys(schema.DEFAULT_DEPLOYMENT_GATE_SETTINGS) as Array<keyof typeof schema.DEFAULT_DEPLOYMENT_GATE_SETTINGS>;
+      const next = { ...current };
+      for (const key of keys) {
+        if (typeof req.body?.[key] === "boolean") {
+          next[key] = req.body[key];
+        }
+      }
+      const updated = await storage.updateTenant(user.tenantId, { deploymentGateSettings: next } as any);
+      if (!updated) return res.status(404).json({ message: "Tenant not found" });
+      res.json(schema.resolveDeploymentGateSettings(updated.deploymentGateSettings));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/tenant/supplier-visibility-settings", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin"), async (req, res) => {
     try {
       const user = req.user as User;
@@ -1848,6 +1935,64 @@ export async function registerRoutes(
       if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
       const deleted = await storage.deleteTenantOfficerType(user.tenantId, id);
       if (!deleted) return res.status(404).json({ message: "Officer type not found" });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+
+  app.get("/api/tenant/duty-types", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "hr_manager", "controller", "scheduler", "compliance_manager", "training_manager", "payroll_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const types = await storage.ensureDefaultDutyTypes(user.tenantId);
+      res.json(types);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/tenant/duty-types", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const { name, requiresLicense } = req.body;
+      if (!name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ message: "name is required" });
+      }
+      const created = await storage.createTenantDutyType(user.tenantId, name, Boolean(requiresLicense));
+      res.status(201).json(created);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/tenant/duty-types/:id", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const updated = await storage.updateTenantDutyType(user.tenantId, id, {
+        name: typeof req.body?.name === "string" ? req.body.name : undefined,
+        requiresLicense: typeof req.body?.requiresLicense === "boolean" ? req.body.requiresLicense : undefined,
+      });
+      if (!updated) return res.status(404).json({ message: "Duty type not found" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/tenant/duty-types/:id", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const deleted = await storage.deleteTenantDutyType(user.tenantId, id);
+      if (!deleted) return res.status(404).json({ message: "Duty type not found" });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -2548,6 +2693,72 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/employees/check-unique", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
+
+      const email = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+      const phone = typeof req.query.phone === "string" ? req.query.phone.trim() : "";
+      const sia = typeof req.query.siaLicenseNumber === "string"
+        ? normalizeSiaLicenceNumber(req.query.siaLicenseNumber)
+        : "";
+      const excludeEmployeeId = req.query.excludeEmployeeId
+        ? parseInt(String(req.query.excludeEmployeeId), 10)
+        : null;
+
+      const conflicts: { field: string; message: string }[] = [];
+
+      if (email) {
+        const existing = await storage.getUserByEmail(email, user.tenantId);
+        if (existing) {
+          const emp = existing.id ? await storage.getEmployeeByUserId(existing.id) : undefined;
+          if (!excludeEmployeeId || !emp || emp.id !== excludeEmployeeId) {
+            conflicts.push({ field: "email", message: "Email already exists for another employee" });
+          }
+        }
+      }
+
+      if (phone) {
+        const digits = phone.replace(/\D/g, "");
+        if (digits.length >= 10) {
+          const { rows } = await pool.query(
+            `SELECT e.id
+             FROM employees e
+             LEFT JOIN users u ON u.id = e.user_id
+             WHERE e.tenant_id = $1
+               AND regexp_replace(COALESCE(e.phone, u.phone, ''), '[^0-9]', '', 'g') LIKE '%' || $2
+             LIMIT 5`,
+            [user.tenantId, digits.slice(-10)],
+          );
+          const hit = rows.find((r: any) => !excludeEmployeeId || r.id !== excludeEmployeeId);
+          if (hit) conflicts.push({ field: "phone", message: "Phone number already exists for another employee" });
+        }
+      }
+
+      if (sia) {
+        if (!isValidSiaLicenceFormat(sia)) {
+          conflicts.push({ field: "siaLicenseNumber", message: "SIA licence number must be 16 digits" });
+        } else {
+          const { rows } = await pool.query(
+            `SELECT id FROM employees
+             WHERE tenant_id = $1
+               AND regexp_replace(COALESCE(sia_license_number, ''), '[^0-9]', '', 'g') = $2
+             LIMIT 1`,
+            [user.tenantId, sia],
+          );
+          if (rows[0] && (!excludeEmployeeId || rows[0].id !== excludeEmployeeId)) {
+            conflicts.push({ field: "siaLicenseNumber", message: "SIA licence number already exists for another employee" });
+          }
+        }
+      }
+
+      res.json({ ok: conflicts.length === 0, conflicts });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/admin/employees/:id", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "hr_manager", "controller", "scheduler", "compliance_manager", "training_manager", "payroll_manager"), async (req, res) => {
     try {
       const user = req.user as User;
@@ -2796,26 +3007,72 @@ export async function registerRoutes(
       const user = req.user as User;
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
 
-      const { firstName, lastName, email, username, phone, jobTitle, department, employmentType, startDate, dateOfBirth, nationalInsurance, gender, nationality, addressLine1, addressLine2, city, county, postcode, country, siaLicenseNumber, siaLicenseType, siaExpiryDate, dbsCertificateNumber, dbsIssueDate, supplierId } = req.body;
+      const { firstName, lastName, email, username, phone, jobTitle, department, employmentType, startDate, dateOfBirth, nationalInsurance, gender, nationality, addressLine1, addressLine2, city, county, postcode, country, siaLicenseNumber, siaLicenseType, siaExpiryDate, siaRegisterStatus, siaRegisterHolderName, siaLastVerifiedAt, dbsCertificateNumber, dbsIssueDate, supplierId, officerType, drivingLicenceNumber } = req.body;
 
-      if (!firstName || !lastName || !email || !username) {
-        return res.status(400).json({ message: "First name, last name, email, and username are required" });
+      if (!firstName || !lastName || !email) {
+        return res.status(400).json({ message: "First name, last name, and email are required" });
       }
 
-      const existingUser = await storage.getUserByUsername(username, user.tenantId);
+      const emailNorm = String(email).trim().toLowerCase();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm);
+      if (!emailOk) {
+        return res.status(400).json({ message: "Enter a valid email address" });
+      }
+
+      const phoneRaw = typeof phone === "string" ? phone.trim() : "";
+      const phoneDigits = phoneRaw.replace(/\D/g, "");
+      if (phoneRaw && phoneDigits.length < 10) {
+        return res.status(400).json({ message: "Enter a valid phone number (at least 10 digits)" });
+      }
+
+      const siaNorm = siaLicenseNumber ? normalizeSiaLicenceNumber(String(siaLicenseNumber)) : "";
+      if (siaLicenseNumber && !isValidSiaLicenceFormat(siaNorm)) {
+        return res.status(400).json({ message: "SIA licence number must be 16 digits" });
+      }
+
+      const resolvedUsername = String(username || emailNorm.split("@")[0] || emailNorm)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, "") || emailNorm;
+
+      const existingUser = await storage.getUserByUsername(resolvedUsername, user.tenantId);
       if (existingUser) return res.status(400).json({ message: "Username already exists" });
 
-      const existingEmail = await storage.getUserByEmail(email, user.tenantId);
+      const existingEmail = await storage.getUserByEmail(emailNorm, user.tenantId);
       if (existingEmail) return res.status(400).json({ message: "Email already exists" });
+
+      if (phoneDigits.length >= 10) {
+        const { rows: phoneRows } = await pool.query(
+          `SELECT e.id
+           FROM employees e
+           LEFT JOIN users u ON u.id = e.user_id
+           WHERE e.tenant_id = $1
+             AND regexp_replace(COALESCE(e.phone, u.phone, ''), '[^0-9]', '', 'g') LIKE '%' || $2
+           LIMIT 1`,
+          [user.tenantId, phoneDigits.slice(-10)],
+        );
+        if (phoneRows[0]) return res.status(400).json({ message: "Phone number already exists" });
+      }
+
+      if (siaNorm) {
+        const { rows: siaRows } = await pool.query(
+          `SELECT id FROM employees
+           WHERE tenant_id = $1
+             AND regexp_replace(COALESCE(sia_license_number, ''), '[^0-9]', '', 'g') = $2
+           LIMIT 1`,
+          [user.tenantId, siaNorm],
+        );
+        if (siaRows[0]) return res.status(400).json({ message: "SIA licence number already exists" });
+      }
 
       const hashedPassword = await bcrypt.hash("Password123!", 10);
       const newUser = await storage.createUser({
-        username,
+        username: resolvedUsername,
         password: hashedPassword,
-        email,
+        email: emailNorm,
         firstName,
         lastName,
-        phone: phone || null,
+        phone: phoneRaw || null,
         role: "employee",
         tenantId: user.tenantId,
         isActive: true,
@@ -2826,6 +3083,7 @@ export async function registerRoutes(
         tenantId: user.tenantId,
         supplierId: supplierId ? parseInt(supplierId) : null,
         jobTitle: jobTitle || null,
+        officerType: officerType || jobTitle || null,
         department: department || null,
         employmentType: employmentType || "full_time",
         startDate: startDate || null,
@@ -2839,12 +3097,23 @@ export async function registerRoutes(
         county: county || null,
         postcode: postcode || null,
         country: country || "United Kingdom",
-        siaLicenseNumber: siaLicenseNumber || null,
+        siaLicenseNumber: siaNorm || null,
         siaLicenseType: siaLicenseType || null,
         siaExpiryDate: siaExpiryDate || null,
+        siaRegisterStatus: siaRegisterStatus || null,
+        siaRegisterHolderName: siaRegisterHolderName || null,
+        siaLastVerifiedAt: siaLastVerifiedAt ? new Date(siaLastVerifiedAt) : null,
         dbsCertificateNumber: dbsCertificateNumber || null,
         dbsIssueDate: dbsIssueDate || null,
       });
+
+      if (typeof drivingLicenceNumber === "string" && drivingLicenceNumber.trim()) {
+        await staffProfileStorage.createDrivingLicence({
+          employeeId: employee.id,
+          tenantId: user.tenantId,
+          licenceNumber: drivingLicenceNumber.trim(),
+        });
+      }
 
       await pool.query(
         `INSERT INTO employee_audit_trail (employee_id, tenant_id, event_type, event_category, title, description, performed_by, performed_by_name)
@@ -2871,7 +3140,7 @@ export async function registerRoutes(
         }
       }
 
-      res.status(201).json({ ...employee, firstName, lastName, email });
+      res.status(201).json({ ...employee, firstName, lastName, email: emailNorm });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -3385,7 +3654,12 @@ export async function registerRoutes(
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
       const employeeId = parseInt(req.params.id);
       const { rows } = await pool.query(
-        `SELECT * FROM employee_pay_rates WHERE employee_id = $1 AND tenant_id = $2 ORDER BY effective_from DESC`,
+        `SELECT r.*, d.name as duty_type_name, d.name as "dutyTypeName",
+                r.duty_type_id as "dutyTypeId"
+         FROM employee_pay_rates r
+         LEFT JOIN tenant_duty_types d ON d.id = r.duty_type_id
+         WHERE r.employee_id = $1 AND r.tenant_id = $2
+         ORDER BY r.effective_from DESC`,
         [employeeId, user.tenantId]
       );
       res.json(rows);
@@ -3399,13 +3673,14 @@ export async function registerRoutes(
       const user = req.user as User;
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
       const employeeId = parseInt(req.params.id);
-      const { hourlyRate, effectiveFrom, effectiveTo, reason } = req.body;
+      const { hourlyRate, effectiveFrom, effectiveTo, reason, dutyTypeId } = req.body;
       if (!hourlyRate || !effectiveFrom) return res.status(400).json({ message: "Hourly rate and effective from date are required" });
+      if (!dutyTypeId) return res.status(400).json({ message: "Duty type is required" });
 
       const { rows } = await pool.query(
-        `INSERT INTO employee_pay_rates (tenant_id, employee_id, hourly_rate, effective_from, effective_to, reason, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [user.tenantId, employeeId, hourlyRate, effectiveFrom, effectiveTo || null, reason || null, user.id]
+        `INSERT INTO employee_pay_rates (tenant_id, employee_id, duty_type_id, hourly_rate, effective_from, effective_to, reason, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        [user.tenantId, employeeId, parseInt(dutyTypeId, 10), hourlyRate, effectiveFrom, effectiveTo || null, reason || null, user.id]
       );
 
       const { rows: allRates } = await pool.query(
@@ -3428,9 +3703,21 @@ export async function registerRoutes(
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
       const id = parseInt(req.params.id);
       const updates: Record<string, any> = {};
-      const fieldMap: Record<string, string> = { hourlyRate: "hourly_rate", effectiveFrom: "effective_from", effectiveTo: "effective_to", reason: "reason" };
+      const fieldMap: Record<string, string> = {
+        hourlyRate: "hourly_rate",
+        effectiveFrom: "effective_from",
+        effectiveTo: "effective_to",
+        reason: "reason",
+        dutyTypeId: "duty_type_id",
+      };
       for (const [key, col] of Object.entries(fieldMap)) {
-        if (req.body[key] !== undefined) updates[col] = req.body[key] || null;
+        if (req.body[key] !== undefined) {
+          if (key === "dutyTypeId") {
+            updates[col] = req.body[key] ? parseInt(req.body[key], 10) : null;
+          } else {
+            updates[col] = req.body[key] || null;
+          }
+        }
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No fields to update" });
       const fields = Object.keys(updates).map((k, i) => `${k} = $${i + 1}`);
@@ -4043,6 +4330,8 @@ export async function registerRoutes(
                 c.company_name as "clientName",
                 s.client_contact as "clientContact", s.client_email as "clientEmail",
                 s.client_phone as "clientPhone", s.contract_ref as "contractRef",
+                s.manager_name as "managerName", s.manager_email as "managerEmail",
+                s.book_on_email as "bookOnEmail",
                 s.is_active as "isActive", s.notes, s.site_code as "siteCode",
                 s.geofence_radius_metres as "geofenceRadiusMetres"
          FROM sites s LEFT JOIN clients c ON s.client_id = c.id
@@ -4102,6 +4391,15 @@ export async function registerRoutes(
           ? null
           : Math.max(50, Math.min(5000, parseInt(body.geofenceRadiusMetres)));
       }
+      if (body.checkCallIntervalMinutes !== undefined) {
+        body.checkCallIntervalMinutes = Math.max(15, Math.min(24 * 60, parseInt(body.checkCallIntervalMinutes) || 60));
+      }
+      if (body.checkCallScheduleMode !== undefined) {
+        const allowed = ["full_day", "day", "night"];
+        if (!allowed.includes(body.checkCallScheduleMode)) {
+          return res.status(400).json({ message: "Invalid check-call schedule mode" });
+        }
+      }
       const updated = await storage.updateSite(siteId, body);
       res.json(updated);
     } catch (err: any) {
@@ -4158,6 +4456,293 @@ export async function registerRoutes(
       });
 
       res.json({ deleted, failed: errors.length, errors });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  const SITE_DETAIL_ROLES = ["super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "controller", "scheduler", "hr_manager", "compliance_manager", "training_manager", "accountant", "payroll_manager"];
+
+  app.get("/api/sites/:id", requireAuth, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const siteId = parseInt(req.params.id, 10);
+      if (isNaN(siteId)) return res.status(400).json({ message: "Invalid site id" });
+      const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
+      const site = await storage.getSite(siteId, tenantFilter);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      let clientName = site.clientName;
+      if (site.clientId) {
+        try {
+          const { rows } = await pool.query(`SELECT company_name FROM clients WHERE id = $1`, [site.clientId]);
+          if (rows[0]?.company_name) clientName = rows[0].company_name;
+        } catch { /* ignore */ }
+      }
+      res.json({ ...site, clientName });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/sites/:id/charge-rates", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.json([]);
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const { rows } = await pool.query(
+        `SELECT r.id, r.tenant_id as "tenantId", r.site_id as "siteId", r.duty_type_id as "dutyTypeId",
+                d.name as "dutyTypeName", r.hourly_charge_rate as "hourlyChargeRate",
+                r.effective_from as "effectiveFrom", r.effective_to as "effectiveTo",
+                r.notes, r.created_at as "createdAt"
+         FROM site_charge_rates r
+         LEFT JOIN tenant_duty_types d ON d.id = r.duty_type_id
+         WHERE r.site_id = $1 AND r.tenant_id = $2
+         ORDER BY d.name NULLS LAST, r.effective_from DESC`,
+        [siteId, user.tenantId],
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/sites/:id/charge-rates", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const dutyTypeId = parseInt(req.body.dutyTypeId, 10);
+      const rate = req.body.hourlyChargeRate;
+      const effectiveFrom = req.body.effectiveFrom;
+      if (!dutyTypeId || rate == null || rate === "" || !effectiveFrom) {
+        return res.status(400).json({ message: "Duty type, hourly rate, and effective from are required" });
+      }
+      const { rows } = await pool.query(
+        `INSERT INTO site_charge_rates (tenant_id, site_id, duty_type_id, hourly_charge_rate, effective_from, effective_to, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING
+           id, tenant_id as "tenantId", site_id as "siteId", duty_type_id as "dutyTypeId",
+           hourly_charge_rate as "hourlyChargeRate", effective_from as "effectiveFrom",
+           effective_to as "effectiveTo", notes, created_at as "createdAt"`,
+        [user.tenantId, siteId, dutyTypeId, String(rate), effectiveFrom, req.body.effectiveTo || null, req.body.notes || null],
+      );
+      res.status(201).json(rows[0]);
+    } catch (err: any) {
+      if (String(err.message || "").includes("uq_site_charge_rates")) {
+        return res.status(400).json({ message: "A rate already exists for this duty type and effective date" });
+      }
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/sites/:id/charge-rates/:rateId", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const rateId = parseInt(req.params.rateId, 10);
+      const fields: string[] = [];
+      const params: any[] = [];
+      let idx = 1;
+      const map: Record<string, string> = {
+        dutyTypeId: "duty_type_id",
+        hourlyChargeRate: "hourly_charge_rate",
+        effectiveFrom: "effective_from",
+        effectiveTo: "effective_to",
+        notes: "notes",
+      };
+      for (const [key, col] of Object.entries(map)) {
+        if (req.body[key] !== undefined) {
+          fields.push(`${col} = $${idx++}`);
+          params.push(req.body[key] === "" ? null : req.body[key]);
+        }
+      }
+      if (fields.length === 0) return res.status(400).json({ message: "No fields to update" });
+      params.push(rateId, siteId, user.tenantId);
+      const { rows } = await pool.query(
+        `UPDATE site_charge_rates SET ${fields.join(", ")}
+         WHERE id = $${idx++} AND site_id = $${idx++} AND tenant_id = $${idx}
+         RETURNING id, tenant_id as "tenantId", site_id as "siteId", duty_type_id as "dutyTypeId",
+           hourly_charge_rate as "hourlyChargeRate", effective_from as "effectiveFrom",
+           effective_to as "effectiveTo", notes, created_at as "createdAt"`,
+        params,
+      );
+      if (!rows[0]) return res.status(404).json({ message: "Rate not found" });
+      res.json(rows[0]);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/sites/:id/charge-rates/:rateId", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const rateId = parseInt(req.params.rateId, 10);
+      const result = await pool.query(
+        `DELETE FROM site_charge_rates WHERE id = $1 AND site_id = $2 AND tenant_id = $3`,
+        [rateId, siteId, user.tenantId],
+      );
+      if (result.rowCount === 0) return res.status(404).json({ message: "Rate not found" });
+      res.status(204).send();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/sites/:id/documents", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.json([]);
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const { rows } = await pool.query(
+        `SELECT id, tenant_id as "tenantId", site_id as "siteId", document_type as "documentType",
+                display_name as "displayName", file_name as "fileName", file_url as "fileUrl",
+                file_size as "fileSize", mime_type as "mimeType", uploaded_by as "uploadedBy",
+                notes, created_at as "createdAt"
+         FROM site_documents WHERE site_id = $1 AND tenant_id = $2 ORDER BY created_at DESC`,
+        [siteId, user.tenantId],
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/sites/:id/documents", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const { fileName, fileUrl, documentType, displayName, fileSize, mimeType, notes } = req.body;
+      if (!fileName || !fileUrl) return res.status(400).json({ message: "fileName and fileUrl are required" });
+      const { rows } = await pool.query(
+        `INSERT INTO site_documents (tenant_id, site_id, document_type, display_name, file_name, file_url, file_size, mime_type, uploaded_by, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING
+           id, tenant_id as "tenantId", site_id as "siteId", document_type as "documentType",
+           display_name as "displayName", file_name as "fileName", file_url as "fileUrl",
+           file_size as "fileSize", mime_type as "mimeType", uploaded_by as "uploadedBy",
+           notes, created_at as "createdAt"`,
+        [user.tenantId, siteId, documentType || "other", displayName || null, fileName, fileUrl, fileSize || null, mimeType || null, user.id, notes || null],
+      );
+      res.status(201).json(rows[0]);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/sites/:id/documents/:docId", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const docId = parseInt(req.params.docId, 10);
+      const result = await pool.query(
+        `DELETE FROM site_documents WHERE id = $1 AND site_id = $2 AND tenant_id = $3`,
+        [docId, siteId, user.tenantId],
+      );
+      if (result.rowCount === 0) return res.status(404).json({ message: "Document not found" });
+      res.status(204).send();
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/sites/:id/notes", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.json([]);
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const { rows } = await pool.query(
+        `SELECT n.id, n.site_id as "siteId", n.body, n.created_by as "createdBy",
+                n.created_at as "createdAt",
+                COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.username, 'Unknown') as "authorName"
+         FROM site_notes n
+         LEFT JOIN users u ON u.id = n.created_by
+         WHERE n.site_id = $1 AND n.tenant_id = $2
+         ORDER BY n.created_at DESC`,
+        [siteId, user.tenantId],
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/sites/:id/notes", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const body = (req.body?.body || "").trim();
+      if (!body) return res.status(400).json({ message: "Note body is required" });
+      const { rows } = await pool.query(
+        `INSERT INTO site_notes (tenant_id, site_id, body, created_by)
+         VALUES ($1, $2, $3, $4) RETURNING id, site_id as "siteId", body, created_by as "createdBy", created_at as "createdAt"`,
+        [user.tenantId, siteId, body, user.id],
+      );
+      res.status(201).json({ ...rows[0], authorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/sites/:id/history", requireRole(...SITE_DETAIL_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.json([]);
+      const siteId = parseInt(req.params.id, 10);
+      const site = await storage.getSite(siteId, user.tenantId);
+      if (!site) return res.status(404).json({ message: "Site not found" });
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+      const { rows } = await pool.query(
+        `SELECT sh.id, sh.date, sh.start_time as "startTime", sh.end_time as "endTime",
+                sh.break_minutes as "breakMinutes", sh.status, sh.title,
+                sh.booked_on_at as "bookedOnAt", sh.check_in_time as "checkInTime",
+                sh.check_out_time as "checkOutTime",
+                d.name as "dutyTypeName",
+                COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as "officerName",
+                e.sia_license_number as "siaLicenseNumber",
+                sup.company_name as "supplierName"
+         FROM shifts sh
+         LEFT JOIN employees e ON e.id = sh.employee_id
+         LEFT JOIN users u ON u.id = e.user_id
+         LEFT JOIN tenant_duty_types d ON d.id = sh.duty_type_id
+         LEFT JOIN suppliers sup ON sup.id = sh.supplier_id
+         WHERE sh.site_id = $1 AND sh.tenant_id = $2
+         ORDER BY sh.date DESC, sh.start_time DESC
+         LIMIT $3`,
+        [siteId, user.tenantId, limit],
+      );
+
+      function hoursBetween(dateStr: string, start: string, end: string, breakMinutes: number): number {
+        try {
+          const s = new Date(`${String(dateStr).slice(0, 10)}T${start.length === 5 ? start + ":00" : start}`);
+          let e = new Date(`${String(dateStr).slice(0, 10)}T${end.length === 5 ? end + ":00" : end}`);
+          if (e <= s) e = new Date(e.getTime() + 24 * 60 * 60 * 1000);
+          const mins = (e.getTime() - s.getTime()) / 60000 - (breakMinutes || 0);
+          return Math.max(0, Math.round(mins / 6) / 10);
+        } catch {
+          return 0;
+        }
+      }
+
+      res.json(rows.map((r: any) => ({
+        ...r,
+        hours: hoursBetween(r.date, r.startTime, r.endTime, r.breakMinutes || 0),
+      })));
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -4430,6 +5015,7 @@ export async function registerRoutes(
           siteId: r.site_id,
           employeeId: r.employee_id,
           supplierId: r.supplier_id,
+          dutyTypeId: r.duty_type_id ?? null,
           shiftCode: r.shift_code,
           title: r.title,
           date: dateStr,
@@ -4762,10 +5348,33 @@ export async function registerRoutes(
     return { conflict: false };
   }
 
+  app.get("/api/shifts/resolve-rates", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "controller", "scheduler", "hr_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const date = String(req.query.date || "").slice(0, 10);
+      if (!date) return res.status(400).json({ message: "date is required" });
+      const { resolveShiftRates } = await import("./shift-rate-resolver");
+      const rates = await resolveShiftRates({
+        tenantId: user.tenantId,
+        siteId: req.query.siteId ? parseInt(String(req.query.siteId), 10) : null,
+        employeeId: req.query.employeeId ? parseInt(String(req.query.employeeId), 10) : null,
+        supplierId: req.query.supplierId && req.query.supplierId !== "inhouse"
+          ? parseInt(String(req.query.supplierId), 10)
+          : null,
+        dutyTypeId: req.query.dutyTypeId ? parseInt(String(req.query.dutyTypeId), 10) : null,
+        date,
+      });
+      res.json(rates);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/shifts", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "controller", "scheduler", "hr_manager"), async (req, res) => {
     try {
       const user = req.user as User;
-      const body = req.body;
+      const body = { ...req.body };
       if (body.employeeId && body.date && body.startTime && body.endTime && user.tenantId) {
         const { conflict, conflictingShift } = await checkShiftConflict(user.tenantId, body.employeeId, body.date, body.startTime, body.endTime);
         if (conflict) {
@@ -4776,7 +5385,10 @@ export async function registerRoutes(
         }
       }
       if (body.employeeId && !body.skipDeploymentGate) {
-        const gate = await staffProfileStorage.validateDeployment(parseInt(body.employeeId));
+        const dutyTypeId = body.dutyTypeId != null ? parseInt(String(body.dutyTypeId), 10) : null;
+        const gate = await staffProfileStorage.validateDeployment(parseInt(body.employeeId), {
+          dutyTypeId: Number.isFinite(dutyTypeId as number) ? dutyTypeId : null,
+        });
         if (!gate.ok) {
           return res.status(400).json({
             message: "Officer failed deployment validation",
@@ -4784,7 +5396,28 @@ export async function registerRoutes(
           });
         }
       }
-      const shift = await storage.createShift({ ...body, tenantId: user.tenantId, createdBy: user.id });
+      const dutyTypeId = body.dutyTypeId != null && body.dutyTypeId !== ""
+        ? parseInt(String(body.dutyTypeId), 10)
+        : null;
+      if (user.tenantId && body.date && (body.payRate == null || body.payRate === "" || body.chargeRate == null || body.chargeRate === "")) {
+        const { resolveShiftRates } = await import("./shift-rate-resolver");
+        const rates = await resolveShiftRates({
+          tenantId: user.tenantId,
+          siteId: body.siteId ? parseInt(String(body.siteId), 10) : null,
+          employeeId: body.employeeId ? parseInt(String(body.employeeId), 10) : null,
+          supplierId: body.supplierId ? parseInt(String(body.supplierId), 10) : null,
+          dutyTypeId,
+          date: String(body.date),
+        });
+        if (body.payRate == null || body.payRate === "") body.payRate = rates.payRate;
+        if (body.chargeRate == null || body.chargeRate === "") body.chargeRate = rates.chargeRate;
+      }
+      const shift = await storage.createShift({
+        ...body,
+        dutyTypeId,
+        tenantId: user.tenantId,
+        createdBy: user.id,
+      });
       res.status(201).json(shift);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -4801,8 +5434,18 @@ export async function registerRoutes(
       const body = req.body;
       const checkEmpId = body.employeeId ?? shift.employeeId;
       const assigningEmployee = body.employeeId != null && body.employeeId !== shift.employeeId;
-      if (assigningEmployee && body.employeeId && !body.skipDeploymentGate) {
-        const gate = await staffProfileStorage.validateDeployment(parseInt(body.employeeId));
+      if (body.dutyTypeId !== undefined) {
+        body.dutyTypeId = body.dutyTypeId != null && body.dutyTypeId !== ""
+          ? parseInt(String(body.dutyTypeId), 10)
+          : null;
+      }
+      const dutyTypeChanged = body.dutyTypeId !== undefined && body.dutyTypeId !== shift.dutyTypeId;
+      if ((assigningEmployee || dutyTypeChanged) && checkEmpId && !body.skipDeploymentGate) {
+        const dutyTypeIdRaw = body.dutyTypeId !== undefined ? body.dutyTypeId : shift.dutyTypeId;
+        const dutyTypeId = dutyTypeIdRaw != null ? parseInt(String(dutyTypeIdRaw), 10) : null;
+        const gate = await staffProfileStorage.validateDeployment(parseInt(String(checkEmpId)), {
+          dutyTypeId: Number.isFinite(dutyTypeId as number) ? dutyTypeId : null,
+        });
         if (!gate.ok) {
           return res.status(400).json({
             message: "Officer failed deployment validation",
@@ -4821,6 +5464,25 @@ export async function registerRoutes(
             conflictingShift,
           });
         }
+      }
+      const rateRelevantChange =
+        body.siteId !== undefined ||
+        body.employeeId !== undefined ||
+        body.supplierId !== undefined ||
+        body.dutyTypeId !== undefined ||
+        body.date !== undefined;
+      if (user.tenantId && rateRelevantChange && (body.payRate === undefined || body.chargeRate === undefined)) {
+        const { resolveShiftRates } = await import("./shift-rate-resolver");
+        const rates = await resolveShiftRates({
+          tenantId: user.tenantId,
+          siteId: body.siteId !== undefined ? (body.siteId ? parseInt(String(body.siteId), 10) : null) : shift.siteId,
+          employeeId: body.employeeId !== undefined ? (body.employeeId ? parseInt(String(body.employeeId), 10) : null) : shift.employeeId,
+          supplierId: body.supplierId !== undefined ? (body.supplierId ? parseInt(String(body.supplierId), 10) : null) : shift.supplierId,
+          dutyTypeId: body.dutyTypeId !== undefined ? body.dutyTypeId : shift.dutyTypeId,
+          date: String(body.date ?? shift.date),
+        });
+        if (body.payRate === undefined) body.payRate = rates.payRate;
+        if (body.chargeRate === undefined) body.chargeRate = rates.chargeRate;
       }
       const updated = await storage.updateShift(shiftId, body);
       res.json(updated);
@@ -4886,9 +5548,30 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Maximum 100 shifts per bulk creation" });
       }
       const created = [];
+      const { resolveShiftRates } = await import("./shift-rate-resolver");
       for (const def of shiftDefs) {
+        const dutyTypeId = def.dutyTypeId != null && def.dutyTypeId !== ""
+          ? parseInt(String(def.dutyTypeId), 10)
+          : null;
+        let payRate = def.payRate;
+        let chargeRate = def.chargeRate;
+        if (user.tenantId && def.date && (payRate == null || payRate === "" || chargeRate == null || chargeRate === "")) {
+          const rates = await resolveShiftRates({
+            tenantId: user.tenantId,
+            siteId: def.siteId ? parseInt(String(def.siteId), 10) : null,
+            employeeId: def.employeeId ? parseInt(String(def.employeeId), 10) : null,
+            supplierId: def.supplierId ? parseInt(String(def.supplierId), 10) : null,
+            dutyTypeId,
+            date: String(def.date),
+          });
+          if (payRate == null || payRate === "") payRate = rates.payRate;
+          if (chargeRate == null || chargeRate === "") chargeRate = rates.chargeRate;
+        }
         const shift = await storage.createShift({
           ...def,
+          dutyTypeId,
+          payRate,
+          chargeRate,
           tenantId: user.tenantId,
           createdBy: user.id,
         });
@@ -20075,6 +20758,129 @@ Respond in JSON format:
       });
       res.json(sites);
     } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // -- Call Taken (Call Chase) --
+
+  app.get("/api/control-room/pending-calls", requireRole(...CONTROL_ROOM_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.json({ pending: [], reversiblePrechecks: [], fromEmail: null, fromName: null });
+      const { listPendingCalls, listReversiblePrechecks } = await import("./control-room-calls");
+      const [pending, reversiblePrechecks] = await Promise.all([
+        listPendingCalls(user.tenantId),
+        listReversiblePrechecks(user.tenantId),
+      ]);
+      const emailSettings = await storage.getTenantEmailSettings(user.tenantId);
+      res.json({
+        pending,
+        reversiblePrechecks,
+        fromEmail: emailSettings?.fromEmail || null,
+        fromName: emailSettings?.fromName || null,
+      });
+    } catch (err: any) {
+      console.error("[pending-calls]", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/control-room/shifts/:id/take-precheck", requireRole(...CONTROL_ROOM_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const shiftId = parseInt(req.params.id, 10);
+      if (isNaN(shiftId)) return res.status(400).json({ message: "Invalid shift id" });
+      const { takePrecheck } = await import("./control-room-calls");
+      const result = await takePrecheck({
+        shiftId,
+        tenantId: user.tenantId,
+        userId: user.id,
+        reason: req.body?.reason,
+        reasonOther: req.body?.reasonOther,
+        reverse: Boolean(req.body?.reverse),
+      });
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      await logControllerAction(
+        user.tenantId,
+        user.id,
+        req.body?.reverse ? "precheck_reversed" : "precheck_taken_manual",
+        shiftId,
+        null,
+        req.body?.reverse ? "Reversed manual precheck" : `Manual precheck: ${req.body?.reason || ""}`,
+      );
+      res.json(result.shift);
+    } catch (err: any) {
+      console.error("[take-precheck]", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/control-room/shifts/:id/take-book-on", requireRole(...CONTROL_ROOM_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const shiftId = parseInt(req.params.id, 10);
+      if (isNaN(shiftId)) return res.status(400).json({ message: "Invalid shift id" });
+      const { takeBookOn } = await import("./control-room-calls");
+      const result = await takeBookOn({
+        shiftId,
+        tenantId: user.tenantId,
+        userId: user.id,
+        reason: req.body?.reason,
+        reasonOther: req.body?.reasonOther,
+        bookOnTime: req.body?.bookOnTime,
+        photoUrl: req.body?.photoUrl,
+        emailTo: req.body?.emailTo,
+        customerName: req.body?.customerName,
+        message: req.body?.message,
+        fromAddress: req.body?.fromAddress,
+        notifyOfficer: req.body?.notifyOfficer !== false,
+      });
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      await logControllerAction(
+        user.tenantId,
+        user.id,
+        "book_on_taken_manual",
+        shiftId,
+        null,
+        `Manual book-on: ${req.body?.reason || ""}`,
+      );
+      res.json({ shift: result.shift, emailQueued: result.emailQueued, emailError: result.emailError });
+    } catch (err: any) {
+      console.error("[take-book-on]", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/control-room/check-calls/:id/take", requireRole(...CONTROL_ROOM_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const checkCallId = parseInt(req.params.id, 10);
+      if (isNaN(checkCallId)) return res.status(400).json({ message: "Invalid check-call id" });
+      const { takeCheckCall } = await import("./control-room-calls");
+      const result = await takeCheckCall({
+        checkCallId,
+        tenantId: user.tenantId,
+        userId: user.id,
+        reason: req.body?.reason,
+        reasonOther: req.body?.reasonOther,
+        photoUrl: req.body?.photoUrl,
+      });
+      if (!result.ok) return res.status(result.status).json({ message: result.message });
+      await logControllerAction(
+        user.tenantId,
+        user.id,
+        "check_call_taken_manual",
+        result.checkCall.shiftId,
+        null,
+        `Manual check-call: ${req.body?.reason || ""}`,
+      );
+      res.json(result.checkCall);
+    } catch (err: any) {
+      console.error("[take-check-call]", err);
       res.status(500).json({ message: err.message });
     }
   });

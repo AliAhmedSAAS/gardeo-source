@@ -45,6 +45,15 @@ export function registerObjectStorageRoutes(app: Express): void {
         });
       }
 
+      if (!process.env.PRIVATE_OBJECT_DIR?.trim()) {
+        return res.status(200).json({
+          useDirectUpload: true,
+          uploadURL: null,
+          objectPath: null,
+          metadata: { name, size, contentType },
+        });
+      }
+
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
 
       // Extract object path from the presigned URL for later reference
@@ -58,7 +67,7 @@ export function registerObjectStorageRoutes(app: Express): void {
       });
     } catch (error) {
       console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: "Failed to generate upload URL" });
+      res.status(500).json({ error: "Failed to generate upload URL", useDirectUpload: true });
     }
   });
 

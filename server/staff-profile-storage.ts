@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNotNull } from "drizzle-orm";
 import { db } from "./db";
 import { storage } from "./storage";
 import {
@@ -12,6 +12,7 @@ import {
   employeeCertificates,
   employeeSiaLicences,
   pFormRecords,
+  employeeVettingFormTokens,
   vettingAuditEvents,
   rightOfWorkChecks,
   employeeAddressHistory,
@@ -31,6 +32,7 @@ import {
   type InsertEmployeeAddressHistory,
   type InsertReference,
   type InsertEmploymentHistory,
+  resolveDeploymentGateSettings,
 } from "@shared/schema";
 
 const POA_TYPES = ["proof_of_address", "utility_bill", "council_tax", "bank_statement"];
@@ -52,6 +54,7 @@ export const staffProfileStorage = {
       vettingAudit,
       rightOfWorkChecksList,
       addressHistory,
+      appFormRows,
     ] = await Promise.all([
       db.select().from(employeeNotes).where(eq(employeeNotes.employeeId, employeeId)).orderBy(desc(employeeNotes.createdAt)),
       db
@@ -79,7 +82,30 @@ export const staffProfileStorage = {
       db.select().from(vettingAuditEvents).where(eq(vettingAuditEvents.employeeId, employeeId)).orderBy(desc(vettingAuditEvents.createdAt)),
       db.select().from(rightOfWorkChecks).where(eq(rightOfWorkChecks.employeeId, employeeId)).orderBy(desc(rightOfWorkChecks.createdAt)),
       db.select().from(employeeAddressHistory).where(eq(employeeAddressHistory.employeeId, employeeId)).orderBy(desc(employeeAddressHistory.livingFrom)),
+      db
+        .select({
+          id: employeeVettingFormTokens.id,
+          submittedAt: employeeVettingFormTokens.submittedAt,
+          lastSavedAt: employeeVettingFormTokens.lastSavedAt,
+          expiresAt: employeeVettingFormTokens.expiresAt,
+          recipientEmail: employeeVettingFormTokens.recipientEmail,
+          createdAt: employeeVettingFormTokens.createdAt,
+        })
+        .from(employeeVettingFormTokens)
+        .where(eq(employeeVettingFormTokens.employeeId, employeeId))
+        .orderBy(desc(employeeVettingFormTokens.createdAt))
+        .limit(10),
     ]);
+
+    const preferredAppForm =
+      appFormRows.find((r) => r.submittedAt) ||
+      appFormRows[0] ||
+      null;
+
+    let applicationFormStatus: "not_sent" | "sent" | "in_progress" | "submitted" = "not_sent";
+    if (preferredAppForm?.submittedAt) applicationFormStatus = "submitted";
+    else if (preferredAppForm?.lastSavedAt) applicationFormStatus = "in_progress";
+    else if (preferredAppForm) applicationFormStatus = "sent";
 
     return {
       notes,
@@ -90,23 +116,43 @@ export const staffProfileStorage = {
       certificates,
       siaLicences,
       pForm: pFormRows[0] || null,
+      applicationForm: preferredAppForm
+        ? {
+            status: applicationFormStatus,
+            submittedAt: preferredAppForm.submittedAt,
+            lastSavedAt: preferredAppForm.lastSavedAt,
+            expiresAt: preferredAppForm.expiresAt,
+            recipientEmail: preferredAppForm.recipientEmail,
+            createdAt: preferredAppForm.createdAt,
+          }
+        : { status: "not_sent" as const },
       vettingAudit,
       rightOfWorkChecks: rightOfWorkChecksList,
       addressHistory,
     };
   },
 
-  async validateDeployment(employeeId: number): Promise<DeploymentGateResult> {
+  async validateDeployment(
+    employeeId: number,
+    opts?: { dutyTypeId?: number | null },
+  ): Promise<DeploymentGateResult> {
     const missing: string[] = [];
     const employee = await storage.getEmployee(employeeId);
     if (!employee) return { ok: false, missing: ["Employee not found"] };
 
+    const tenant = employee.tenantId ? await storage.getTenant(employee.tenantId) : undefined;
+    const gate = resolveDeploymentGateSettings(tenant?.deploymentGateSettings);
+
+    if (!gate.enabled) {
+      return { ok: true, missing: [] };
+    }
+
     const step = employee.officerStep ?? 0;
-    if (step < MIN_DEPLOY_STEP) {
+    if (gate.requireOfficerStep && step < MIN_DEPLOY_STEP) {
       missing.push(`Officer step must be at least ${MIN_DEPLOY_STEP} (current: ${step})`);
     }
 
-    if (!employee.nationalInsurance?.trim()) {
+    if (gate.requireNiNumber && !employee.nationalInsurance?.trim()) {
       missing.push("NI number required");
     }
 
@@ -115,37 +161,55 @@ export const staffProfileStorage = {
     const hasPassportDoc = docs.some((d) =>
       ["passport", "passport_id", "identity", "proof_of_identity"].includes((d.documentType || "").toLowerCase())
     );
-    if (!immigration?.passportDocNo && !hasPassportDoc) {
+    if (gate.requirePassportId && !immigration?.passportDocNo && !hasPassportDoc) {
       missing.push("Passport / ID document required");
     }
 
-    if (immigration?.shareCode) {
-      if (immigration.shareCodeExpiry && new Date(immigration.shareCodeExpiry) < new Date()) {
-        missing.push("Share code expired");
+    if (gate.requireShareCode) {
+      if (immigration?.shareCode) {
+        if (immigration.shareCodeExpiry && new Date(immigration.shareCodeExpiry) < new Date()) {
+          missing.push("Share code expired");
+        }
+      } else if (immigration?.visaNeeded || immigration?.brpNeeded) {
+        missing.push("Share code required");
       }
-    } else if (immigration?.visaNeeded || immigration?.brpNeeded) {
-      missing.push("Share code required");
     }
 
     const hasPoa = docs.some((d) => POA_TYPES.includes((d.documentType || "").toLowerCase()));
-    if (!hasPoa) {
+    if (gate.requireProofOfAddress && !hasPoa) {
       missing.push("Proof of address (utility bill or bank statement) required");
     }
 
-    const siaLicences = await db.select().from(employeeSiaLicences).where(eq(employeeSiaLicences.employeeId, employeeId));
-    const defaultSia = siaLicences.find((s) => s.isDefault) || siaLicences[0];
-    const siaNumber = defaultSia?.siaNumber || employee.siaLicenseNumber;
-    const siaExpiry = defaultSia?.expiryDate || employee.siaExpiryDate;
-    if (!siaNumber) {
-      missing.push("Valid SIA licence required");
-    } else if (siaExpiry && new Date(siaExpiry) < new Date()) {
-      missing.push("SIA licence expired");
+    let dutyRequiresLicense = false;
+    if (opts?.dutyTypeId && employee.tenantId) {
+      const dutyType = await storage.getTenantDutyType(employee.tenantId, opts.dutyTypeId);
+      dutyRequiresLicense = Boolean(dutyType?.requiresLicense);
     }
 
-    const [pForm] = await db.select().from(pFormRecords).where(eq(pFormRecords.employeeId, employeeId)).limit(1);
-    if (step <= 6) {
-      if (!pForm || pForm.status !== "finished") {
-        missing.push("P Form must be finished");
+    // SIA / licence check only when the selected duty type requires a licence
+    if (gate.requireSiaLicence && dutyRequiresLicense) {
+      const siaLicences = await db.select().from(employeeSiaLicences).where(eq(employeeSiaLicences.employeeId, employeeId));
+      const defaultSia = siaLicences.find((s) => s.isDefault) || siaLicences[0];
+      const siaNumber = defaultSia?.siaNumber || employee.siaLicenseNumber;
+      const siaExpiry = defaultSia?.expiryDate || employee.siaExpiryDate;
+      if (!siaNumber) {
+        missing.push("Valid SIA licence required for this duty type");
+      } else if (siaExpiry && new Date(siaExpiry) < new Date()) {
+        missing.push("SIA licence expired");
+      }
+    }
+
+    if (gate.requireApplicationForm) {
+      const [submittedAppForm] = await db
+        .select({ id: employeeVettingFormTokens.id })
+        .from(employeeVettingFormTokens)
+        .where(and(
+          eq(employeeVettingFormTokens.employeeId, employeeId),
+          isNotNull(employeeVettingFormTokens.submittedAt),
+        ))
+        .limit(1);
+      if (!submittedAppForm) {
+        missing.push("Application form must be submitted");
       }
     }
 

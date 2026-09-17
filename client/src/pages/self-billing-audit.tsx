@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   FileText, Download, Loader2, Shield, AlertTriangle,
   CheckCircle2, ClipboardList, Building2, Receipt, Scale, FileCheck,
@@ -1082,16 +1083,17 @@ export default function SelfBillingAuditPage() {
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[220px]">
                     <label className="text-xs text-muted-foreground mb-1 block">Supplier</label>
-                    <Select value={selectedAuditSupplierId} onValueChange={setSelectedAuditSupplierId}>
-                      <SelectTrigger data-testid="select-audit-supplier">
-                        <SelectValue placeholder="Select a supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map(s => (
-                          <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={selectedAuditSupplierId}
+                      onValueChange={setSelectedAuditSupplierId}
+                      options={suppliers.map(s => ({
+                        value: String(s.id),
+                        label: s.companyName,
+                      }))}
+                      placeholder="Select a supplier"
+                      searchPlaceholder="Search suppliers…"
+                      data-testid="select-audit-supplier"
+                    />
                   </div>
                 </div>
 

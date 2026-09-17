@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, formatApiErrorDescription, formatApiErrorTitle } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,6 +42,9 @@ type EnrichedShift = {
   siteId: number | null;
   employeeId: number | null;
   supplierId: number | null;
+  dutyTypeId: number | null;
+  payRate?: string | null;
+  chargeRate?: string | null;
   siteName: string;
   employeeName: string;
   supplierName: string;
@@ -166,7 +170,12 @@ export default function SchedulingPage() {
   const [detailShift, setDetailShift] = useState<EnrichedShift | null>(null);
 
   const [editShift, setEditShift] = useState<EnrichedShift | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", notes: "" });
+  const [editForm, setEditForm] = useState({
+    title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
+    payRate: "", chargeRate: "",
+    payRateOptionId: "", chargeRateOptionId: "",
+  });
+  const [editRatesManual, setEditRatesManual] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
   const [selectedShiftIds, setSelectedShiftIds] = useState<Set<number>>(new Set());
@@ -184,8 +193,11 @@ export default function SchedulingPage() {
 
   const [shiftForm, setShiftForm] = useState({
     title: "", date: "", startTime: "", endTime: "",
-    siteId: "", employeeId: "", supplierId: "", notes: "",
+    siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
+    payRate: "", chargeRate: "",
+    payRateOptionId: "", chargeRateOptionId: "",
   });
+  const [ratesManual, setRatesManual] = useState(false);
   const [repeatOption, setRepeatOption] = useState<RepeatOption>("none");
 
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false);
@@ -239,12 +251,130 @@ export default function SchedulingPage() {
     queryKey: ["/api/sites"],
   });
 
+  const { data: dutyTypes = [] } = useQuery<Array<{ id: number; name: string; requiresLicense: boolean }>>({
+    queryKey: ["/api/tenant/duty-types"],
+  });
+
   const { data: clients = [] } = useQuery<ClientOption[]>({
     queryKey: ["/api/clients"],
   });
 
   const selectedSupplierId = shiftForm.supplierId;
   const isInhouse = !selectedSupplierId || selectedSupplierId === "inhouse";
+
+  const canResolveRates = !!shiftForm.date && !!shiftForm.siteId;
+  type RateOption = {
+    id: string;
+    rate: string;
+    label: string;
+  };
+  const { data: resolvedRates } = useQuery<{
+    payRate: string | null;
+    chargeRate: string | null;
+    payRateSource: "employee" | "supplier" | null;
+    chargeRateSource: "site" | null;
+    chargeRateOptions: RateOption[];
+    payRateOptions: RateOption[];
+  }>({
+    queryKey: [
+      "/api/shifts/resolve-rates",
+      shiftForm.date,
+      shiftForm.siteId,
+      shiftForm.dutyTypeId,
+      shiftForm.employeeId,
+      shiftForm.supplierId,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({ date: shiftForm.date });
+      if (shiftForm.siteId) params.set("siteId", shiftForm.siteId);
+      if (shiftForm.dutyTypeId) params.set("dutyTypeId", shiftForm.dutyTypeId);
+      if (shiftForm.employeeId) params.set("employeeId", shiftForm.employeeId);
+      if (shiftForm.supplierId && shiftForm.supplierId !== "inhouse") params.set("supplierId", shiftForm.supplierId);
+      const res = await fetch(`/api/shifts/resolve-rates?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to resolve rates");
+      return res.json();
+    },
+    enabled: shiftDialogOpen && canResolveRates,
+  });
+
+  useEffect(() => {
+    if (!resolvedRates || ratesManual) return;
+    setShiftForm((f) => {
+      const chargeOpt = resolvedRates.chargeRateOptions?.[0];
+      const payOpt = resolvedRates.payRateOptions?.[0];
+      const keepCharge = f.chargeRateOptionId && resolvedRates.chargeRateOptions?.some((o) => o.id === f.chargeRateOptionId);
+      const keepPay = f.payRateOptionId && resolvedRates.payRateOptions?.some((o) => o.id === f.payRateOptionId);
+      return {
+        ...f,
+        chargeRate: keepCharge ? f.chargeRate : (chargeOpt?.rate ?? ""),
+        chargeRateOptionId: keepCharge ? f.chargeRateOptionId : (chargeOpt?.id ?? ""),
+        payRate: keepPay ? f.payRate : (payOpt?.rate ?? ""),
+        payRateOptionId: keepPay ? f.payRateOptionId : (payOpt?.id ?? ""),
+      };
+    });
+  }, [resolvedRates, ratesManual]);
+
+  const editCanResolveRates = !!editForm.date && !!editForm.siteId && !!editShift;
+  const { data: editResolvedRates } = useQuery<{
+    payRate: string | null;
+    chargeRate: string | null;
+    chargeRateOptions: RateOption[];
+    payRateOptions: RateOption[];
+    payRateSource: "employee" | "supplier" | null;
+  }>({
+    queryKey: [
+      "/api/shifts/resolve-rates",
+      "edit",
+      editForm.date,
+      editForm.siteId,
+      editForm.dutyTypeId,
+      editForm.employeeId,
+      editForm.supplierId,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams({ date: editForm.date });
+      if (editForm.siteId) params.set("siteId", editForm.siteId);
+      if (editForm.dutyTypeId) params.set("dutyTypeId", editForm.dutyTypeId);
+      if (editForm.employeeId) params.set("employeeId", editForm.employeeId);
+      if (editForm.supplierId && editForm.supplierId !== "inhouse") params.set("supplierId", editForm.supplierId);
+      const res = await fetch(`/api/shifts/resolve-rates?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to resolve rates");
+      return res.json();
+    },
+    enabled: editCanResolveRates,
+  });
+
+  useEffect(() => {
+    if (!editResolvedRates) return;
+    if (!editRatesManual) {
+      setEditForm((f) => {
+        const chargeOpt =
+          editResolvedRates.chargeRateOptions?.find((o) => o.rate === f.chargeRate) ||
+          editResolvedRates.chargeRateOptions?.[0];
+        const payOpt =
+          editResolvedRates.payRateOptions?.find((o) => o.rate === f.payRate) ||
+          editResolvedRates.payRateOptions?.[0];
+        return {
+          ...f,
+          chargeRate: chargeOpt?.rate ?? f.chargeRate,
+          chargeRateOptionId: chargeOpt?.id ?? "",
+          payRate: payOpt?.rate ?? f.payRate,
+          payRateOptionId: payOpt?.id ?? "",
+        };
+      });
+      return;
+    }
+    // Keep saved rates; just bind matching option ids for the selects
+    setEditForm((f) => {
+      const chargeOpt = editResolvedRates.chargeRateOptions?.find((o) => o.rate === f.chargeRate);
+      const payOpt = editResolvedRates.payRateOptions?.find((o) => o.rate === f.payRate);
+      return {
+        ...f,
+        chargeRateOptionId: chargeOpt?.id || f.chargeRateOptionId || "",
+        payRateOptionId: payOpt?.id || f.payRateOptionId || "",
+      };
+    });
+  }, [editResolvedRates, editRatesManual]);
 
   const { data: inhouseEmployees = [], isLoading: inhouseLoading, isError: inhouseError } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/employees/inhouse"],
@@ -335,7 +465,10 @@ export default function SchedulingPage() {
         siteId: data.siteId ? Number(data.siteId) : null,
         employeeId: data.employeeId ? Number(data.employeeId) : null,
         supplierId: data.supplierId && data.supplierId !== "inhouse" ? Number(data.supplierId) : null,
+        dutyTypeId: data.dutyTypeId ? Number(data.dutyTypeId) : null,
         notes: data.notes || null,
+        payRate: data.payRate || null,
+        chargeRate: data.chargeRate || null,
       };
       const res = await apiRequest("POST", "/api/shifts", payload);
       return res.json();
@@ -346,7 +479,13 @@ export default function SchedulingPage() {
       closeShiftDialog();
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: formatApiErrorTitle(err),
+        description: (
+          <span className="whitespace-pre-line">{formatApiErrorDescription(err)}</span>
+        ),
+        variant: "destructive",
+      });
     },
   });
 
@@ -361,7 +500,13 @@ export default function SchedulingPage() {
       closeShiftDialog();
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: formatApiErrorTitle(err),
+        description: (
+          <span className="whitespace-pre-line">{formatApiErrorDescription(err)}</span>
+        ),
+        variant: "destructive",
+      });
     },
   });
 
@@ -422,7 +567,8 @@ export default function SchedulingPage() {
 
   const closeShiftDialog = useCallback(() => {
     setShiftDialogOpen(false);
-    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", notes: "" });
+    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "", payRate: "", chargeRate: "", payRateOptionId: "", chargeRateOptionId: "" });
+    setRatesManual(false);
     setRepeatOption("none");
     setSelectedDay("");
     setShowAvailableSuggestions(false);
@@ -447,7 +593,10 @@ export default function SchedulingPage() {
         siteId: shiftForm.siteId ? Number(shiftForm.siteId) : null,
         employeeId: shiftForm.employeeId ? Number(shiftForm.employeeId) : null,
         supplierId: shiftForm.supplierId && shiftForm.supplierId !== "inhouse" ? Number(shiftForm.supplierId) : null,
+        dutyTypeId: shiftForm.dutyTypeId ? Number(shiftForm.dutyTypeId) : null,
         notes: shiftForm.notes || null,
+        payRate: shiftForm.payRate || null,
+        chargeRate: shiftForm.chargeRate || null,
       }));
       bulkCreateMutation.mutate({ shifts: shiftPayloads });
     }
@@ -464,7 +613,13 @@ export default function SchedulingPage() {
       setEditShift(null);
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({
+        title: formatApiErrorTitle(err),
+        description: (
+          <span className="whitespace-pre-line">{formatApiErrorDescription(err)}</span>
+        ),
+        variant: "destructive",
+      });
     },
   });
 
@@ -503,6 +658,7 @@ export default function SchedulingPage() {
 
   const openEditShift = useCallback((shift: EnrichedShift) => {
     setEditShift(shift);
+    setEditRatesManual(true);
     setEditForm({
       title: shift.title,
       date: shift.date.split("T")[0],
@@ -511,7 +667,12 @@ export default function SchedulingPage() {
       siteId: shift.siteId ? String(shift.siteId) : "",
       employeeId: shift.employeeId ? String(shift.employeeId) : "",
       supplierId: shift.supplierId ? String(shift.supplierId) : "",
+      dutyTypeId: shift.dutyTypeId ? String(shift.dutyTypeId) : "",
       notes: shift.notes || "",
+      payRate: shift.payRate != null ? String(shift.payRate) : "",
+      chargeRate: shift.chargeRate != null ? String(shift.chargeRate) : "",
+      payRateOptionId: "",
+      chargeRateOptionId: "",
     });
   }, []);
 
@@ -527,7 +688,10 @@ export default function SchedulingPage() {
         siteId: editForm.siteId ? Number(editForm.siteId) : null,
         employeeId: editForm.employeeId ? Number(editForm.employeeId) : null,
         supplierId: editForm.supplierId && editForm.supplierId !== "inhouse" ? Number(editForm.supplierId) : null,
+        dutyTypeId: editForm.dutyTypeId ? Number(editForm.dutyTypeId) : null,
         notes: editForm.notes || null,
+        payRate: editForm.payRate || null,
+        chargeRate: editForm.chargeRate || null,
       },
     });
   }, [editShift, editForm, updateShiftMutation]);
@@ -901,74 +1065,80 @@ export default function SchedulingPage() {
         </div>
         <div className="flex-shrink-0 w-[150px]">
           <Label className="text-[10px] text-muted-foreground px-0.5">Client</Label>
-          <Select
+          <SearchableSelect
             value={searchClient}
             onValueChange={(val) => {
               setSearchClient(val);
               setSearchSite("all");
             }}
-          >
-            <SelectTrigger className="h-9" data-testid="select-filter-client">
-              <SelectValue placeholder="All clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {clients.map((client) => (
-                <SelectItem key={client.id} value={String(client.id)}>
-                  {client.companyName || client.company_name || `Client #${client.id}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={clients.map((client) => ({
+              value: String(client.id),
+              label: client.companyName || client.company_name || `Client #${client.id}`,
+            }))}
+            noneValue="all"
+            noneLabel="All Clients"
+            placeholder="All clients"
+            searchPlaceholder="Search clients…"
+            triggerClassName="h-9"
+            data-testid="select-filter-client"
+          />
         </div>
         <div className="flex-shrink-0 w-[150px]">
           <Label className="text-[10px] text-muted-foreground px-0.5">Site</Label>
-          <Select value={searchSite} onValueChange={setSearchSite}>
-            <SelectTrigger className="h-9" data-testid="select-filter-site">
-              <SelectValue placeholder="All sites" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sites</SelectItem>
-              {filteredSitesForFilter.map((site) => (
-                <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={searchSite}
+            onValueChange={setSearchSite}
+            options={filteredSitesForFilter.map((site) => ({
+              value: String(site.id),
+              label: site.name,
+            }))}
+            noneValue="all"
+            noneLabel="All Sites"
+            placeholder="All sites"
+            searchPlaceholder="Search sites…"
+            triggerClassName="h-9"
+            data-testid="select-filter-site"
+          />
         </div>
         <div className="flex-shrink-0 w-[170px]">
           <Label className="text-[10px] text-muted-foreground px-0.5">Subcontractor</Label>
-          <Select
+          <SearchableSelect
             value={searchSupplier}
             onValueChange={(val) => {
               setSearchSupplier(val);
               setSearchOfficer("all");
             }}
-          >
-            <SelectTrigger className="h-9" data-testid="select-filter-supplier">
-              <SelectValue placeholder="All subcontractors" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subcontractors</SelectItem>
-              <SelectItem value="inhouse">{tenantCompanyName} (In-house)</SelectItem>
-              {approvedSuppliers.map((s) => (
-                <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={[
+              { value: "inhouse", label: `${tenantCompanyName} (In-house)` },
+              ...approvedSuppliers.map((s) => ({
+                value: String(s.id),
+                label: s.companyName,
+              })),
+            ]}
+            noneValue="all"
+            noneLabel="All Subcontractors"
+            placeholder="All subcontractors"
+            searchPlaceholder="Search subcontractors…"
+            triggerClassName="h-9"
+            data-testid="select-filter-supplier"
+          />
         </div>
         <div className="flex-shrink-0 w-[160px]">
           <Label className="text-[10px] text-muted-foreground px-0.5">Officer</Label>
-          <Select value={searchOfficer} onValueChange={setSearchOfficer}>
-            <SelectTrigger className="h-9" data-testid="select-filter-officer">
-              <SelectValue placeholder="All officers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Officers</SelectItem>
-              {officerFilterOptions.map((officer) => (
-                <SelectItem key={officer.id} value={String(officer.id)}>{officer.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={searchOfficer}
+            onValueChange={setSearchOfficer}
+            options={officerFilterOptions.map((officer) => ({
+              value: String(officer.id),
+              label: officer.name,
+            }))}
+            noneValue="all"
+            noneLabel="All Officers"
+            placeholder="All officers"
+            searchPlaceholder="Search officers…"
+            triggerClassName="h-9"
+            data-testid="select-filter-officer"
+          />
         </div>
         <div className="flex-shrink-0 w-[130px]">
           <Label className="text-[10px] text-muted-foreground px-0.5">Status</Label>
@@ -1285,7 +1455,7 @@ export default function SchedulingPage() {
                   data-testid="input-shift-date"
                   type="date"
                   value={shiftForm.date}
-                  onChange={(e) => setShiftForm((f) => ({ ...f, date: e.target.value }))}
+                  onChange={(e) => { setRatesManual(false); setShiftForm((f) => ({ ...f, date: e.target.value })); }}
                 />
               </div>
               <div className="space-y-2">
@@ -1347,40 +1517,51 @@ export default function SchedulingPage() {
             </div>
             <div className="space-y-2">
               <Label>Site <span className="text-red-500">*</span></Label>
-              <Select value={shiftForm.siteId} onValueChange={(val) => setShiftForm((f) => ({ ...f, siteId: val }))}>
-                <SelectTrigger data-testid="select-shift-site">
-                  <SelectValue placeholder="Select a site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={shiftForm.siteId}
+                onValueChange={(val) => { setRatesManual(false); setShiftForm((f) => ({ ...f, siteId: val })); }}
+                options={sites.map((site) => ({ value: String(site.id), label: site.name }))}
+                placeholder="Select a site"
+                searchPlaceholder="Search sites…"
+                emptyText="No sites found."
+                data-testid="select-shift-site"
+              />
             </div>
             <div className="space-y-2">
-              <Label>Supplier / Provider</Label>
-              <Select value={shiftForm.supplierId} onValueChange={(val) => setShiftForm((f) => ({ ...f, supplierId: val, employeeId: "" }))}>
-                <SelectTrigger data-testid="select-shift-supplier">
-                  <SelectValue placeholder={`In-house (${tenantCompanyName})`} />
+              <Label>Duty Type</Label>
+              <Select value={shiftForm.dutyTypeId || "none"} onValueChange={(val) => { setRatesManual(false); setShiftForm((f) => ({ ...f, dutyTypeId: val === "none" ? "" : val })); }}>
+                <SelectTrigger data-testid="select-shift-duty-type">
+                  <SelectValue placeholder="Select duty type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inhouse" data-testid="option-supplier-inhouse">
-                    <span className="flex items-center gap-2">
-                      <Building2 className="w-3.5 h-3.5" />
-                      In-house ({tenantCompanyName})
-                    </span>
-                  </SelectItem>
-                  {approvedSuppliers.map((sup) => (
-                    <SelectItem key={sup.id} value={String(sup.id)} data-testid={`option-supplier-${sup.id}`}>
-                      <span className="flex items-center gap-2">
-                        <Truck className="w-3.5 h-3.5" />
-                        {sup.companyName}
-                      </span>
+                  <SelectItem value="none">No duty type</SelectItem>
+                  {dutyTypes.map((dt) => (
+                    <SelectItem key={dt.id} value={String(dt.id)}>
+                      {dt.name}{dt.requiresLicense ? " (licence required)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {shiftForm.dutyTypeId && dutyTypes.find((d) => String(d.id) === shiftForm.dutyTypeId)?.requiresLicense && (
+                <p className="text-[11px] text-muted-foreground">Assigned officer must have a valid SIA licence for this duty type.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Supplier / Provider</Label>
+              <SearchableSelect
+                value={shiftForm.supplierId || "inhouse"}
+                onValueChange={(val) => { setRatesManual(false); setShiftForm((f) => ({ ...f, supplierId: val, employeeId: "" })); }}
+                options={[
+                  { value: "inhouse", label: `In-house (${tenantCompanyName})` },
+                  ...approvedSuppliers.map((sup) => ({
+                    value: String(sup.id),
+                    label: sup.companyName,
+                  })),
+                ]}
+                placeholder={`In-house (${tenantCompanyName})`}
+                searchPlaceholder="Search suppliers…"
+                data-testid="select-shift-supplier"
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -1399,38 +1580,30 @@ export default function SchedulingPage() {
                   </Button>
                 )}
               </div>
-              <Select value={shiftForm.employeeId} onValueChange={(val) => setShiftForm((f) => ({ ...f, employeeId: val }))}>
-                <SelectTrigger data-testid="select-shift-employee">
-                  <SelectValue
-                    placeholder={
-                      officersLoading
-                        ? "Loading officers..."
-                        : officersError
-                          ? "Failed to load officers"
-                          : filteredEmployees.length === 0
-                            ? "No officers available"
-                            : "Select an officer"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {officersLoading ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">Loading officers...</div>
-                  ) : officersError ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">Could not load officers. Try again.</div>
-                  ) : filteredEmployees.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground text-center">
-                      {!isInhouse
-                        ? "This supplier has no officers yet."
-                        : "No in-house staff found (employees with no supplier)."}
-                    </div>
-                  ) : (
-                    filteredEmployees.map((emp) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>{officerLabel(emp)}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={shiftForm.employeeId}
+                onValueChange={(val) => { setRatesManual(false); setShiftForm((f) => ({ ...f, employeeId: val === "none" ? "" : val })); }}
+                options={filteredEmployees.map((emp) => ({
+                  value: String(emp.id),
+                  label: officerLabel(emp),
+                  keywords: emp.employeeNumber || undefined,
+                }))}
+                noneValue="none"
+                noneLabel="Unassigned"
+                disabled={officersLoading || officersError || filteredEmployees.length === 0}
+                placeholder={
+                  officersLoading
+                    ? "Loading officers..."
+                    : officersError
+                      ? "Failed to load officers"
+                      : filteredEmployees.length === 0
+                        ? "No officers available"
+                        : "Select an officer"
+                }
+                searchPlaceholder="Search officers…"
+                emptyText="No officers found."
+                data-testid="select-shift-employee"
+              />
               {showAvailableSuggestions && isInhouse && (
                 <div className="border rounded-lg p-2 bg-muted/20 space-y-1.5 max-h-48 overflow-y-auto" data-testid="available-employees-panel">
                   {suggestionsLoading ? (
@@ -1481,6 +1654,82 @@ export default function SchedulingPage() {
                   )}
                 </div>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Charge rate (£/hr)</Label>
+                <Select
+                  value={shiftForm.chargeRateOptionId || "none"}
+                  onValueChange={(val) => {
+                    setRatesManual(true);
+                    if (val === "none") {
+                      setShiftForm((f) => ({ ...f, chargeRate: "", chargeRateOptionId: "" }));
+                      return;
+                    }
+                    const opt = (resolvedRates?.chargeRateOptions || []).find((o) => o.id === val);
+                    setShiftForm((f) => ({
+                      ...f,
+                      chargeRateOptionId: val,
+                      chargeRate: opt?.rate || "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-shift-charge-rate">
+                    <SelectValue placeholder="Select charge rate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No charge rate</SelectItem>
+                    {(resolvedRates?.chargeRateOptions || []).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  From site rates{resolvedRates?.chargeRateOptions?.length ? ` (${resolvedRates.chargeRateOptions.length})` : ""}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Pay rate (£/hr)</Label>
+                <Select
+                  value={shiftForm.payRateOptionId || "none"}
+                  onValueChange={(val) => {
+                    setRatesManual(true);
+                    if (val === "none") {
+                      setShiftForm((f) => ({ ...f, payRate: "", payRateOptionId: "" }));
+                      return;
+                    }
+                    const opt = (resolvedRates?.payRateOptions || []).find((o) => o.id === val);
+                    setShiftForm((f) => ({
+                      ...f,
+                      payRateOptionId: val,
+                      payRate: opt?.rate || "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-shift-pay-rate">
+                    <SelectValue placeholder={isInhouse ? "Select employee rate" : "Select supplier rate"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No pay rate</SelectItem>
+                    {(resolvedRates?.payRateOptions || []).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {isInhouse ? "From employee pay rates" : "From supplier rate cards"}
+                  {resolvedRates?.payRateOptions?.length ? ` (${resolvedRates.payRateOptions.length})` : ""}
+                  {ratesManual && (
+                    <button type="button" className="ml-2 underline" onClick={() => setRatesManual(false)}>
+                      Use default
+                    </button>
+                  )}
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="shift-notes">Notes</Label>
@@ -1609,48 +1858,146 @@ export default function SchedulingPage() {
             </div>
             <div className="space-y-2">
               <Label>Site <span className="text-red-500">*</span></Label>
-              <Select value={editForm.siteId} onValueChange={(val) => setEditForm(f => ({ ...f, siteId: val }))}>
-                <SelectTrigger data-testid="select-edit-site">
-                  <SelectValue placeholder="Select a site" />
+              <SearchableSelect
+                value={editForm.siteId}
+                onValueChange={(val) => setEditForm(f => ({ ...f, siteId: val }))}
+                options={sites.map((site) => ({ value: String(site.id), label: site.name }))}
+                placeholder="Select a site"
+                searchPlaceholder="Search sites…"
+                data-testid="select-edit-site"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duty Type</Label>
+              <Select value={editForm.dutyTypeId || "none"} onValueChange={(val) => setEditForm(f => ({ ...f, dutyTypeId: val === "none" ? "" : val }))}>
+                <SelectTrigger data-testid="select-edit-duty-type">
+                  <SelectValue placeholder="Select duty type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
+                  <SelectItem value="none">No duty type</SelectItem>
+                  {dutyTypes.map((dt) => (
+                    <SelectItem key={dt.id} value={String(dt.id)}>
+                      {dt.name}{dt.requiresLicense ? " (licence required)" : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Supplier</Label>
-              <Select value={editForm.supplierId || "inhouse"} onValueChange={(val) => setEditForm(f => ({ ...f, supplierId: val, employeeId: "" }))}>
-                <SelectTrigger data-testid="select-edit-supplier">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inhouse">{tenantCompanyName} (In-house)</SelectItem>
-                  {approvedSuppliers.map(s => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={editForm.supplierId || "inhouse"}
+                onValueChange={(val) => setEditForm(f => ({ ...f, supplierId: val, employeeId: "" }))}
+                options={[
+                  { value: "inhouse", label: `${tenantCompanyName} (In-house)` },
+                  ...approvedSuppliers.map((s) => ({ value: String(s.id), label: s.companyName })),
+                ]}
+                placeholder="Select supplier"
+                searchPlaceholder="Search suppliers…"
+                data-testid="select-edit-supplier"
+              />
             </div>
             <div className="space-y-2">
               <Label>Officer</Label>
-              <Select value={editForm.employeeId || "none"} onValueChange={(val) => setEditForm(f => ({ ...f, employeeId: val === "none" ? "" : val }))}>
-                <SelectTrigger data-testid="select-edit-employee">
-                  <SelectValue placeholder="Select an officer (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {editFilteredEmployees.map((emp) => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>{officerLabel(emp)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={editForm.employeeId || "none"}
+                onValueChange={(val) => setEditForm(f => ({ ...f, employeeId: val === "none" ? "" : val }))}
+                options={[
+                  { value: "none", label: "Unassigned" },
+                  ...editFilteredEmployees.map((emp) => ({ value: String(emp.id), label: officerLabel(emp) })),
+                ]}
+                placeholder="Select an officer (optional)"
+                searchPlaceholder="Search officers…"
+                data-testid="select-edit-employee"
+              />
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea data-testid="input-edit-notes" value={editForm.notes} onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Charge rate (£/hr)</Label>
+                <Select
+                  value={editForm.chargeRateOptionId || (editForm.chargeRate ? `current-charge-${editForm.chargeRate}` : "none")}
+                  onValueChange={(val) => {
+                    setEditRatesManual(true);
+                    if (val === "none") {
+                      setEditForm((f) => ({ ...f, chargeRate: "", chargeRateOptionId: "" }));
+                      return;
+                    }
+                    if (val.startsWith("current-charge-")) {
+                      setEditForm((f) => ({ ...f, chargeRateOptionId: "", chargeRate: val.replace("current-charge-", "") }));
+                      return;
+                    }
+                    const opt = (editResolvedRates?.chargeRateOptions || []).find((o) => o.id === val);
+                    setEditForm((f) => ({
+                      ...f,
+                      chargeRateOptionId: val,
+                      chargeRate: opt?.rate || "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-edit-charge-rate">
+                    <SelectValue placeholder="Select charge rate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No charge rate</SelectItem>
+                    {(editResolvedRates?.chargeRateOptions || []).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                    {editForm.chargeRate &&
+                      !(editResolvedRates?.chargeRateOptions || []).some((o) => o.rate === editForm.chargeRate) && (
+                        <SelectItem value={`current-charge-${editForm.chargeRate}`}>
+                          £{Number(editForm.chargeRate).toFixed(2)}/hr — current
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Pay rate (£/hr)</Label>
+                <Select
+                  value={editForm.payRateOptionId || (editForm.payRate ? `current-pay-${editForm.payRate}` : "none")}
+                  onValueChange={(val) => {
+                    setEditRatesManual(true);
+                    if (val === "none") {
+                      setEditForm((f) => ({ ...f, payRate: "", payRateOptionId: "" }));
+                      return;
+                    }
+                    if (val.startsWith("current-pay-")) {
+                      setEditForm((f) => ({ ...f, payRateOptionId: "", payRate: val.replace("current-pay-", "") }));
+                      return;
+                    }
+                    const opt = (editResolvedRates?.payRateOptions || []).find((o) => o.id === val);
+                    setEditForm((f) => ({
+                      ...f,
+                      payRateOptionId: val,
+                      payRate: opt?.rate || "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-edit-pay-rate">
+                    <SelectValue placeholder="Select pay rate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No pay rate</SelectItem>
+                    {(editResolvedRates?.payRateOptions || []).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                    {editForm.payRate &&
+                      !(editResolvedRates?.payRateOptions || []).some((o) => o.rate === editForm.payRate) && (
+                        <SelectItem value={`current-pay-${editForm.payRate}`}>
+                          £{Number(editForm.payRate).toFixed(2)}/hr — current
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter className="flex items-center justify-between gap-2">
@@ -1817,15 +2164,16 @@ export default function SchedulingPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Site</Label>
-                  <Select value={templateForm.siteId} onValueChange={v => setTemplateForm(f => ({ ...f, siteId: v }))}>
-                    <SelectTrigger data-testid="select-template-site">
-                      <SelectValue placeholder="Any site" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Any site</SelectItem>
-                      {sites.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={templateForm.siteId || ""}
+                    onValueChange={(v) => setTemplateForm(f => ({ ...f, siteId: v }))}
+                    options={sites.map((s) => ({ value: String(s.id), label: s.name }))}
+                    placeholder="Any site"
+                    searchPlaceholder="Search sites…"
+                    noneValue=""
+                    noneLabel="Any site"
+                    data-testid="select-template-site"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Start Time <span className="text-red-500">*</span></Label>

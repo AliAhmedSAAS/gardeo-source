@@ -13,6 +13,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Briefcase, UserPlus, Users, Search, Plus, Eye, Calendar, MapPin,
   Clock, Sparkles, Loader2, TrendingUp, CheckCircle2, XCircle,
@@ -1117,19 +1118,17 @@ export default function RecruitmentPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Site</Label>
-                <Select
+                <SearchableSelect
                   value={jobForm.siteId}
                   onValueChange={(val) => setJobForm({ ...jobForm, siteId: val })}
-                >
-                  <SelectTrigger data-testid="select-job-site">
-                    <SelectValue placeholder="Select site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map((site) => (
-                      <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={sites.map((site) => ({
+                    value: String(site.id),
+                    label: site.name,
+                  }))}
+                  placeholder="Select site"
+                  searchPlaceholder="Search sites…"
+                  data-testid="select-job-site"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="job-closing-date">Closing Date</Label>

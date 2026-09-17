@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -132,10 +133,14 @@ export default function FmJobsPage() {
                 <div className="col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} data-testid="input-description" /></div>
                 <div>
                   <Label>Site</Label>
-                  <Select value={form.siteId} onValueChange={(v) => setForm({ ...form, siteId: v })}>
-                    <SelectTrigger data-testid="select-site"><SelectValue placeholder="Pick site" /></SelectTrigger>
-                    <SelectContent>{(sites || []).map((s: any) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={form.siteId}
+                    onValueChange={(v) => setForm({ ...form, siteId: v })}
+                    options={(sites || []).map((s: any) => ({ value: String(s.id), label: s.name }))}
+                    placeholder="Pick site"
+                    searchPlaceholder="Search sites…"
+                    data-testid="select-site"
+                  />
                 </div>
                 <div>
                   <Label>Service Line</Label>
@@ -164,10 +169,14 @@ export default function FmJobsPage() {
                 <div><Label>Estimated Hours</Label><Input type="number" step="0.5" value={form.estimatedHours} onChange={(e) => setForm({ ...form, estimatedHours: e.target.value })} data-testid="input-hours" /></div>
                 <div>
                   <Label>Supplier (optional)</Label>
-                  <Select value={form.supplierId} onValueChange={(v) => setForm({ ...form, supplierId: v })}>
-                    <SelectTrigger data-testid="select-supplier"><SelectValue placeholder="In-house" /></SelectTrigger>
-                    <SelectContent>{(suppliers || []).map(s => <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={form.supplierId}
+                    onValueChange={(v) => setForm({ ...form, supplierId: v })}
+                    options={(suppliers || []).map((s) => ({ value: String(s.id), label: s.companyName }))}
+                    placeholder="In-house"
+                    searchPlaceholder="Search suppliers…"
+                    data-testid="select-supplier"
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label>Assign Workers ({form.serviceLine})</Label>

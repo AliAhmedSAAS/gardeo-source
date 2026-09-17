@@ -32,6 +32,7 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -2253,16 +2254,17 @@ export default function SupplierDetailPage() {
                 {(rcRateType === "employee" || rcRateType === "both") && (
                   <div className="space-y-2">
                     <Label>Employee</Label>
-                    <Select value={rcForm.employeeId} onValueChange={(v) => setRcForm({ ...rcForm, employeeId: v })} data-testid="select-src-employee">
-                      <SelectTrigger data-testid="trigger-src-employee">
-                        <SelectValue placeholder="Select an employee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {supplierEmployees.map((emp: any) => (
-                          <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      value={rcForm.employeeId}
+                      onValueChange={(v) => setRcForm({ ...rcForm, employeeId: v })}
+                      options={supplierEmployees.map((emp: any) => ({
+                        value: String(emp.id),
+                        label: `${emp.firstName} ${emp.lastName}`,
+                      }))}
+                      placeholder="Select an employee"
+                      searchPlaceholder="Search officers…"
+                      data-testid="select-src-employee"
+                    />
                   </div>
                 )}
 

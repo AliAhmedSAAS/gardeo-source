@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -523,18 +524,17 @@ export default function AbsencesPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Employee *</Label>
-              <Select value={logForm.employeeId} onValueChange={v => setLogForm(f => ({ ...f, employeeId: v }))}>
-                <SelectTrigger data-testid="select-absence-employee">
-                  <SelectValue placeholder="Select employee..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((e: any) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.firstName} {e.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={logForm.employeeId}
+                onValueChange={v => setLogForm(f => ({ ...f, employeeId: v }))}
+                options={employees.map((e: any) => ({
+                  value: String(e.id),
+                  label: `${e.firstName} ${e.lastName}`,
+                }))}
+                placeholder="Select employee..."
+                searchPlaceholder="Search officers…"
+                data-testid="select-absence-employee"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Absence Type *</Label>

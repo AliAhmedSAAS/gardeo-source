@@ -22,6 +22,34 @@ export const vettingStatusEnum = pgEnum("vetting_status", [
   "not_started", "pending", "in_progress", "passed", "failed", "expired"
 ]);
 
+/** Admin-controlled checks enforced when assigning officers to shifts. */
+export type DeploymentGateSettings = {
+  enabled: boolean;
+  requireOfficerStep: boolean;
+  requireNiNumber: boolean;
+  requirePassportId: boolean;
+  requireShareCode: boolean;
+  requireProofOfAddress: boolean;
+  requireSiaLicence: boolean;
+  requireApplicationForm: boolean;
+};
+
+export const DEFAULT_DEPLOYMENT_GATE_SETTINGS: DeploymentGateSettings = {
+  enabled: true,
+  requireOfficerStep: true,
+  requireNiNumber: true,
+  requirePassportId: true,
+  requireShareCode: true,
+  requireProofOfAddress: true,
+  requireSiaLicence: true,
+  requireApplicationForm: true,
+};
+
+export function resolveDeploymentGateSettings(raw: unknown): DeploymentGateSettings {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_DEPLOYMENT_GATE_SETTINGS };
+  return { ...DEFAULT_DEPLOYMENT_GATE_SETTINGS, ...(raw as Partial<DeploymentGateSettings>) };
+}
+
 export const sessions = pgTable(
   "sessions",
   {
@@ -73,6 +101,7 @@ export const tenants = pgTable("tenants", {
   defaultLeaveEntitlementDays: integer("default_leave_entitlement_days").default(28),
   leaveCarryForwardCapDays: integer("leave_carry_forward_cap_days").default(5),
   defaultProbationWeeks: integer("default_probation_weeks").default(12),
+  deploymentGateSettings: jsonb("deployment_gate_settings").$type<DeploymentGateSettings>().default(DEFAULT_DEPLOYMENT_GATE_SETTINGS),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -642,6 +671,14 @@ export const sites = pgTable("sites", {
   clientContact: text("client_contact"),
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
+  managerName: text("manager_name"),
+  managerEmail: text("manager_email"),
+  bookOnEmail: text("book_on_email"),
+  bookOnEmailEnabled: boolean("book_on_email_enabled").default(true),
+  checkCallEnabled: boolean("check_call_enabled").default(true),
+  checkCallIntervalMinutes: integer("check_call_interval_minutes").default(60),
+  /** full_day | day (06:00–18:00) | night (18:00–06:00) */
+  checkCallScheduleMode: text("check_call_schedule_mode").default("full_day"),
   contractRef: text("contract_ref"),
   externalId: text("external_id"),
   lastSyncedAt: timestamp("last_synced_at"),
@@ -657,12 +694,56 @@ export const sites = pgTable("sites", {
   uniqueIndex("uq_sites_tenant_external").on(table.tenantId, table.externalId).where(sql`external_id IS NOT NULL`),
 ]);
 
+export const siteChargeRates = pgTable("site_charge_rates", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  siteId: integer("site_id").references(() => sites.id, { onDelete: "cascade" }).notNull(),
+  dutyTypeId: integer("duty_type_id").notNull(),
+  hourlyChargeRate: numeric("hourly_charge_rate", { precision: 10, scale: 2 }).notNull(),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_site_charge_rates_site").on(table.siteId),
+  uniqueIndex("uq_site_charge_rates_site_duty").on(table.siteId, table.dutyTypeId, table.effectiveFrom),
+]);
+
+export const siteDocuments = pgTable("site_documents", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
+  siteId: integer("site_id").references(() => sites.id, { onDelete: "cascade" }).notNull(),
+  documentType: text("document_type").notNull().default("other"),
+  displayName: text("display_name"),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_site_documents_site").on(table.siteId),
+]);
+
+export const siteNotes = pgTable("site_notes", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id),
+  siteId: integer("site_id").references(() => sites.id, { onDelete: "cascade" }).notNull(),
+  body: text("body").notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_site_notes_site").on(table.siteId),
+]);
+
 export const shifts = pgTable("shifts", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").references(() => tenants.id),
   siteId: integer("site_id").references(() => sites.id),
   employeeId: integer("employee_id").references(() => employees.id),
   supplierId: integer("supplier_id").references(() => suppliers.id),
+  dutyTypeId: integer("duty_type_id"),
   shiftCode: text("shift_code"),
   title: text("title").notNull(),
   date: date("date").notNull(),
@@ -682,6 +763,20 @@ export const shifts = pgTable("shifts", {
     checkedAt?: string;
     passed?: boolean;
     failReason?: string;
+    method?: "manual" | "app";
+    reason?: string;
+    reasonOther?: string;
+  }>(),
+  bookOnCallData: jsonb("book_on_call_data").$type<{
+    method?: "manual" | "app";
+    reason?: string;
+    reasonOther?: string;
+    photoUrl?: string;
+    takenBy?: string;
+    takenAt?: string;
+    bookOnTime?: string;
+    emailTo?: string;
+    emailQueued?: boolean;
   }>(),
   lastCheckInLat: text("last_check_in_lat"),
   lastCheckInLng: text("last_check_in_lng"),
@@ -718,6 +813,7 @@ export const shifts = pgTable("shifts", {
   handoverNotes: text("handover_notes"),
   lateMinutes: integer("late_minutes").default(0),
   payRate: numeric("pay_rate", { precision: 10, scale: 2 }),
+  chargeRate: numeric("charge_rate", { precision: 10, scale: 2 }),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1412,6 +1508,9 @@ export const insertVettingAuditEventSchema = createInsertSchema(vettingAuditEven
 export const insertRightOfWorkCheckSchema = createInsertSchema(rightOfWorkChecks).omit({ id: true, createdAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true });
 export const insertSiteSchema = createInsertSchema(sites).omit({ id: true, createdAt: true });
+export const insertSiteChargeRateSchema = createInsertSchema(siteChargeRates).omit({ id: true, createdAt: true });
+export const insertSiteDocumentSchema = createInsertSchema(siteDocuments).omit({ id: true, createdAt: true });
+export const insertSiteNoteSchema = createInsertSchema(siteNotes).omit({ id: true, createdAt: true });
 export const insertShiftSchema = createInsertSchema(shifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertIncidentSchema = createInsertSchema(incidents).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertSupplierSchema = createInsertSchema(suppliers).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1600,6 +1699,12 @@ export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Site = typeof sites.$inferSelect;
 export type InsertSite = z.infer<typeof insertSiteSchema>;
+export type SiteChargeRate = typeof siteChargeRates.$inferSelect;
+export type InsertSiteChargeRate = z.infer<typeof insertSiteChargeRateSchema>;
+export type SiteDocument = typeof siteDocuments.$inferSelect;
+export type InsertSiteDocument = z.infer<typeof insertSiteDocumentSchema>;
+export type SiteNote = typeof siteNotes.$inferSelect;
+export type InsertSiteNote = z.infer<typeof insertSiteNoteSchema>;
 export type Shift = typeof shifts.$inferSelect;
 export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type Incident = typeof incidents.$inferSelect;
@@ -2164,6 +2269,7 @@ export const employeePayRates = pgTable("employee_pay_rates", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  dutyTypeId: integer("duty_type_id"),
   hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }).notNull(),
   effectiveFrom: date("effective_from").notNull(),
   effectiveTo: date("effective_to"),
@@ -2177,6 +2283,26 @@ export const employeePayRates = pgTable("employee_pay_rates", {
 export const insertEmployeePayRateSchema = createInsertSchema(employeePayRates).omit({ id: true, createdAt: true });
 export type EmployeePayRate = typeof employeePayRates.$inferSelect;
 export type InsertEmployeePayRate = z.infer<typeof insertEmployeePayRateSchema>;
+
+/** Charge/pay rates by duty type — mirrors site_charge_rates for employees. */
+export const employeeChargeRates = pgTable("employee_charge_rates", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  dutyTypeId: integer("duty_type_id").notNull(),
+  hourlyChargeRate: numeric("hourly_charge_rate", { precision: 10, scale: 2 }).notNull(),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_employee_charge_rates_employee").on(table.employeeId),
+  uniqueIndex("uq_employee_charge_rates_emp_duty").on(table.employeeId, table.dutyTypeId, table.effectiveFrom),
+]);
+
+export const insertEmployeeChargeRateSchema = createInsertSchema(employeeChargeRates).omit({ id: true, createdAt: true });
+export type EmployeeChargeRate = typeof employeeChargeRates.$inferSelect;
+export type InsertEmployeeChargeRate = z.infer<typeof insertEmployeeChargeRateSchema>;
 
 export const documentTemplates = pgTable("document_templates", {
   id: serial("id").primaryKey(),
@@ -2925,6 +3051,45 @@ export const tenantOfficerTypes = pgTable("tenant_officer_types", {
 export const insertTenantOfficerTypeSchema = createInsertSchema(tenantOfficerTypes).omit({ id: true, createdAt: true });
 export type TenantOfficerType = typeof tenantOfficerTypes.$inferSelect;
 export type InsertTenantOfficerType = z.infer<typeof insertTenantOfficerTypeSchema>;
+
+export const tenantDutyTypes = pgTable("tenant_duty_types", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  requiresLicense: boolean("requires_license").notNull().default(false),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_tenant_duty_types_tenant_name").on(table.tenantId, table.name),
+  index("idx_tenant_duty_types_tenant").on(table.tenantId),
+]);
+
+export const insertTenantDutyTypeSchema = createInsertSchema(tenantDutyTypes).omit({ id: true, createdAt: true });
+export type TenantDutyType = typeof tenantDutyTypes.$inferSelect;
+export type InsertTenantDutyType = z.infer<typeof insertTenantDutyTypeSchema>;
+
+export const shiftCheckCalls = pgTable("shift_check_calls", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  shiftId: integer("shift_id").notNull().references(() => shifts.id, { onDelete: "cascade" }),
+  dueAt: timestamp("due_at").notNull(),
+  status: text("status").notNull().default("pending"), // pending | taken_manual | taken_app
+  takenAt: timestamp("taken_at"),
+  takenBy: varchar("taken_by").references(() => users.id),
+  method: text("method"), // manual | app
+  reason: text("reason"),
+  reasonOther: text("reason_other"),
+  photoUrl: text("photo_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_shift_check_calls_shift").on(table.shiftId),
+  index("idx_shift_check_calls_tenant_status").on(table.tenantId, table.status),
+  index("idx_shift_check_calls_due").on(table.dueAt),
+]);
+
+export const insertShiftCheckCallSchema = createInsertSchema(shiftCheckCalls).omit({ id: true, createdAt: true });
+export type ShiftCheckCall = typeof shiftCheckCalls.$inferSelect;
+export type InsertShiftCheckCall = z.infer<typeof insertShiftCheckCallSchema>;
 
 export const tenantXeroConnections = pgTable("tenant_xero_connections", {
   id: serial("id").primaryKey(),

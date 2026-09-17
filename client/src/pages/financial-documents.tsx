@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -388,17 +389,19 @@ export default function FinancialDocumentsPage() {
             </div>
             <div className="min-w-[160px]">
               <Label className="text-xs text-muted-foreground mb-1 block">Supplier</Label>
-              <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                <SelectTrigger data-testid="select-supplier-filter">
-                  <SelectValue placeholder="All suppliers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All suppliers</SelectItem>
-                  {suppliers.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id.toString()}>{s.companyName || s.company_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={supplierFilter}
+                onValueChange={setSupplierFilter}
+                options={suppliers.map((s: any) => ({
+                  value: s.id.toString(),
+                  label: s.companyName || s.company_name,
+                }))}
+                noneValue="all"
+                noneLabel="All suppliers"
+                placeholder="All suppliers"
+                searchPlaceholder="Search suppliers…"
+                data-testid="select-supplier-filter"
+              />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground mb-1 block">From</Label>
@@ -572,31 +575,35 @@ export default function FinancialDocumentsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Supplier</Label>
-                <Select value={uploadForm.supplierId} onValueChange={(v) => setUploadForm({ ...uploadForm, supplierId: v })}>
-                  <SelectTrigger data-testid="select-doc-supplier">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {suppliers.map((s: any) => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.companyName || s.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={uploadForm.supplierId}
+                  onValueChange={(v) => setUploadForm({ ...uploadForm, supplierId: v })}
+                  options={suppliers.map((s: any) => ({
+                    value: s.id.toString(),
+                    label: s.companyName || s.company_name,
+                  }))}
+                  noneValue="none"
+                  noneLabel="None"
+                  placeholder="None"
+                  searchPlaceholder="Search suppliers…"
+                  data-testid="select-doc-supplier"
+                />
               </div>
               <div>
                 <Label>Client</Label>
-                <Select value={uploadForm.clientId} onValueChange={(v) => setUploadForm({ ...uploadForm, clientId: v })}>
-                  <SelectTrigger data-testid="select-doc-client">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {clients.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.companyName || c.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={uploadForm.clientId}
+                  onValueChange={(v) => setUploadForm({ ...uploadForm, clientId: v })}
+                  options={clients.map((c: any) => ({
+                    value: c.id.toString(),
+                    label: c.companyName || c.company_name,
+                  }))}
+                  noneValue="none"
+                  noneLabel="None"
+                  placeholder="None"
+                  searchPlaceholder="Search clients…"
+                  data-testid="select-doc-client"
+                />
               </div>
             </div>
 

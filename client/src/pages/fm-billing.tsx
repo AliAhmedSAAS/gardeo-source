@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Receipt, Building2 } from "lucide-react";
 import type { FmSupplier } from "@shared/schema";
@@ -69,12 +69,17 @@ function SelfBillingPanel() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
         <div>
           <Label>FM Supplier</Label>
-          <Select value={fmSupplierId} onValueChange={setFmSupplierId}>
-            <SelectTrigger data-testid="select-fm-supplier"><SelectValue placeholder="Choose supplier" /></SelectTrigger>
-            <SelectContent>
-              {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={fmSupplierId}
+            onValueChange={setFmSupplierId}
+            options={suppliers.map(s => ({
+              value: String(s.id),
+              label: s.companyName,
+            }))}
+            placeholder="Choose supplier"
+            searchPlaceholder="Search suppliers…"
+            data-testid="select-fm-supplier"
+          />
         </div>
         <div>
           <Label>Period start</Label>
@@ -166,12 +171,17 @@ function ClientInvoicePanel() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
         <div>
           <Label>Client</Label>
-          <Select value={clientId} onValueChange={setClientId}>
-            <SelectTrigger data-testid="select-client"><SelectValue placeholder="Choose client" /></SelectTrigger>
-            <SelectContent>
-              {clients.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.companyName || c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={clientId}
+            onValueChange={setClientId}
+            options={clients.map(c => ({
+              value: String(c.id),
+              label: c.companyName || c.name,
+            }))}
+            placeholder="Choose client"
+            searchPlaceholder="Search clients…"
+            data-testid="select-client"
+          />
         </div>
         <div>
           <Label>Period start</Label>

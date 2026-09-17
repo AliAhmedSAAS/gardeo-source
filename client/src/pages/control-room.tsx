@@ -13,6 +13,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, formatApiErrorDescription, formatApiErrorTitle } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Virtuoso } from "react-virtuoso";
 import {
@@ -71,6 +72,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import type { Shift, Incident, Site } from "@shared/schema";
 import { AISituationalAwareness, AISmartAlerts, AIQuickActions, AIChatPanel, AIUpgradeBanner, AIKPIInsights, AIAutoContactPanel, AIContactLogs, AIAutonomousPanel } from "./ai-controller-panels";
+import { CallChasePanel } from "@/components/control-room/CallChasePanel";
 
 type EnrichedShift = Shift & {
   siteName: string;
@@ -115,6 +117,7 @@ const tabs = [
   { id: "overview", label: "Live Overview", icon: Activity },
   { id: "ai_autonomous", label: "AI Autonomous", icon: Bot },
   { id: "shifts", label: "Live Shifts", icon: Clock },
+  { id: "call_chase", label: "Call Chase", icon: PhoneCall },
   { id: "incidents", label: "Incidents", icon: AlertTriangle },
   { id: "communications", label: "Communications", icon: MessageSquare },
 ] as const;
@@ -421,7 +424,13 @@ export default function ControlRoomPage() {
       toast({ title: "Shift updated" });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({
+        title: formatApiErrorTitle(error, "Failed"),
+        description: (
+          <span className="whitespace-pre-line">{formatApiErrorDescription(error)}</span>
+        ),
+        variant: "destructive",
+      });
     },
   });
 
@@ -1608,6 +1617,12 @@ export default function ControlRoomPage() {
             </div>
           )}
 
+          {activeTab === "call_chase" && (
+            <div data-testid="tab-content-call-chase">
+              <CallChasePanel />
+            </div>
+          )}
+
           {activeTab === "incidents" && (
             <div className="space-y-4" data-testid="tab-content-incidents">
               <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1654,14 +1669,17 @@ export default function ControlRoomPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Site</Label>
-                        <Select value={newIncident.siteId} onValueChange={(val) => setNewIncident((prev) => ({ ...prev, siteId: val }))}>
-                          <SelectTrigger data-testid="select-incident-site"><SelectValue placeholder="Select site" /></SelectTrigger>
-                          <SelectContent>
-                            {sites.map((site) => (
-                              <SelectItem key={site.id} value={String(site.id)}>{site.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                          value={newIncident.siteId}
+                          onValueChange={(val) => setNewIncident((prev) => ({ ...prev, siteId: val }))}
+                          options={sites.map((site) => ({
+                            value: String(site.id),
+                            label: site.name,
+                          }))}
+                          placeholder="Select site"
+                          searchPlaceholder="Search sites…"
+                          data-testid="select-incident-site"
+                        />
                       </div>
                       <Button onClick={handleSubmitIncident} disabled={createIncidentMutation.isPending} className="w-full" data-testid="button-submit-incident">
                         {createIncidentMutation.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
@@ -2049,16 +2067,17 @@ export default function ControlRoomPage() {
               </div>
               <div className="space-y-2">
                 <Label>New Employee</Label>
-                <Select value={reassignEmployeeId} onValueChange={setReassignEmployeeId}>
-                  <SelectTrigger data-testid="select-reassign-employee"><SelectValue placeholder="Select employee" /></SelectTrigger>
-                  <SelectContent>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={reassignEmployeeId}
+                  onValueChange={setReassignEmployeeId}
+                  options={employees.map((emp) => ({
+                    value: String(emp.id),
+                    label: `${emp.firstName} ${emp.lastName}`,
+                  }))}
+                  placeholder="Select employee"
+                  searchPlaceholder="Search employees…"
+                  data-testid="select-reassign-employee"
+                />
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>Cancel</Button>

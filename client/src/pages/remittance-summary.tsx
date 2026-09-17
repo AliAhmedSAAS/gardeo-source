@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   FileSpreadsheet, Loader2, Search, PoundSterling, FileDown,
   Building2, Archive,
@@ -259,18 +260,20 @@ export default function RemittanceSummaryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div>
               <label className="text-sm font-medium mb-1 block">Supplier</label>
-              <select
+              <SearchableSelect
                 value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onValueChange={setSupplierId}
+                options={[
+                  { value: "all", label: "── All Suppliers ──" },
+                  ...suppliers.map((s) => ({
+                    value: String(s.id),
+                    label: s.companyName,
+                  })),
+                ]}
+                placeholder="Select a supplier..."
+                searchPlaceholder="Search suppliers…"
                 data-testid="select-supplier"
-              >
-                <option value="">Select a supplier...</option>
-                <option value="all">── All Suppliers ──</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={String(s.id)}>{s.companyName}</option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>

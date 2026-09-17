@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Clock, MapPin, User, CheckCircle2, XCircle, AlertTriangle,
@@ -239,18 +240,20 @@ function BilledTab({ suppliers }: { suppliers: { id: number; name: string }[] })
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={billedSupplierFilter} onValueChange={(val) => { setBilledSupplierFilter(val); setSelectedInvoiceIds(new Set()); }}>
-          <SelectTrigger className="w-64" data-testid="select-billed-supplier-filter">
-            <Building2 className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Select a supplier" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Suppliers</SelectItem>
-            {suppliers.map((s) => (
-              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={billedSupplierFilter}
+          onValueChange={(val) => { setBilledSupplierFilter(val); setSelectedInvoiceIds(new Set()); }}
+          options={suppliers.map((s) => ({
+            value: String(s.id),
+            label: s.name,
+          }))}
+          noneValue="all"
+          noneLabel="All Suppliers"
+          placeholder="Select a supplier"
+          searchPlaceholder="Search suppliers…"
+          className="w-64"
+          data-testid="select-billed-supplier-filter"
+        />
 
         {invoices.length > 0 && !billedLoading && (
           <>
@@ -626,18 +629,20 @@ export default function AdminSupplierTimesheetsPage() {
                   <SelectItem value="resolved">Resolved</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={supplierFilter} onValueChange={handleSupplierChange}>
-                <SelectTrigger className="w-48" data-testid="select-supplier-filter">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter by supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Suppliers</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={supplierFilter}
+                onValueChange={handleSupplierChange}
+                options={suppliers.map((s) => ({
+                  value: String(s.id),
+                  label: s.name,
+                }))}
+                noneValue="all"
+                noneLabel="All Suppliers"
+                placeholder="Filter by supplier"
+                searchPlaceholder="Search suppliers…"
+                className="w-48"
+                data-testid="select-supplier-filter"
+              />
               <Select value={periodFilter} onValueChange={handlePeriodChange}>
                 <SelectTrigger className="w-52" data-testid="select-period-filter">
                   <CalendarRange className="w-4 h-4 mr-2" />

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   RefreshCw, Plus, Trash2, TestTube, Play, Settings2, ChevronDown, Eye,
   CheckCircle2, XCircle, Clock, Loader2, Users, MapPin, Building, Truck, CalendarDays, AlertTriangle, Wifi, WifiOff, ArrowRight, Globe, Code2,
@@ -630,19 +631,21 @@ export default function DataSyncPage() {
                     </div>
                     <div className="flex-1 min-w-[200px]">
                       <Label className="text-xs font-medium text-blue-800 mb-1 block">Supplier (optional)</Label>
-                      <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId} data-testid={`select-supplier-${config.id}`}>
-                        <SelectTrigger className="h-9" data-testid={`select-trigger-supplier-${config.id}`}>
-                          <SelectValue placeholder="All suppliers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all" data-testid="select-supplier-all">All suppliers</SelectItem>
-                          {suppliersList.filter(s => s.external_id).map(s => (
-                            <SelectItem key={s.id} value={s.external_id!} data-testid={`select-supplier-${s.id}`}>
-                              {s.company_name} ({s.external_id})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={selectedSupplierId}
+                        onValueChange={setSelectedSupplierId}
+                        options={suppliersList.filter(s => s.external_id).map(s => ({
+                          value: s.external_id!,
+                          label: `${s.company_name} (${s.external_id})`,
+                          keywords: s.company_name,
+                        }))}
+                        noneValue="all"
+                        noneLabel="All suppliers"
+                        placeholder="All suppliers"
+                        searchPlaceholder="Search suppliers…"
+                        triggerClassName="h-9"
+                        data-testid={`select-trigger-supplier-${config.id}`}
+                      />
                     </div>
                   </div>
                 )}

@@ -8,6 +8,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { queryClient } from "@/lib/queryClient";
 import {
   Brain, Sparkles, Zap, Send, TrendingUp, TrendingDown, Bot,
@@ -1194,15 +1195,20 @@ export function AIAutonomousPanel({ shifts }: { shifts: any[] }) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Site *</label>
-                <select
+                <SearchableSelect
                   value={coverForm.siteId}
-                  onChange={(e) => setCoverForm(f => ({ ...f, siteId: e.target.value }))}
-                  className="w-full h-9 px-3 rounded-md border text-sm bg-background"
+                  onValueChange={(v) => setCoverForm(f => ({ ...f, siteId: v }))}
+                  options={sites.map((s) => ({
+                    value: String(s.id),
+                    label: s.name,
+                  }))}
+                  noneValue=""
+                  noneLabel="Select site..."
+                  placeholder="Select site..."
+                  searchPlaceholder="Search sites…"
+                  triggerClassName="h-9"
                   data-testid="select-cover-site"
-                >
-                  <option value="">Select site...</option>
-                  {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

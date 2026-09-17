@@ -9,9 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -393,34 +391,34 @@ export default function PayrollPage() {
                 className="w-auto"
                 data-testid="input-date-to"
               />
-              <Select
+              <SearchableSelect
                 value={filterSiteId}
                 onValueChange={(v) => { setFilterSiteId(v); setSelectedShifts(new Set()); }}
-              >
-                <SelectTrigger className="w-40" data-testid="select-filter-site">
-                  <SelectValue placeholder="All Sites" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {uniqueSites.map((site) => (
-                    <SelectItem key={site} value={site}>{site}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
+                options={uniqueSites.map((site) => ({
+                  value: site,
+                  label: site,
+                }))}
+                noneValue="all"
+                noneLabel="All Sites"
+                placeholder="All Sites"
+                searchPlaceholder="Search sites…"
+                className="w-40"
+                data-testid="select-filter-site"
+              />
+              <SearchableSelect
                 value={filterEmployeeName}
                 onValueChange={(v) => { setFilterEmployeeName(v); setSelectedShifts(new Set()); }}
-              >
-                <SelectTrigger className="w-44" data-testid="select-filter-employee">
-                  <SelectValue placeholder="All Employees" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {uniqueEmployees.map((emp) => (
-                    <SelectItem key={emp} value={emp}>{emp}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={uniqueEmployees.map((emp) => ({
+                  value: emp,
+                  label: emp,
+                }))}
+                noneValue="all"
+                noneLabel="All Employees"
+                placeholder="All Employees"
+                searchPlaceholder="Search employees…"
+                className="w-44"
+                data-testid="select-filter-employee"
+              />
             </div>
             <div className="flex-1" />
             {selectedShifts.size > 0 && (

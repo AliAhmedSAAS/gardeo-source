@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FileText, Plus, Loader2, Trash2, Receipt, CreditCard, CalendarRange,
-  CheckCircle2, Building2, ChevronDown, ChevronRight, ChevronLeft, Send, Calendar, Banknote, Download, RefreshCw, Eye, Undo2, AlertTriangle, Pencil, ArrowUp, ArrowDown, ArrowUpDown,
+  CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, Send, Calendar, Banknote, Download, RefreshCw, Eye, Undo2, AlertTriangle, Pencil, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 
 type EnrichedInvoice = {
@@ -758,17 +759,19 @@ export default function SelfBillingPage() {
               </Button>
               <div className="min-w-[220px]">
                 <Label className="text-xs text-muted-foreground mb-1 block">Supplier</Label>
-                <Select value={invoiceSupplierFilter} onValueChange={setInvoiceSupplierFilter}>
-                  <SelectTrigger data-testid="filter-supplier">
-                    <SelectValue placeholder="All Suppliers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Suppliers</SelectItem>
-                    {invoiceSupplierOptions.map(([id, name]) => (
-                      <SelectItem key={id} value={String(id)}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={invoiceSupplierFilter}
+                  onValueChange={setInvoiceSupplierFilter}
+                  options={invoiceSupplierOptions.map(([id, name]) => ({
+                    value: String(id),
+                    label: name,
+                  }))}
+                  noneValue="all"
+                  noneLabel="All Suppliers"
+                  placeholder="All Suppliers"
+                  searchPlaceholder="Search suppliers…"
+                  data-testid="filter-supplier"
+                />
               </div>
               <div className="min-w-[160px]">
                 <Label className="text-xs text-muted-foreground mb-1 block">VAT Status</Label>
@@ -1242,32 +1245,22 @@ export default function SelfBillingPage() {
               <form onSubmit={handlePreview} className="space-y-4 max-w-lg" data-testid="form-generate-invoice">
                 <div className="space-y-2">
                   <Label htmlFor="generate-supplier">Supplier</Label>
-                  <Select
+                  <SearchableSelect
                     value={generateForm.supplierId}
                     onValueChange={(val) => {
                       setGenerateForm({ ...generateForm, supplierId: val });
                       setPreviewData(null);
                       setGenerateResult(null);
                     }}
-                  >
-                    <SelectTrigger data-testid="select-generate-supplier">
-                      <Building2 className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Select a supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliersLoading ? (
-                        <SelectItem value="loading" disabled>Loading suppliers...</SelectItem>
-                      ) : activeSuppliers.length === 0 ? (
-                        <SelectItem value="none" disabled>No active self-billing suppliers</SelectItem>
-                      ) : (
-                        activeSuppliers.map((s) => (
-                          <SelectItem key={s.id} value={String(s.id)} data-testid={`option-supplier-${s.id}`}>
-                            {s.companyName}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    options={activeSuppliers.map((s) => ({
+                      value: String(s.id),
+                      label: s.companyName,
+                    }))}
+                    placeholder={suppliersLoading ? "Loading suppliers..." : activeSuppliers.length === 0 ? "No active self-billing suppliers" : "Select a supplier"}
+                    searchPlaceholder="Search suppliers…"
+                    disabled={suppliersLoading || activeSuppliers.length === 0}
+                    data-testid="select-generate-supplier"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1743,21 +1736,17 @@ export default function SelfBillingPage() {
           <form onSubmit={handleCreateRateCard} className="space-y-4" data-testid="form-add-rate-card">
             <div className="space-y-2">
               <Label>Supplier</Label>
-              <Select
+              <SearchableSelect
                 value={rateCardForm.supplierId}
                 onValueChange={(val) => setRateCardForm({ ...rateCardForm, supplierId: val })}
-              >
-                <SelectTrigger data-testid="select-rc-supplier">
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={suppliers.map((s) => ({
+                  value: String(s.id),
+                  label: s.companyName,
+                }))}
+                placeholder="Select supplier"
+                searchPlaceholder="Search suppliers…"
+                data-testid="select-rc-supplier"
+              />
             </div>
 
             <div className="space-y-2">
@@ -1808,17 +1797,19 @@ export default function SelfBillingPage() {
             {rcSelectedSupplierId && (
               <div className="space-y-2">
                 <Label>Employee (optional)</Label>
-                <Select value={rateCardForm.employeeId} onValueChange={(v) => setRateCardForm({ ...rateCardForm, employeeId: v })} data-testid="select-rc-employee">
-                  <SelectTrigger data-testid="trigger-rc-employee">
-                    <SelectValue placeholder="All employees" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Employees</SelectItem>
-                    {rcSupplierEmployees.map((emp: any) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={rateCardForm.employeeId || "all"}
+                  onValueChange={(v) => setRateCardForm({ ...rateCardForm, employeeId: v })}
+                  options={rcSupplierEmployees.map((emp: any) => ({
+                    value: String(emp.id),
+                    label: `${emp.firstName} ${emp.lastName}`,
+                  }))}
+                  noneValue="all"
+                  noneLabel="All Employees"
+                  placeholder="All employees"
+                  searchPlaceholder="Search employees…"
+                  data-testid="trigger-rc-employee"
+                />
               </div>
             )}
 
@@ -2099,17 +2090,19 @@ export default function SelfBillingPage() {
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium">Supplier</Label>
-                  <Select value={rpSupplierFilter} onValueChange={(v) => { setRpSupplierFilter(v); setRpSelectedTxnId(null); setRecordPaymentSelected(new Set()); }}>
-                    <SelectTrigger data-testid="select-rp-supplier">
-                      <SelectValue placeholder="Select a supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Suppliers</SelectItem>
-                      {supplierOptions.map(([id, name]) => (
-                        <SelectItem key={id} value={id}>{name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={rpSupplierFilter}
+                    onValueChange={(v) => { setRpSupplierFilter(v); setRpSelectedTxnId(null); setRecordPaymentSelected(new Set()); }}
+                    options={supplierOptions.map(([id, name]) => ({
+                      value: id,
+                      label: name,
+                    }))}
+                    noneValue="all"
+                    noneLabel="All Suppliers"
+                    placeholder="Select a supplier"
+                    searchPlaceholder="Search suppliers…"
+                    data-testid="select-rp-supplier"
+                  />
                 </div>
 
                 {rpSupplierFilter !== "all" && (
@@ -2334,27 +2327,21 @@ export default function SelfBillingPage() {
           <form onSubmit={handleRenew} className="space-y-4">
             <div className="space-y-2">
               <Label>Supplier</Label>
-              <Select
+              <SearchableSelect
                 value={renewForm.supplierId}
                 onValueChange={(val) => setRenewForm({ ...renewForm, supplierId: val })}
-              >
-                <SelectTrigger data-testid="select-renew-supplier">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Select a supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers
-                    .filter((s: any) => s.selfBillingAgreementStatus && s.selfBillingAgreementStatus !== "none")
-                    .map((s: any) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.companyName}
-                        {s.selfBillingExpiryDate && new Date(s.selfBillingExpiryDate) < new Date() && (
-                          <span className="text-red-500 ml-2">(Expired)</span>
-                        )}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                options={suppliers
+                  .filter((s: any) => s.selfBillingAgreementStatus && s.selfBillingAgreementStatus !== "none")
+                  .map((s: any) => ({
+                    value: String(s.id),
+                    label: s.selfBillingExpiryDate && new Date(s.selfBillingExpiryDate) < new Date()
+                      ? `${s.companyName} (Expired)`
+                      : s.companyName,
+                  }))}
+                placeholder="Select a supplier"
+                searchPlaceholder="Search suppliers…"
+                data-testid="select-renew-supplier"
+              />
             </div>
             <div className="space-y-2">
               <Label>Renewal Period</Label>
