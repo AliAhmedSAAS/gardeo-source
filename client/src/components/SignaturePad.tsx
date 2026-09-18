@@ -7,10 +7,12 @@ export function SignaturePad({
   value,
   onChange,
   label = "Signature *",
+  compact = false,
 }: {
   value: string;
   onChange: (data: string) => void;
   label?: string;
+  compact?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -94,20 +96,23 @@ export function SignaturePad({
   }, [onChange]);
 
   return (
-    <div className="space-y-2">
+    <div className={compact ? "space-y-1" : "space-y-2"}>
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">{label}</Label>
+        {label ? <Label className="text-sm font-medium">{label}</Label> : <span />}
         <Button type="button" variant="ghost" size="sm" onClick={clearSignature} className="h-7 text-xs gap-1">
           <Eraser className="w-3 h-3" /> Clear
         </Button>
       </div>
-      <div className={`border-2 rounded-lg overflow-hidden bg-white ${hasDrawn ? "border-teal-500" : "border-dashed border-gray-300"}`}>
+      <div className={compact
+        ? `overflow-hidden bg-white border-b ${hasDrawn ? "border-[#0F2942]" : "border-dotted border-neutral-400"}`
+        : `border-2 rounded-lg overflow-hidden bg-white ${hasDrawn ? "border-teal-500" : "border-dashed border-gray-300"}`}
+      >
         <canvas
           ref={canvasRef}
           width={600}
-          height={150}
+          height={compact ? 80 : 150}
           className="w-full cursor-crosshair touch-none"
-          style={{ height: "120px" }}
+          style={{ height: compact ? "64px" : "120px" }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -117,9 +122,11 @@ export function SignaturePad({
           onTouchEnd={stopDrawing}
         />
       </div>
-      <p className="text-xs text-muted-foreground">
-        {hasDrawn ? "Signature captured — clear and redraw if needed" : "Draw your signature with mouse or finger"}
-      </p>
+      {compact ? null : (
+        <p className="text-xs text-muted-foreground">
+          {hasDrawn ? "Signature captured — clear and redraw if needed" : "Draw your signature with mouse or finger"}
+        </p>
+      )}
     </div>
   );
 }

@@ -2571,6 +2571,342 @@ export function generateVettingCompletionCertPdf(data: {
   });
 }
 
+export function generateImsSe19CompletionCertificatePdf(data: {
+  companyName?: string | null;
+  officerName: string;
+  niNumber?: string | null;
+  appointmentDate?: string | null;
+  screeningCompletedDate?: string | null;
+  signatoryName?: string | null;
+  signatoryInitials?: string | null;
+  signatoryPosition?: string | null;
+  signatureImage?: string | null;
+}): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const buffers: Buffer[] = [];
+    const stream = new PassThrough();
+    stream.on("data", (chunk) => buffers.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(buffers)));
+    stream.on("error", reject);
+    doc.pipe(stream);
+
+    const navy = "#0F2942";
+    const steel = "#1F4E79";
+    const left = 50;
+    const right = 545;
+    const width = right - left;
+    const valueX = left + 170;
+    let y = 50;
+
+    const companyName = (data.companyName || "Guardian FM").trim() || "Guardian FM";
+    doc.font("Helvetica-Bold").fontSize(16).fillColor(navy).text(companyName, left, y, { width, align: "center" });
+    y = doc.y + 8;
+    doc.font("Helvetica-Bold").fontSize(13).fillColor(steel).text(
+      "CERTIFICATE FOR COMPLETION OF SCREENING",
+      left,
+      y,
+      { width, align: "center" },
+    );
+    y = doc.y + 6;
+    doc.font("Helvetica").fontSize(10).fillColor("#8B7355").text(
+      "Satisfactory completion of screening enquiries",
+      left,
+      y,
+      { width, align: "center" },
+    );
+    y = doc.y + 16;
+    doc.lineWidth(1.2).strokeColor(navy).moveTo(left, y).lineTo(right, y).stroke();
+    y += 22;
+
+    const drawField = (label: string, value: string) => {
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(navy).text(label, left, y);
+      if (value) {
+        doc.font("Helvetica").fontSize(10).fillColor("#111").text(value, valueX, y, { width: right - valueX });
+      } else {
+        doc.moveTo(valueX, y + 12).lineTo(right, y + 12).lineWidth(0.5).strokeColor("#999").stroke();
+      }
+      y += 22;
+    };
+
+    drawField("Name", data.officerName || "");
+    drawField("N.I.", (data.niNumber || "").toUpperCase());
+    drawField("Date of Appointment", data.appointmentDate || "");
+    drawField("Date Screening Completed", data.screeningCompletedDate || "");
+
+    y += 10;
+    doc.font("Helvetica").fontSize(10).fillColor("#111").text(
+      "The above named person has, to date, been contracted on a provisional / temporary basis and has undergone:",
+      left,
+      y,
+      { width },
+    );
+    y = doc.y + 14;
+
+    const box = (x: number, by: number, checked: boolean) => {
+      doc.lineWidth(0.8).strokeColor("#000").rect(x, by, 11, 11).stroke();
+      if (checked) {
+        doc.moveTo(x + 2, by + 6).lineTo(x + 4.5, by + 9).lineTo(x + 9, by + 2).lineWidth(1.4).stroke();
+      }
+    };
+
+    box(left, y, true);
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(navy).text(
+      "(a) Satisfactory completion of screening",
+      left + 18,
+      y - 1,
+      { width: width - 18 },
+    );
+    y += 22;
+
+    box(left, y, false);
+    doc.font("Helvetica").fontSize(10).fillColor("#111").text(
+      "(b) Completion of Screening with the following exceptions: Satisfactory",
+      left + 18,
+      y - 1,
+      { width: width - 18 },
+    );
+    y = Math.max(doc.y, y + 14) + 16;
+
+    doc.font("Helvetica").fontSize(10).text(
+      "My reasons for discretion in relation to above, is/are:",
+      left,
+      y,
+      { width },
+    );
+    y = doc.y + 8;
+    doc.moveTo(left, y + 12).lineTo(right, y + 12).lineWidth(0.5).strokeColor("#999").stroke();
+    y += 40;
+
+    const signedValue = (data.signatoryInitials || "").trim();
+    const nameValue = (data.signatoryName || "").trim();
+    const positionValue = (data.signatoryPosition || "").trim();
+    const sigWidth = 150;
+    const sigHeight = 48;
+    const sigX = valueX;
+    let signatureDrawn = false;
+
+    if (data.signatureImage) {
+      try {
+        const base64Match = data.signatureImage.match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          doc.image(Buffer.from(base64Match[1], "base64"), sigX, y, { fit: [sigWidth, sigHeight] });
+          signatureDrawn = true;
+        }
+      } catch {
+        signatureDrawn = false;
+      }
+    }
+
+    const signedTextY = signatureDrawn ? y + sigHeight + 4 : y;
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(navy).text("Signed", left, signedTextY);
+    if (signedValue) {
+      doc.font("Helvetica").fontSize(11).fillColor("#111").text(signedValue, valueX, signedTextY);
+    } else if (!signatureDrawn) {
+      doc.moveTo(valueX, signedTextY + 12).lineTo(valueX + 140, signedTextY + 12).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+    y = signedTextY + 22;
+
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(navy).text("Name", left, y);
+    if (nameValue) {
+      doc.font("Helvetica").fontSize(10).fillColor("#111").text(nameValue, valueX, y);
+    } else {
+      doc.moveTo(valueX, y + 12).lineTo(right, y + 12).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+    y += 20;
+
+    doc.font("Helvetica-Bold").text("Position", left, y);
+    if (positionValue) {
+      doc.font("Helvetica").text(positionValue, valueX, y);
+    } else {
+      doc.moveTo(valueX, y + 12).lineTo(right, y + 12).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+    y += 20;
+
+    doc.font("Helvetica-Bold").text("Date", left, y);
+    if (data.screeningCompletedDate) {
+      doc.font("Helvetica").text(data.screeningCompletedDate, valueX, y);
+    } else {
+      doc.moveTo(valueX, y + 12).lineTo(valueX + 140, y + 12).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+
+    doc.end();
+  });
+}
+
+export const STAFF_FEEDBACK_QUESTIONS: { key: "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "q7" | "q8" | "q9"; label: string }[] = [
+  { key: "q1", label: "How do you rate the uniform & protective equipment issued to you?" },
+  { key: "q2", label: "How do you rate the payment structure?" },
+  { key: "q3", label: "How would you rate the communication between the mobile supervisor team and management team?" },
+  { key: "q4", label: "How would you rate the induction and training you received?" },
+  { key: "q5", label: "How do you rate the way we handle queries when contacting our office?" },
+  { key: "q6", label: "How do you rate the effectiveness of the mobile supervisory team when conducting site visits?" },
+  { key: "q7", label: "How would you rate the senior management effectiveness when conducting site visits?" },
+  { key: "q8", label: "How do you rate the check call in system effectiveness made to control and or supervisors?" },
+  { key: "q9", label: "How do you rate the environment where you work?" },
+];
+
+export const STAFF_FEEDBACK_RATINGS: { value: string; label: string }[] = [
+  { value: "very_poor", label: "Very poor" },
+  { value: "poor", label: "Poor" },
+  { value: "good", label: "Good" },
+  { value: "very_good", label: "Very Good" },
+];
+
+export function generateStaffFeedbackQuestionnairePdf(data: {
+  companyName: string;
+  officerName: string;
+  issueNumber: number;
+  lastSurveyDate?: string | null;
+  conductedBy?: string | null;
+  reviewedBy?: string | null;
+  signedDate?: string | null;
+  submittedAt?: Date | null;
+  ratings: Record<"q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "q7" | "q8" | "q9", string | null | undefined>;
+  comments?: string | null;
+  printName?: string | null;
+  signatureImage?: string | null;
+}): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 40 });
+    const buffers: Buffer[] = [];
+    const stream = new PassThrough();
+    stream.on("data", (chunk) => buffers.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(buffers)));
+    stream.on("error", reject);
+    doc.pipe(stream);
+
+    const navy = "#0F2942";
+    const steel = "#1F4E79";
+    const left = 40;
+    const right = 555;
+    const width = right - left;
+    const valueX = left + 150;
+    const ratingColW = 210;
+    const questionW = width - ratingColW - 8;
+    const comments = data.comments?.trim() || "";
+    let y = 36;
+
+    const companyName = (data.companyName || "Guardian FM").trim() || "Guardian FM";
+    doc.font("Helvetica-Bold").fontSize(15).fillColor(navy).text(companyName, left, y, { width, align: "center" });
+    y = doc.y + 4;
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(steel).text(
+      "SECURITY PERSONNEL FEEDBACK QUESTIONNAIRE",
+      left,
+      y,
+      { width, align: "center" },
+    );
+    y = doc.y + 3;
+    doc.font("Helvetica").fontSize(9).fillColor("#8B7355").text(
+      "Confidential appraisal of company support, training and supervision",
+      left,
+      y,
+      { width, align: "center" },
+    );
+    y = doc.y + 10;
+    doc.lineWidth(1.1).strokeColor(navy).moveTo(left, y).lineTo(right, y).stroke();
+    y += 14;
+
+    const drawField = (label: string, value: string) => {
+      doc.font("Helvetica-Bold").fontSize(9.5).fillColor(navy).text(label, left, y);
+      if (value) {
+        doc.font("Helvetica").fontSize(9.5).fillColor("#111").text(value, valueX, y, { width: right - valueX });
+      } else {
+        doc.moveTo(valueX, y + 11).lineTo(right, y + 11).lineWidth(0.5).strokeColor("#999").stroke();
+      }
+      y += 18;
+    };
+
+    const box = (x: number, by: number, checked: boolean) => {
+      doc.lineWidth(0.7).strokeColor("#000").rect(x, by, 9, 9).stroke();
+      if (checked) {
+        doc.moveTo(x + 1.5, by + 5).lineTo(x + 3.5, by + 7.2).lineTo(x + 7.5, by + 1.8).lineWidth(1.2).stroke();
+      }
+    };
+
+    drawField("Name", data.officerName || "");
+    drawField("Issue number", String(data.issueNumber || 1));
+    drawField("Date of last survey", data.lastSurveyDate || "");
+    drawField("Conducted by", data.conductedBy || "");
+    drawField("Reviewed by HR", data.reviewedBy || "");
+    y += 4;
+
+    STAFF_FEEDBACK_QUESTIONS.forEach((q, i) => {
+      const label = `${i + 1}. ${q.label}`;
+      doc.font("Helvetica").fontSize(9);
+      const textH = doc.heightOfString(label, { width: questionW });
+      const rowH = Math.max(20, textH + 4);
+      doc.fillColor("#111").text(label, left, y, { width: questionW });
+      let cx = left + questionW + 6;
+      const ratingY = y + Math.max(0, (rowH - 9) / 2 - 1);
+      for (const opt of STAFF_FEEDBACK_RATINGS) {
+        box(cx, ratingY, data.ratings[q.key] === opt.value);
+        doc.font("Helvetica").fontSize(7.5).fillColor("#111").text(opt.label, cx + 12, ratingY - 1, { lineBreak: false });
+        cx += 52;
+      }
+      y += rowH + 4;
+    });
+
+    y += 4;
+    doc.font("Helvetica").fontSize(8).fillColor("#111").text(
+      'If you the SELF EMPLOYED PERSONNEL has scored "POOR or VERY POOR" please expand in order for us analyse your concerns. Please make comments if you wish to provide information to enhance the appraisal process.',
+      left,
+      y,
+      { width },
+    );
+    y = doc.y + 6;
+    if (comments) {
+      doc.font("Helvetica").fontSize(9).fillColor("#111").text(comments, left, y, {
+        width,
+        height: 36,
+        ellipsis: true,
+      });
+      y += 40;
+    } else {
+      doc.moveTo(left, y + 11).lineTo(right, y + 11).lineWidth(0.5).strokeColor("#999").stroke();
+      y += 22;
+    }
+
+    const sigWidth = 130;
+    const sigHeight = 32;
+    let signatureDrawn = false;
+    if (data.signatureImage) {
+      try {
+        const base64Match = data.signatureImage.match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          doc.image(Buffer.from(base64Match[1], "base64"), valueX, y, { fit: [sigWidth, sigHeight] });
+          signatureDrawn = true;
+        }
+      } catch {
+        signatureDrawn = false;
+      }
+    }
+
+    doc.font("Helvetica-Bold").fontSize(9.5).fillColor(navy).text("Signed", left, signatureDrawn ? y + 10 : y);
+    if (!signatureDrawn) {
+      doc.moveTo(valueX, y + 11).lineTo(valueX + 140, y + 11).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+    y += signatureDrawn ? sigHeight + 6 : 18;
+
+    doc.font("Helvetica-Bold").fontSize(9.5).fillColor(navy).text("Name", left, y);
+    if (data.printName) {
+      doc.font("Helvetica").fontSize(9.5).fillColor("#111").text(data.printName, valueX, y);
+    } else {
+      doc.moveTo(valueX, y + 11).lineTo(right, y + 11).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+    y += 18;
+
+    doc.font("Helvetica-Bold").text("Date", left, y);
+    if (data.signedDate) {
+      doc.font("Helvetica").text(data.signedDate, valueX, y);
+    } else {
+      doc.moveTo(valueX, y + 11).lineTo(valueX + 140, y + 11).lineWidth(0.5).strokeColor("#999").stroke();
+    }
+
+    doc.end();
+  });
+}
+
 function drawLabelValue(
   doc: PDFKit.PDFDocument,
   x: number,

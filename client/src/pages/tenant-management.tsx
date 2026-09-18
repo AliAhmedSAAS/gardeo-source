@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -87,7 +88,7 @@ export default function TenantManagementPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<typeof emptyTenantForm & { isActive: boolean }> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<typeof emptyTenantForm & { isActive: boolean; employmentVettingAutomationEnabled: boolean }> }) => {
       const res = await apiRequest("PATCH", `/api/admin/tenants/${id}`, data);
       return res.json();
     },
@@ -95,6 +96,28 @@ export default function TenantManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tenants"] });
       setEditOpen(false);
       toast({ title: "Tenant updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const toggleAutomationMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/tenants/${id}`, {
+        employmentVettingAutomationEnabled: enabled,
+      });
+      return res.json() as Promise<Tenant>;
+    },
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tenants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
+      setSelectedTenant(updated);
+      toast({
+        title: updated.employmentVettingAutomationEnabled
+          ? "Employment vetting automation enabled"
+          : "Employment vetting automation disabled",
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Failed", description: error.message, variant: "destructive" });
@@ -451,6 +474,25 @@ export default function TenantManagementPage() {
               </Button>
             </div>
           )}
+          {selectedTenant && (
+            <div className="flex items-center justify-between gap-3 border-t pt-3">
+              <div>
+                <Label htmlFor="employment-vetting-automation">Employment vetting automation</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Show Telephone Screening, Email Sending, and Submit Verification on officer vetting.
+                </p>
+              </div>
+              <Switch
+                id="employment-vetting-automation"
+                checked={!!selectedTenant.employmentVettingAutomationEnabled}
+                disabled={toggleAutomationMutation.isPending}
+                onCheckedChange={(enabled) => {
+                  toggleAutomationMutation.mutate({ id: selectedTenant.id, enabled });
+                }}
+                data-testid="switch-employment-vetting-automation"
+              />
+            </div>
+          )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
             <Button
@@ -502,7 +544,23 @@ export default function TenantManagementPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Industry</p>
-                  <p className="capitalize">{selectedTenant.industry || "Security"}</p>
+                    <p className="capitalize">{selectedTenant.industry || "Security"}</p>
+                </div>
+                <div className="col-span-2 flex items-center justify-between gap-3 rounded-md border border-border/70 p-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Employment vetting automation</p>
+                    <p className="text-sm">
+                      {selectedTenant.employmentVettingAutomationEnabled ? "Enabled" : "Disabled"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!selectedTenant.employmentVettingAutomationEnabled}
+                    disabled={toggleAutomationMutation.isPending}
+                    onCheckedChange={(enabled) => {
+                      toggleAutomationMutation.mutate({ id: selectedTenant.id, enabled });
+                    }}
+                    data-testid="switch-employment-vetting-automation-detail"
+                  />
                 </div>
                 {selectedTenant.companyRegNumber && (
                   <div>

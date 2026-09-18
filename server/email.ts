@@ -972,6 +972,128 @@ export async function sendVettingFormLinkEmail(params: {
   }
 }
 
+export async function sendStaffFeedbackRequest(params: {
+  to: string;
+  employeeName: string;
+  companyName?: string;
+  tradingName?: string | null;
+  replyTo?: string | null;
+  tenantEmail?: string | null;
+  tenantId?: number | null;
+  formUrl: string;
+  expiresAt: Date;
+}): Promise<{ ok: boolean; error?: string; skipped?: boolean; via?: "smtp" | "resend" | "outlook" }> {
+  const {
+    to,
+    employeeName,
+    companyName = "Guardosmart",
+    tradingName,
+    replyTo,
+    tenantEmail,
+    tenantId,
+    formUrl,
+    expiresAt,
+  } = params;
+  const brand = (tradingName || companyName || "Guardosmart").trim();
+  const reply = (replyTo || tenantEmail || "").trim() || undefined;
+  const expiresLabel = expiresAt.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const subject = `[${brand}] Security personnel feedback questionnaire`;
+  const html = `
+        <p>Hi ${escapeHtml(employeeName)},</p>
+        <p><strong>${escapeHtml(brand)}</strong> would like you to complete a short Security Personnel Feedback Questionnaire. Your answers help us improve uniform, pay, training, supervision, and site support.</p>
+        <p style="margin:24px 0;">
+          <a href="${escapeHtml(formUrl)}"
+             style="display:inline-block;background:#1F3A5F;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600;">
+            Open feedback form
+          </a>
+        </p>
+        <p style="font-size:13px;color:#555;">
+          Or open this link in your browser:<br/>
+          <a href="${escapeHtml(formUrl)}">${escapeHtml(formUrl)}</a>
+        </p>
+        <p>This confidential link expires on <strong>${escapeHtml(expiresLabel)}</strong> and can only be submitted once.</p>
+        <p>— ${escapeHtml(brand)} HR Team${reply ? `<br/><span style="color:#666">${escapeHtml(reply)}</span>` : ""}</p>
+      `;
+
+  if (tenantId != null) {
+    try {
+      const { sendViaTenantEmailSettings } = await import("./tenant-email-settings");
+      const tenantSend = await sendViaTenantEmailSettings({
+        tenantId,
+        to,
+        subject,
+        html,
+        replyTo: reply,
+      });
+      if (tenantSend.ok) {
+        return { ok: true, via: tenantSend.via || "smtp" };
+      }
+      if (
+        tenantSend.error &&
+        !tenantSend.error.includes("not enabled") &&
+        !tenantSend.error.includes("not configured")
+      ) {
+        return { ok: false, error: tenantSend.error };
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[email] Tenant email settings error:", message);
+    }
+  }
+
+  if (tenantId != null) {
+    try {
+      const { sendTenantOutlookEmail } = await import("./email-command-service");
+      const outlook = await sendTenantOutlookEmail({
+        tenantId,
+        to,
+        subject,
+        html,
+        replyTo: reply,
+      });
+      if (outlook.ok) {
+        return { ok: true, via: "outlook" };
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[email] Outlook send error:", message);
+    }
+  }
+
+  if (!resend) {
+    return {
+      ok: false,
+      error:
+        "No tenant email configured. Set SMTP in Settings → Integrations, or connect Outlook in Email Command Centre.",
+      skipped: true,
+    };
+  }
+
+  const from = fromAddress.includes("<")
+    ? fromAddress.replace(/^[^<]*/, `${brand} HR `)
+    : `${brand} HR <${fromAddress}>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from,
+      to: [to],
+      ...(reply ? { replyTo: reply } : {}),
+      subject,
+      html,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, via: "resend" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] sendStaffFeedbackRequest failed:", message);
+    return { ok: false, error: message };
+  }
+}
+
 export async function sendDocumentRequestEmail(params: {
   to: string;
   employeeName: string;
@@ -1116,5 +1238,6 @@ export const emailService = {
   sendPersonalReferenceRequest,
   sendVettingPacketEmail,
   sendVettingFormLinkEmail,
+  sendStaffFeedbackRequest,
   sendDocumentRequestEmail,
 };

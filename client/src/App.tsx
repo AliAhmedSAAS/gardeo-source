@@ -92,6 +92,7 @@ const AbsencesPage = lazy(() => import("@/pages/absences"));
 const TrainingMatrixPage = lazy(() => import("@/pages/training-matrix"));
 const OfferResponsePage = lazy(() => import("@/pages/offer-response"));
 const EmploymentVerifyPage = lazy(() => import("@/pages/employment-verify"));
+const StaffFeedbackPage = lazy(() => import("@/pages/staff-feedback"));
 const PersonalReferenceVerifyPage = lazy(() => import("@/pages/personal-reference-verify"));
 const PublicVettingFormPage = lazy(() => import("@/pages/public-vetting-form"));
 const FmDashboardPage = lazy(() => import("@/pages/fm-dashboard"));
@@ -329,6 +330,9 @@ function Router() {
       </Route>
       <Route path="/verify/employment/:token">
         <Suspense fallback={<FullScreenSpinner />}><EmploymentVerifyPage /></Suspense>
+      </Route>
+      <Route path="/feedback/:token">
+        <Suspense fallback={<FullScreenSpinner />}><StaffFeedbackPage /></Suspense>
       </Route>
       <Route path="/verify/personal/:token">
         <Suspense fallback={<FullScreenSpinner />}><PersonalReferenceVerifyPage /></Suspense>

@@ -54,6 +54,22 @@ async function loadEmployeeScoped(req: Request, res: Response) {
   return { user, employee, employeeId };
 }
 
+async function requireEmploymentVettingAutomation(
+  ctx: { employee: { tenantId?: number | null } },
+  res: Response,
+): Promise<boolean> {
+  if (!ctx.employee.tenantId) {
+    res.status(403).json({ message: "Employment vetting automation is not enabled for this company" });
+    return false;
+  }
+  const tenant = await storage.getTenant(ctx.employee.tenantId);
+  if (!tenant?.employmentVettingAutomationEnabled) {
+    res.status(403).json({ message: "Employment vetting automation is not enabled for this company" });
+    return false;
+  }
+  return true;
+}
+
 function addMonths(date: Date, months: number) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);
@@ -406,7 +422,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!code || !action) {
         return res.status(400).json({ message: "Code and action are required" });
       }
-      const allowed = new Set(["AR", "CV", "VC", "SI", "CL", "CR", "SDR", "VE", "DR", "WR"]);
+      const allowed = new Set(["AR", "CV", "VC", "SI", "CL", "CR", "SDR", "VE", "DR", "WR", "IN", "FB"]);
       if (!allowed.has(code)) {
         return res.status(400).json({ message: "Invalid audit code" });
       }
@@ -723,6 +739,66 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
     }
   });
 
+  app.post("/api/admin/employees/:id/employment-telephone-screening", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      if (!(await requireEmploymentVettingAutomation(ctx, res))) return;
+      const result = await staffProfileStorage.runEmploymentTelephoneScreening(
+        ctx.employeeId,
+        ctx.employee,
+        ctx.user.id,
+      );
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/employees/:id/employment-email-sending", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      if (!(await requireEmploymentVettingAutomation(ctx, res))) return;
+      const result = await staffProfileStorage.runEmploymentEmailSending(
+        ctx.employeeId,
+        ctx.employee,
+        ctx.user.id,
+      );
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/employees/:id/employment-submit-verification", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      if (!(await requireEmploymentVettingAutomation(ctx, res))) return;
+      const result = await staffProfileStorage.runEmploymentSubmitVerification(
+        ctx.employeeId,
+        ctx.employee,
+        ctx.user.id,
+      );
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/employees/:id/completion-certification", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      if (!(await requireEmploymentVettingAutomation(ctx, res))) return;
+      const result = await staffProfileStorage.runCompletionCertification(ctx.employeeId, ctx.employee);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/admin/employees/:id/employment-history/:histId/send-verification", guard, async (req, res) => {
     try {
       const ctx = await loadEmployeeScoped(req, res);
@@ -750,6 +826,28 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       );
       if (!result.ok) return res.status(400).json({ message: result.error });
       res.json(result.record);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/admin/employees/:id/staff-feedback", guard, async (req, res) => {
+    try {
+      const ctx = await loadEmployeeScoped(req, res);
+      if (!ctx) return;
+      const result = await staffProfileStorage.sendStaffFeedbackQuestionnaire(
+        ctx.employeeId,
+        ctx.employee,
+        ctx.user.id,
+        typeof req.body?.to === "string" ? req.body.to : null,
+      );
+      if (!result.ok) return res.status(400).json({ message: result.error });
+      res.json({
+        sentTo: result.sentTo,
+        formUrl: result.formUrl,
+        expiresAt: result.expiresAt,
+        issueNumber: result.issueNumber,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -1359,6 +1457,35 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
     try {
       const { submitPersonalReferenceForm } = await import("./personal-reference-verify");
       const result = await submitPersonalReferenceForm(String(req.params.token || ""), req.body || {});
+      if (!result.ok) {
+        return res.status(result.status || 400).json({ message: result.error });
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/public/feedback/:token", async (req, res) => {
+    try {
+      const { getStaffFeedbackFormByToken } = await import("./staff-feedback-verify");
+      const result = await getStaffFeedbackFormByToken(String(req.params.token || ""));
+      if (!result.ok) {
+        return res.status(result.status || 404).json({
+          message: result.error,
+          submitted: !!(result as any).submitted,
+        });
+      }
+      res.json(result.data);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/public/feedback/:token", async (req, res) => {
+    try {
+      const { submitStaffFeedbackForm } = await import("./staff-feedback-verify");
+      const result = await submitStaffFeedbackForm(String(req.params.token || ""), req.body || {});
       if (!result.ok) {
         return res.status(result.status || 400).json({ message: result.error });
       }

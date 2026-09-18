@@ -1,4 +1,4 @@
-import { eq, desc, and, isNotNull } from "drizzle-orm";
+import { eq, desc, and, isNotNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import { storage } from "./storage";
 import {
@@ -19,6 +19,7 @@ import {
   sites,
   clients,
   employmentHistory,
+  employmentReferenceTokens,
   type InsertEmployeeNote,
   type InsertEmployeePreferredSite,
   type InsertEmployeeEducation,
@@ -34,6 +35,17 @@ import {
   type InsertEmploymentHistory,
   resolveDeploymentGateSettings,
 } from "@shared/schema";
+import {
+  buildEmploymentTelephoneScreeningPlan,
+  buildEmploymentEmailSendingPlan,
+  buildEmploymentSubmitVerificationPlan,
+  reminderStatsFromEvents,
+  formatLondonYmd,
+  resolveRegistrationDate,
+} from "./employment-telephone-screening";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 const POA_TYPES = ["proof_of_address", "utility_bill", "council_tax", "bank_statement"];
 const MIN_DEPLOY_STEP = 5;
@@ -79,7 +91,7 @@ export const staffProfileStorage = {
       db.select().from(employeeCertificates).where(eq(employeeCertificates.employeeId, employeeId)).orderBy(desc(employeeCertificates.createdAt)),
       db.select().from(employeeSiaLicences).where(eq(employeeSiaLicences.employeeId, employeeId)).orderBy(desc(employeeSiaLicences.createdAt)),
       db.select().from(pFormRecords).where(eq(pFormRecords.employeeId, employeeId)).limit(1),
-      db.select().from(vettingAuditEvents).where(eq(vettingAuditEvents.employeeId, employeeId)).orderBy(desc(vettingAuditEvents.createdAt)),
+      db.select().from(vettingAuditEvents).where(eq(vettingAuditEvents.employeeId, employeeId)).orderBy(sql`COALESCE(${vettingAuditEvents.eventAt}, ${vettingAuditEvents.createdAt}) DESC`),
       db.select().from(rightOfWorkChecks).where(eq(rightOfWorkChecks.employeeId, employeeId)).orderBy(desc(rightOfWorkChecks.createdAt)),
       db.select().from(employeeAddressHistory).where(eq(employeeAddressHistory.employeeId, employeeId)).orderBy(desc(employeeAddressHistory.livingFrom)),
       db
@@ -411,8 +423,8 @@ export const staffProfileStorage = {
     return row;
   },
 
-  async addVettingAudit(data: InsertVettingAuditEvent) {
-    const payload: InsertVettingAuditEvent = {
+  async addVettingAudit(data: InsertVettingAuditEvent & { createdAt?: Date }) {
+    const payload: Record<string, unknown> = {
       employeeId: data.employeeId,
       code: data.code,
       action: data.action,
@@ -421,17 +433,21 @@ export const staffProfileStorage = {
       tenantId: data.tenantId ?? null,
       createdBy: data.createdBy || null,
     };
+    if (data.eventAt) payload.eventAt = data.eventAt;
+    if (data.eventType) payload.eventType = data.eventType;
+    if (data.employmentHistoryId != null) payload.employmentHistoryId = data.employmentHistoryId;
+    if (data.createdAt) payload.createdAt = data.createdAt;
     // Avoid FK violations when tenant/user ids are missing or stale
-    if (!payload.tenantId) delete (payload as any).tenantId;
-    if (!payload.createdBy) delete (payload as any).createdBy;
+    if (!payload.tenantId) delete payload.tenantId;
+    if (!payload.createdBy) delete payload.createdBy;
 
     try {
-      const [row] = await db.insert(vettingAuditEvents).values(payload).returning();
+      const [row] = await db.insert(vettingAuditEvents).values(payload as InsertVettingAuditEvent).returning();
       return row;
     } catch (err: any) {
       // Retry without optional FKs if constraint fails
       if (err?.code === "23503") {
-        const { tenantId: _t, createdBy: _c, ...safe } = payload as any;
+        const { tenantId: _t, createdBy: _c, employmentHistoryId: _e, ...safe } = payload as any;
         const [row] = await db.insert(vettingAuditEvents).values(safe).returning();
         return row;
       }
@@ -626,6 +642,70 @@ export const staffProfileStorage = {
     return { ok: true as const, record: updated };
   },
 
+  async sendStaffFeedbackQuestionnaire(
+    employeeId: number,
+    employee: { tenantId?: number | null; userId?: string | null; employeeNumber?: string | null; portalEmail?: string | null },
+    userId: string,
+    emailOverride?: string | null,
+  ) {
+    const empUser = employee.userId ? await storage.getUser(employee.userId) : null;
+    const officerName =
+      `${empUser?.firstName || ""} ${empUser?.lastName || ""}`.trim() ||
+      employee.employeeNumber ||
+      `Employee #${employeeId}`;
+    const toEmail = (emailOverride || empUser?.email || employee.portalEmail || "").trim();
+    if (!toEmail || !toEmail.includes("@")) {
+      return { ok: false as const, error: "No officer email on file. Enter an email and try again." };
+    }
+
+    const tenant = employee.tenantId ? await storage.getTenant(employee.tenantId) : null;
+    const companyName = tenant?.name || "Guardosmart";
+
+    let verifyUrl: string | undefined;
+    let expiresAt: Date | undefined;
+    let issueNumber = 1;
+    try {
+      const { createStaffFeedbackToken } = await import("./staff-feedback-verify");
+      const created = await createStaffFeedbackToken({
+        tenantId: employee.tenantId ?? null,
+        employeeId,
+      });
+      verifyUrl = created.verifyUrl;
+      expiresAt = created.expiresAt;
+      issueNumber = created.issueNumber;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[staff-profile] Failed to create staff feedback token:", message);
+      return { ok: false as const, error: "Could not create feedback link. Check database migration." };
+    }
+
+    const { sendStaffFeedbackRequest } = await import("./email");
+    const sent = await sendStaffFeedbackRequest({
+      to: toEmail,
+      employeeName: officerName,
+      companyName,
+      tradingName: tenant?.tradingName,
+      replyTo: tenant?.email,
+      tenantEmail: tenant?.email,
+      tenantId: employee.tenantId ?? null,
+      formUrl: verifyUrl!,
+      expiresAt: expiresAt || new Date(),
+    });
+    if (!sent.ok) return { ok: false as const, error: sent.error || "Email failed" };
+
+    await this.addVettingAudit({
+      employeeId,
+      tenantId: employee.tenantId ?? null,
+      code: "FB",
+      action: "Feedback questionnaire email sent",
+      details: `Security Personnel Feedback Questionnaire (issue ${issueNumber}) emailed to ${toEmail} on behalf of ${companyName}${sent.via ? ` via ${sent.via}` : ""}`,
+      colorKey: "teal",
+      createdBy: userId,
+    });
+
+    return { ok: true as const, sentTo: toEmail, formUrl: verifyUrl, expiresAt, issueNumber };
+  },
+
   async recordPersonalReferenceVerbalEnquiry(
     refId: number,
     employeeId: number,
@@ -769,4 +849,519 @@ export const staffProfileStorage = {
       .returning();
     return updated;
   },
+
+  async runEmploymentTelephoneScreening(
+    employeeId: number,
+    employee: { createdAt?: Date | string | null; startDate?: string | null; vettingStartDate?: string | null; tenantId?: number | null },
+    userId: string,
+  ) {
+    const jobs = await storage.getEmploymentHistory(employeeId);
+    if (jobs.length === 0) {
+      return { generated: 0, events: [] as any[], employmentUpdated: 0, message: "No employment records" };
+    }
+
+    const plan = buildEmploymentTelephoneScreeningPlan({
+      registrationDate: resolveRegistrationDate(employee),
+      jobs: jobs.map((job) => ({
+        id: job.id,
+        employerName: job.employerName,
+        dateFrom: String(job.dateFrom).slice(0, 10),
+        dateTo: job.dateTo ? String(job.dateTo).slice(0, 10) : null,
+      })),
+    });
+
+    const written = await db.transaction(async (tx) => {
+      const rows = [];
+      for (const event of plan.events) {
+        const payload: Record<string, unknown> = {
+          employeeId,
+          code: event.code,
+          action: event.action,
+          details: event.details,
+          eventType: event.eventType,
+          colorKey: event.colorKey,
+          eventAt: event.eventAt,
+          createdAt: event.eventAt,
+        };
+        if (event.employmentHistoryId != null) payload.employmentHistoryId = event.employmentHistoryId;
+        if (employee.tenantId) payload.tenantId = employee.tenantId;
+        if (userId) payload.createdBy = userId;
+        const [row] = await tx.insert(vettingAuditEvents).values(payload as InsertVettingAuditEvent).returning();
+        rows.push(row);
+      }
+
+      for (const update of plan.employmentUpdates) {
+        await tx
+          .update(employmentHistory)
+          .set({
+            confirmedFrom: update.confirmedFrom,
+            confirmedTo: update.confirmedTo,
+            verballyConfirmedAt: update.verballyConfirmedAt,
+            verificationStatus: "verified",
+          })
+          .where(and(eq(employmentHistory.id, update.id), eq(employmentHistory.employeeId, employeeId)));
+      }
+
+      return rows;
+    });
+
+    return {
+      generated: written.length,
+      events: written,
+      employmentUpdated: plan.employmentUpdates.length,
+    };
+  },
+
+  async runEmploymentEmailSending(
+    employeeId: number,
+    employee: { tenantId?: number | null },
+    userId: string,
+  ) {
+    const jobs = await storage.getEmploymentHistory(employeeId);
+    if (jobs.length === 0) {
+      return { generated: 0, events: [] as any[], message: "No employment records" };
+    }
+
+    const eligible = jobs.filter((job) => job.verballyConfirmedAt);
+    if (eligible.length === 0) {
+      return { generated: 0, events: [] as any[], employmentUpdated: 0, message: "No verbally confirmed employment records" };
+    }
+
+    const existingAudits = await db
+      .select()
+      .from(vettingAuditEvents)
+      .where(eq(vettingAuditEvents.employeeId, employeeId));
+    const existingStats = reminderStatsFromEvents(existingAudits);
+
+    const toGenerate = eligible.filter((job) => !existingStats.has(job.id));
+    const plan = buildEmploymentEmailSendingPlan(
+      toGenerate.map((job) => ({
+        id: job.id,
+        employerName: job.employerName,
+        verballyConfirmedAt: job.verballyConfirmedAt as Date | string,
+      })),
+    );
+
+    const mergedStats = reminderStatsFromEvents([
+      ...existingAudits,
+      ...plan.events.map((event) => ({
+        code: event.code,
+        action: event.action,
+        eventType: event.eventType,
+        employmentHistoryId: event.employmentHistoryId,
+        eventAt: event.eventAt,
+        createdAt: event.eventAt,
+      })),
+    ]);
+
+    if (plan.events.length === 0 && mergedStats.size === 0) {
+      return { generated: 0, events: [] as any[], employmentUpdated: 0, message: "No verbally confirmed employment records" };
+    }
+
+    const jobById = new Map(jobs.map((job) => [job.id, job]));
+    const written = await db.transaction(async (tx) => {
+      const rows = [];
+      for (const event of plan.events) {
+        const payload: Record<string, unknown> = {
+          employeeId,
+          code: event.code,
+          action: event.action,
+          details: event.details,
+          eventType: event.eventType,
+          colorKey: event.colorKey,
+          eventAt: event.eventAt,
+          createdAt: event.eventAt,
+        };
+        if (event.employmentHistoryId != null) payload.employmentHistoryId = event.employmentHistoryId;
+        if (employee.tenantId) payload.tenantId = employee.tenantId;
+        if (userId) payload.createdBy = userId;
+        const [row] = await tx.insert(vettingAuditEvents).values(payload as InsertVettingAuditEvent).returning();
+        rows.push(row);
+      }
+
+      let employmentUpdated = 0;
+      for (const job of eligible) {
+        const stats = mergedStats.get(job.id);
+        if (!stats) continue;
+        await tx
+          .update(employmentHistory)
+          .set({
+            requestedDate: job.requestedDate || formatLondonYmd(stats.firstAt),
+            requestCount: stats.count,
+          })
+          .where(and(eq(employmentHistory.id, job.id), eq(employmentHistory.employeeId, employeeId)));
+        employmentUpdated += 1;
+      }
+      return { rows, employmentUpdated };
+    });
+
+    return {
+      generated: written.rows.length,
+      events: written.rows,
+      employmentUpdated: written.employmentUpdated,
+    };
+  },
+
+  async runEmploymentSubmitVerification(
+    employeeId: number,
+    employee: { tenantId?: number | null },
+    userId: string,
+  ) {
+    const jobs = await storage.getEmploymentHistory(employeeId);
+    if (jobs.length === 0) {
+      return { generated: 0, events: [] as any[], message: "No employment records" };
+    }
+
+    const audits = await db
+      .select()
+      .from(vettingAuditEvents)
+      .where(eq(vettingAuditEvents.employeeId, employeeId));
+
+    const reminderStats = reminderStatsFromEvents(audits);
+    const eligible = jobs
+      .filter((job) => reminderStats.has(job.id))
+      .map((job) => ({
+        id: job.id,
+        employerName: job.employerName,
+        latestReminderAt: reminderStats.get(job.id)!.lastAt,
+      }));
+
+    if (eligible.length === 0) {
+      return { generated: 0, events: [] as any[], message: "No email reminders" };
+    }
+
+    const plan = buildEmploymentSubmitVerificationPlan(eligible);
+    if (plan.events.length === 0) {
+      return { generated: 0, events: [] as any[], message: "No email reminders" };
+    }
+
+    const jobById = new Map(jobs.map((job) => [job.id, job]));
+
+    const written = await db.transaction(async (tx) => {
+      const rows = [];
+      for (const event of plan.events) {
+        const payload: Record<string, unknown> = {
+          employeeId,
+          code: event.code,
+          action: event.action,
+          details: event.details,
+          eventType: event.eventType,
+          colorKey: event.colorKey,
+          eventAt: event.eventAt,
+          createdAt: event.eventAt,
+        };
+        if (event.employmentHistoryId != null) payload.employmentHistoryId = event.employmentHistoryId;
+        if (employee.tenantId) payload.tenantId = employee.tenantId;
+        if (userId) payload.createdBy = userId;
+        const [row] = await tx.insert(vettingAuditEvents).values(payload as InsertVettingAuditEvent).returning();
+        rows.push(row);
+      }
+
+      for (const update of plan.employmentUpdates) {
+        const hist = jobById.get(update.id);
+        if (!hist) continue;
+        await tx
+          .update(employmentHistory)
+          .set({
+            submittedDate: update.submittedDate,
+            verificationStatus: "verified",
+            requestedDate: hist.requestedDate || formatLondonYmd(reminderStats.get(update.id)?.firstAt || update.verifiedAt),
+            requestCount: Math.max(hist.requestCount || 0, reminderStats.get(update.id)?.count || 0),
+          })
+          .where(and(eq(employmentHistory.id, update.id), eq(employmentHistory.employeeId, employeeId)));
+
+        const [existingToken] = await tx
+          .select()
+          .from(employmentReferenceTokens)
+          .where(eq(employmentReferenceTokens.employmentHistoryId, update.id))
+          .orderBy(desc(employmentReferenceTokens.id))
+          .limit(1);
+
+        const printName = existingToken?.refereePrintName?.trim() || "HR";
+        const company = existingToken?.refereeCompany?.trim() || hist.employerName;
+        const position = existingToken?.refereePosition?.trim() || "HR";
+        const signature = existingToken?.refereeSignature?.trim() || printName;
+        const answers = {
+          usedAt: update.verifiedAt,
+          informationConfirmed: existingToken?.informationConfirmed ?? true,
+          detailsIfDifferent: existingToken?.detailsIfDifferent ?? null,
+          attitude: existingToken?.attitude || "good",
+          timeKeeping: existingToken?.timeKeeping || "good",
+          timeOff: existingToken?.timeOff || "average",
+          reasonForLeaving: existingToken?.reasonForLeaving || "own_accord",
+          wouldReemploy: existingToken?.wouldReemploy || "yes",
+          refereePrintName: printName,
+          refereeCompany: company,
+          refereePosition: position,
+          refereeSignature: signature,
+        };
+
+        if (existingToken) {
+          await tx
+            .update(employmentReferenceTokens)
+            .set(answers)
+            .where(eq(employmentReferenceTokens.id, existingToken.id));
+        } else {
+          const expiresAt = new Date(update.verifiedAt);
+          expiresAt.setDate(expiresAt.getDate() + 14);
+          const tokenValues: Record<string, unknown> = {
+            token: crypto.randomBytes(32).toString("hex"),
+            employeeId,
+            employmentHistoryId: update.id,
+            expiresAt,
+            ...answers,
+          };
+          if (employee.tenantId) tokenValues.tenantId = employee.tenantId;
+          await tx.insert(employmentReferenceTokens).values(tokenValues as any);
+        }
+      }
+
+      if (plan.vettingCompleteAt) {
+        await tx
+          .update(employees)
+          .set({ vettingCompleteAt: plan.vettingCompleteAt, updatedAt: new Date() })
+          .where(eq(employees.id, employeeId));
+      }
+
+      return rows;
+    });
+
+    const { buildEmploymentReferenceConfirmationPdf } = await import("./employment-reference-verify");
+    for (const update of plan.employmentUpdates) {
+      const hist = jobById.get(update.id);
+      if (!hist) continue;
+      try {
+        const [tokenRow] = await db
+          .select()
+          .from(employmentReferenceTokens)
+          .where(
+            and(
+              eq(employmentReferenceTokens.employmentHistoryId, update.id),
+              isNotNull(employmentReferenceTokens.usedAt),
+            ),
+          )
+          .orderBy(desc(employmentReferenceTokens.id))
+          .limit(1);
+        if (!tokenRow) continue;
+        const pdf = await buildEmploymentReferenceConfirmationPdf(tokenRow, {
+          ...hist,
+          submittedDate: update.submittedDate,
+          verificationStatus: "verified",
+        }, { appliedPosition: "Security Officer" });
+        if (!pdf) continue;
+        await storage.createDocument({
+          employeeId,
+          tenantId: employee.tenantId ?? null,
+          documentType: "employment_reference",
+          fileName: pdf.filename,
+          fileUrl: `data:application/pdf;base64,${pdf.buffer.toString("base64")}`,
+          fileSize: pdf.buffer.length,
+          mimeType: "application/pdf",
+          isVerified: true,
+          verifiedAt: update.verifiedAt,
+          notes: `Employment reference confirmation for ${hist.employerName} (employment ${update.id}).`,
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[employment-submit-verification] Failed to generate confirmation PDF:", message);
+      }
+    }
+
+    return {
+      generated: written.length,
+      events: written,
+      employmentUpdated: plan.employmentUpdates.length,
+      vettingCompleteAt: plan.vettingCompleteAt,
+    };
+  },
+
+  async runCompletionCertification(
+    employeeId: number,
+    employee: {
+      tenantId?: number | null;
+      nationalInsurance?: string | null;
+      userId?: string | null;
+      employeeNumber?: string | null;
+      vettingStartDate?: string | Date | null;
+      startDate?: string | Date | null;
+      createdAt?: Date | string | null;
+    },
+  ) {
+    const empUser = employee.userId ? await storage.getUser(employee.userId) : null;
+    const officerName =
+      `${empUser?.firstName || ""} ${empUser?.lastName || ""}`.trim() ||
+      employee.employeeNumber ||
+      `Employee #${employeeId}`;
+    const niNumber = (employee.nationalInsurance || "").trim().toUpperCase();
+    const tenant = employee.tenantId ? await storage.getTenant(employee.tenantId) : null;
+    const signatoryName = (tenant?.hrSignatoryName || "").trim();
+    const signatoryPosition = (tenant?.hrSignatoryPosition || "").trim();
+    const signatoryInitials = initialsFromName(signatoryName);
+
+    const audits = await db
+      .select()
+      .from(vettingAuditEvents)
+      .where(eq(vettingAuditEvents.employeeId, employeeId));
+
+    const screeningCompletedAt = earliestMatchingAuditInstant(audits, isVettingCompleteEvent);
+    const firstAuditAt = earliestMatchingAuditInstant(audits, () => true);
+    const appointmentAt =
+      parseDateValue(employee.vettingStartDate) ||
+      parseDateValue(employee.startDate) ||
+      firstAuditAt ||
+      parseDateValue(employee.createdAt);
+    const appointmentDate = appointmentAt ? formatUkDdMmYyyy(appointmentAt) : "";
+    const screeningCompletedDate = screeningCompletedAt ? formatUkDdMmYyyy(screeningCompletedAt) : "";
+
+    if (!employee.vettingStartDate && appointmentAt) {
+      await db
+        .update(employees)
+        .set({ vettingStartDate: formatLondonYmd(appointmentAt), updatedAt: new Date() })
+        .where(eq(employees.id, employeeId));
+    }
+
+    const { generateImsSe19CompletionCertificatePdf } = await import("./pdf-service");
+    const buffer = await generateImsSe19CompletionCertificatePdf({
+      companyName: tenant?.tradingName || tenant?.name || "Guardian FM",
+      officerName,
+      niNumber,
+      appointmentDate,
+      screeningCompletedDate,
+      signatoryName,
+      signatoryInitials,
+      signatoryPosition,
+      signatureImage: tenant?.hrSignatureData || null,
+    });
+
+    const safeName = officerName.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-") || String(employeeId);
+    const fileName = `IMS-SE-19-Completion-Certificate-${safeName}.pdf`;
+    const fileUrl = writeBufferToUploads(buffer, ".pdf");
+    const verifiedAt = screeningCompletedAt || new Date();
+    const notes = "Certificate for Completion of Screening (IMS SE 19).";
+
+    const [existing] = await db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.employeeId, employeeId), eq(documents.documentType, "completion_certificate")))
+      .orderBy(desc(documents.id))
+      .limit(1);
+
+    const fileFields = {
+      fileName,
+      fileUrl,
+      fileSize: buffer.length,
+      mimeType: "application/pdf" as const,
+      notes,
+      isVerified: true,
+      verifiedAt,
+    };
+
+    if (existing?.fileUrl && existing.fileUrl !== fileUrl) {
+      removeUploadedObject(existing.fileUrl);
+    }
+
+    const document = existing
+      ? await storage.updateDocument(existing.id, fileFields)
+      : await storage.createDocument({
+          employeeId,
+          tenantId: employee.tenantId ?? null,
+          documentType: "completion_certificate",
+          ...fileFields,
+        });
+
+    return {
+      document,
+      replaced: !!existing,
+      officerName,
+      niNumber: niNumber || null,
+      appointmentDate: appointmentDate || null,
+      screeningCompletedDate: screeningCompletedDate || null,
+    };
+  },
 };
+
+function auditInstant(event: { eventAt?: Date | null; createdAt?: Date | null }): Date | null {
+  const value = event.eventAt || event.createdAt;
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function earliestMatchingAuditInstant(
+  events: Array<{
+    code?: string | null;
+    action?: string | null;
+    details?: string | null;
+    eventType?: string | null;
+    eventAt?: Date | null;
+    createdAt?: Date | null;
+  }>,
+  match: (event: { code?: string | null; action?: string | null; details?: string | null; eventType?: string | null }) => boolean,
+): Date | null {
+  const instants = events
+    .filter(match)
+    .map(auditInstant)
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => a.getTime() - b.getTime());
+  return instants[0] || null;
+}
+
+function auditText(event: { action?: string | null; details?: string | null; eventType?: string | null }): string {
+  return `${event.action || ""} ${event.details || ""} ${event.eventType || ""}`;
+}
+
+function isVettingCompleteEvent(event: {
+  code?: string | null;
+  action?: string | null;
+  details?: string | null;
+  eventType?: string | null;
+}): boolean {
+  if ((event.code || "").toUpperCase() === "VC") return true;
+  return /vetting complete/i.test(auditText(event));
+}
+
+function formatUkDdMmYyyy(date: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function parseDateValue(value: string | Date | null | undefined): Date | null {
+  if (!value) return null;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  return parts.map((part) => part[0]!.toUpperCase()).join(".") + ".";
+}
+
+function writeBufferToUploads(buffer: Buffer, extension: string): string {
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  const ext = extension.startsWith(".") ? extension : `.${extension}`;
+  const safeName = `${crypto.randomUUID()}${ext}`;
+  fs.writeFileSync(path.join(uploadsDir, safeName), buffer);
+  return `/objects/uploads/${safeName}`;
+}
+
+function removeUploadedObject(fileUrl: string): void {
+  if (!fileUrl.startsWith("/objects/uploads/")) return;
+  const base = path.basename(fileUrl);
+  if (!base || base.includes("..")) return;
+  try {
+    fs.unlinkSync(path.join(process.cwd(), "uploads", base));
+  } catch {
+    // ignore missing previous file
+  }
+}

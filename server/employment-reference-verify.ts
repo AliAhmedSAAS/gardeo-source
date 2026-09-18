@@ -133,6 +133,7 @@ export async function getSubmittedEmploymentReferenceToken(
 export async function buildEmploymentReferenceConfirmationPdf(
   row: EmploymentReferenceToken,
   hist: EmploymentHistory,
+  opts?: { appliedPosition?: string },
 ): Promise<{ buffer: Buffer; filename: string } | null> {
   if (!row.usedAt || !row.refereePrintName || !row.refereeSignature) return null;
   const employee = await storage.getEmployee(row.employeeId);
@@ -150,7 +151,7 @@ export async function buildEmploymentReferenceConfirmationPdf(
     address: addressParts.join(", ") || null,
     postcode: employee.postcode || null,
     nationalInsurance: employee.nationalInsurance || null,
-    appliedPosition: employee.jobTitle || "Security Officer",
+    appliedPosition: opts?.appliedPosition || employee.jobTitle || "Security Officer",
     employerName: hist.employerName,
     statedRole: hist.jobTitle,
     dateFrom: hist.dateFrom,

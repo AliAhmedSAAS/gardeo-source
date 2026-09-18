@@ -102,6 +102,7 @@ export const tenants = pgTable("tenants", {
   leaveCarryForwardCapDays: integer("leave_carry_forward_cap_days").default(5),
   defaultProbationWeeks: integer("default_probation_weeks").default(12),
   deploymentGateSettings: jsonb("deployment_gate_settings").$type<DeploymentGateSettings>().default(DEFAULT_DEPLOYMENT_GATE_SETTINGS),
+  employmentVettingAutomationEnabled: boolean("employment_vetting_automation_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -389,6 +390,7 @@ export const employmentHistory = pgTable("employment_history", {
   refereeEmail: text("referee_email"),
   confirmedFrom: date("confirmed_from"),
   confirmedTo: date("confirmed_to"),
+  verballyConfirmedAt: timestamp("verbally_confirmed_at", { withTimezone: true }),
   screeningComments: text("screening_comments"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -549,10 +551,13 @@ export const vettingAuditEvents = pgTable("vetting_audit_events", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
   tenantId: integer("tenant_id").references(() => tenants.id),
+  employmentHistoryId: integer("employment_history_id").references(() => employmentHistory.id, { onDelete: "set null" }),
   code: text("code").notNull(),
   action: text("action").notNull(),
   details: text("details"),
+  eventType: text("event_type"),
   colorKey: text("color_key"),
+  eventAt: timestamp("event_at", { withTimezone: true }),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
@@ -1593,6 +1598,36 @@ export const employmentReferenceTokens = pgTable("employment_reference_tokens", 
 export const insertEmploymentReferenceTokenSchema = createInsertSchema(employmentReferenceTokens).omit({ id: true, createdAt: true });
 export type EmploymentReferenceToken = typeof employmentReferenceTokens.$inferSelect;
 export type InsertEmploymentReferenceToken = z.infer<typeof insertEmploymentReferenceTokenSchema>;
+
+export const staffFeedbackTokens = pgTable("staff_feedback_tokens", {
+  id: serial("id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  tenantId: integer("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "cascade" }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  issueNumber: integer("issue_number").notNull().default(1),
+  q1: text("q1"),
+  q2: text("q2"),
+  q3: text("q3"),
+  q4: text("q4"),
+  q5: text("q5"),
+  q6: text("q6"),
+  q7: text("q7"),
+  q8: text("q8"),
+  q9: text("q9"),
+  comments: text("comments"),
+  printName: text("print_name"),
+  signature: text("signature"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_staff_feedback_tokens_token").on(table.token),
+  index("idx_staff_feedback_tokens_employee").on(table.employeeId),
+]);
+
+export const insertStaffFeedbackTokenSchema = createInsertSchema(staffFeedbackTokens).omit({ id: true, createdAt: true });
+export type StaffFeedbackToken = typeof staffFeedbackTokens.$inferSelect;
+export type InsertStaffFeedbackToken = z.infer<typeof insertStaffFeedbackTokenSchema>;
 
 export const personalReferenceTokens = pgTable("personal_reference_tokens", {
   id: serial("id").primaryKey(),

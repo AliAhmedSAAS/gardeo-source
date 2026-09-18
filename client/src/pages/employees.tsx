@@ -232,6 +232,7 @@ type EmployeeDetail = EnrichedEmployee & {
     createdAt?: string | null;
   };
   vettingAudit?: any[];
+  employmentVettingAutomationEnabled?: boolean;
   rightOfWorkChecks?: any[];
   addressHistory?: any[];
 };

@@ -273,6 +273,38 @@ app.use((req, res, next) => {
 
   try {
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS staff_feedback_tokens (
+        id serial PRIMARY KEY,
+        token varchar(64) NOT NULL UNIQUE,
+        tenant_id integer REFERENCES tenants(id) ON DELETE SET NULL,
+        employee_id integer NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        expires_at timestamp NOT NULL,
+        used_at timestamp,
+        issue_number integer NOT NULL DEFAULT 1,
+        q1 text,
+        q2 text,
+        q3 text,
+        q4 text,
+        q5 text,
+        q6 text,
+        q7 text,
+        q8 text,
+        q9 text,
+        comments text,
+        print_name text,
+        signature text,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_staff_feedback_tokens_token ON staff_feedback_tokens (token)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_staff_feedback_tokens_employee ON staff_feedback_tokens (employee_id)`);
+    log("Ensured staff_feedback_tokens table exists");
+  } catch (e) {
+    log("Could not create staff_feedback_tokens table: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS personal_reference_tokens (
         id serial PRIMARY KEY,
         token varchar(64) NOT NULL UNIQUE,
@@ -544,6 +576,30 @@ app.use((req, res, next) => {
     log("Ensured shift call-taken columns/tables exist");
   } catch (e) {
     log("Could not ensure shift call-taken schema: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE employment_history ADD COLUMN IF NOT EXISTS verbally_confirmed_at timestamptz`);
+    await pool.query(`ALTER TABLE vetting_audit_events ADD COLUMN IF NOT EXISTS employment_history_id integer`);
+    await pool.query(`ALTER TABLE vetting_audit_events ADD COLUMN IF NOT EXISTS event_type text`);
+    await pool.query(`ALTER TABLE vetting_audit_events ADD COLUMN IF NOT EXISTS event_at timestamptz`);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_vetting_audit_event_at
+      ON vetting_audit_events (employee_id, event_at)
+    `);
+    log("Ensured employment telephone screening columns exist");
+  } catch (e) {
+    log("Could not ensure employment telephone screening schema: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE tenants
+      ADD COLUMN IF NOT EXISTS employment_vetting_automation_enabled boolean DEFAULT false
+    `);
+    log("Ensured tenants.employment_vetting_automation_enabled exists");
+  } catch (e) {
+    log("Could not add tenants.employment_vetting_automation_enabled: " + (e as Error).message);
   }
 
   try {

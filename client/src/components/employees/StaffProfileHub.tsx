@@ -13,12 +13,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Trash2, User, Phone, Mail, FileText,
   CheckCircle2, Clock, ExternalLink, Send, Pencil, Upload, CreditCard, AlertTriangle,
-  Download, Loader2, ShieldCheck,
+  Download, Loader2, ShieldCheck, PhoneCall, FileCheck, Award, MessageSquare,
 } from "lucide-react";
 
 function invalidateEmployee(employeeId: number) {
@@ -29,6 +33,38 @@ function invalidateEmployee(employeeId: number) {
   queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
   void queryClient.refetchQueries({ queryKey: idKey, type: "active" });
   void queryClient.refetchQueries({ queryKey: idKeyStr, type: "active" });
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(",");
+  const header = comma >= 0 ? dataUrl.slice(0, comma) : "data:application/pdf;base64";
+  const data = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+  const mime = /data:([^;]+)/.exec(header)?.[1] || "application/pdf";
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+function openEmployeeFile(fileUrl: string, fileName?: string) {
+  if (!fileUrl) return;
+  if (fileUrl.startsWith("data:")) {
+    const blob = dataUrlToBlob(fileUrl);
+    const objectUrl = URL.createObjectURL(blob);
+    const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = fileName || "document.pdf";
+      a.rel = "noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    return;
+  }
+  window.open(fileUrl, "_blank", "noopener,noreferrer");
 }
 
 function patchEmployeeDocuments(employeeId: number, updater: (docs: any[]) => any[]) {
@@ -51,6 +87,20 @@ function formatDate(dateStr: string | null | undefined): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleString("en-GB", {
+    timeZone: "Europe/London",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 const HEALTH_FIELDS: { key: string; label: string }[] = [
@@ -98,6 +148,8 @@ const AUDIT_LEGEND = [
   { code: "VE", label: "Verbal Enquiry", color: "bg-purple-600" },
   { code: "DR", label: "Documentation request", color: "bg-orange-500" },
   { code: "WR", label: "Work reference", color: "bg-rose-800" },
+  { code: "IN", label: "Induction / booklet", color: "bg-indigo-600" },
+  { code: "FB", label: "Feedback questionnaire", color: "bg-teal-700" },
 ];
 
 function useEmpMutation(employeeId: number, successMsg: string) {
@@ -1082,9 +1134,15 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
   const [sendKind, setSendKind] = useState<"employment" | "personal">("employment");
   const [formLinkOpen, setFormLinkOpen] = useState(false);
   const [formLinkEmail, setFormLinkEmail] = useState(employee.email || "");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackEmail, setFeedbackEmail] = useState(employee.email || "");
 
   const [logOpen, setLogOpen] = useState(false);
   const [logForm, setLogForm] = useState({ code: "VE", action: "", details: "" });
+  const [screeningOpen, setScreeningOpen] = useState(false);
+  const [emailSendingOpen, setEmailSendingOpen] = useState(false);
+  const [submitVerificationOpen, setSubmitVerificationOpen] = useState(false);
+  const [completionCertOpen, setCompletionCertOpen] = useState(false);
 
   const { data: tenantProfile } = useQuery<any>({
     queryKey: ["/api/tenant/profile"],
@@ -1210,6 +1268,11 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
     setFormLinkOpen(true);
   };
 
+  const openFeedbackDialog = () => {
+    setFeedbackEmail(employee.email || employee.portalEmail || "");
+    setFeedbackOpen(true);
+  };
+
   const verbalMut = useMutation({
     mutationFn: async () => {
       const base = veKind === "personal" ? "references" : "employment-history";
@@ -1225,6 +1288,118 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
       toast({ title: "Verbal Enquiry recorded" });
     },
     onError: (err: Error) => toast({ title: "Verbal Enquiry failed", description: err.message, variant: "destructive" }),
+  });
+
+  const screeningMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/employees/${employeeId}/employment-telephone-screening`,
+      );
+      return res.json();
+    },
+    onSuccess: (result: { generated?: number; message?: string }) => {
+      invalidateEmployee(employeeId);
+      setScreeningOpen(false);
+      if (!result?.generated) {
+        toast({ title: "Nothing to screen", description: result?.message || "No employment records" });
+        return;
+      }
+      toast({
+        title: "Employment telephone screening complete",
+        description: `${result.generated} audit event${result.generated === 1 ? "" : "s"} written`,
+      });
+    },
+    onError: (err: Error) => toast({ title: "Telephone screening failed", description: err.message, variant: "destructive" }),
+  });
+
+  const emailSendingMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/employees/${employeeId}/employment-email-sending`,
+      );
+      return res.json();
+    },
+    onSuccess: (result: { generated?: number; employmentUpdated?: number; message?: string }) => {
+      invalidateEmployee(employeeId);
+      setEmailSendingOpen(false);
+      if (!result?.generated && !result?.employmentUpdated) {
+        toast({ title: "Nothing to send", description: result?.message || "No employment records" });
+        return;
+      }
+      toast({
+        title: "Employment email sending complete",
+        description: result.generated
+          ? `${result.generated} reminder${result.generated === 1 ? "" : "s"} written to the audit trail`
+          : "Requested date and request count updated from existing reminders",
+      });
+    },
+    onError: (err: Error) => toast({ title: "Email sending failed", description: err.message, variant: "destructive" }),
+  });
+
+  const submitVerificationMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/employees/${employeeId}/employment-submit-verification`,
+      );
+      return res.json();
+    },
+    onSuccess: (result: { generated?: number; message?: string }) => {
+      invalidateEmployee(employeeId);
+      setSubmitVerificationOpen(false);
+      if (!result?.generated) {
+        toast({ title: "Nothing to verify", description: result?.message || "No email reminders" });
+        return;
+      }
+      toast({
+        title: "Employment submit verification complete",
+        description: `${result.generated} audit event${result.generated === 1 ? "" : "s"} written`,
+      });
+    },
+    onError: (err: Error) => toast({ title: "Submit verification failed", description: err.message, variant: "destructive" }),
+  });
+
+  const completionCertMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/employees/${employeeId}/completion-certification`,
+      );
+      return res.json();
+    },
+    onSuccess: (result: {
+      replaced?: boolean;
+      document?: any;
+      appointmentDate?: string | null;
+      screeningCompletedDate?: string | null;
+    }) => {
+      if (result?.document?.id) {
+        patchEmployeeDocuments(employeeId, (docs) => {
+          const without = docs.filter(
+            (d) => d.id !== result.document.id && d.documentType !== "completion_certificate",
+          );
+          return [result.document, ...without];
+        });
+      }
+      invalidateEmployee(employeeId);
+      setCompletionCertOpen(false);
+      if (result?.document?.fileUrl) {
+        openEmployeeFile(result.document.fileUrl, result.document.fileName);
+      }
+      const dates = [
+        result?.appointmentDate ? `appointment ${result.appointmentDate}` : null,
+        result?.screeningCompletedDate ? `screening completed ${result.screeningCompletedDate}` : null,
+      ].filter(Boolean);
+      toast({
+        title: result?.replaced ? "Completion certificate updated" : "Completion certificate saved",
+        description: dates.length
+          ? `IMS SE 19 PDF on officer file (${dates.join("; ")}).`
+          : "IMS SE 19 PDF on officer file. Appointment and screening dates were blank.",
+      });
+    },
+    onError: (err: Error) => toast({ title: "Completion certification failed", description: err.message, variant: "destructive" }),
   });
 
   const sendOneMut = useMutation({
@@ -1290,6 +1465,27 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const sendFeedbackMut = useMutation({
+    mutationFn: async (to: string) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/admin/employees/${employeeId}/staff-feedback`,
+        { to },
+      );
+      return res.json();
+    },
+    onSuccess: (data: { expiresAt: string; sentTo: string; issueNumber?: number }) => {
+      invalidateEmployee(employeeId);
+      setFeedbackOpen(false);
+      const expiry = formatDate(data.expiresAt);
+      toast({
+        title: "Feedback questionnaire sent",
+        description: `IMS SE 18 issue ${data.issueNumber || 1} sent to ${data.sentTo} as ${tenantBrand}. Link expires ${expiry}.`,
+      });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const submitSend = () => {
     if (sendMode === "all") {
       sendAllMut.mutate();
@@ -1311,6 +1507,15 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
       return;
     }
     sendFormLinkMut.mutate(email);
+  };
+
+  const submitFeedback = () => {
+    const email = feedbackEmail.trim();
+    if (!email || !email.includes("@")) {
+      toast({ title: "Officer email required", description: "Enter a valid email address", variant: "destructive" });
+      return;
+    }
+    sendFeedbackMut.mutate(email);
   };
 
   const logAuditMut = useMutation({
@@ -1335,6 +1540,10 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
   const applicationForm = employee.applicationForm || { status: "not_sent" };
   const personalRefs = (employee.references || []).filter((r: any) => (r.referenceKind || "personal") === "personal");
   const employment = employee.employmentHistory || [];
+  const hasVerbalConfirmed = employment.some((e: any) => e.verballyConfirmedAt);
+  const hasEmailReminders = audit.some(
+    (a: any) => a.code === "CL" && a.action === "Reminder" && a.employmentHistoryId,
+  );
 
   const appFormStatusLabel =
     applicationForm.status === "submitted"
@@ -1381,6 +1590,72 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
           >
             <Phone className="w-3.5 h-3.5 mr-1" /> Verbal Enquiry
           </Button>
+          {!!employee.employmentVettingAutomationEnabled && (
+            <div
+              className="flex flex-wrap gap-2 basis-full rounded-lg border border-dashed border-border/80 bg-muted/20 p-2"
+              data-testid="group-employment-vetting-automation"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground w-full px-0.5">
+                Employment vetting automation
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={employment.length === 0 || screeningMut.isPending}
+                onClick={() => setScreeningOpen(true)}
+                data-testid="button-employment-telephone-screening"
+              >
+                {screeningMut.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <PhoneCall className="w-3.5 h-3.5 mr-1" />
+                )}
+                Employment Telephone Screening
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={employment.length === 0 || !hasVerbalConfirmed || emailSendingMut.isPending}
+                onClick={() => setEmailSendingOpen(true)}
+                data-testid="button-employment-email-sending"
+              >
+                {emailSendingMut.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5 mr-1" />
+                )}
+                Employment Email Sending
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={employment.length === 0 || !hasEmailReminders || submitVerificationMut.isPending}
+                onClick={() => setSubmitVerificationOpen(true)}
+                data-testid="button-employment-submit-verification"
+              >
+                {submitVerificationMut.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <FileCheck className="w-3.5 h-3.5 mr-1" />
+                )}
+                Employment Submit Verification
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={completionCertMut.isPending}
+                onClick={() => setCompletionCertOpen(true)}
+                data-testid="button-completion-certification"
+              >
+                {completionCertMut.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Award className="w-3.5 h-3.5 mr-1" />
+                )}
+                Completion Certification
+              </Button>
+            </div>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -1398,6 +1673,15 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
             data-testid="button-send-vetting-form-link"
           >
             <Mail className="w-3.5 h-3.5 mr-1" /> Email Application Form
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={sendFeedbackMut.isPending}
+            onClick={openFeedbackDialog}
+            data-testid="button-send-staff-feedback"
+          >
+            <MessageSquare className="w-3.5 h-3.5 mr-1" /> Send Feedback Questionnaire
           </Button>
           {onOpenApplicationForm ? (
             <Button
@@ -1671,6 +1955,9 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
                       <td className="py-2.5 pr-2">{formatDate(e.dateTo)}</td>
                       <td className="py-2.5 pr-2">
                         <span className="text-muted-foreground">{formatDate(e.confirmedFrom)} – {formatDate(e.confirmedTo)}</span>
+                        {e.verballyConfirmedAt && (
+                          <div className="text-[10px] text-muted-foreground">Verbal {formatDate(e.verballyConfirmedAt)}</div>
+                        )}
                         {e.verificationStatus === "verified" && (
                           <Badge className="ml-1.5 h-4 text-[9px]" variant="default">Verified</Badge>
                         )}
@@ -1820,6 +2107,43 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
         </DialogContent>
       </Dialog>
 
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Feedback Questionnaire</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Emails the officer a confidential Security Personnel Feedback Questionnaire (IMS SE 18).
+              The link expires in <strong>14 days</strong> and can be submitted once.
+              Sent as <strong>{tenantBrand}</strong>
+              {tenantProfile?.email ? ` — replies to ${tenantProfile.email}` : ""}.
+              {mailboxLabel ? <> Outlook mailbox available: <strong>{mailboxLabel}</strong>.</> : null}
+            </p>
+            <div>
+              <Label className="text-xs">Officer email</Label>
+              <Input
+                type="email"
+                value={feedbackEmail}
+                onChange={(e) => setFeedbackEmail(e.target.value)}
+                placeholder="officer@example.com"
+                data-testid="input-staff-feedback-email"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackOpen(false)}>Cancel</Button>
+            <Button
+              onClick={submitFeedback}
+              disabled={sendFeedbackMut.isPending}
+              data-testid="button-confirm-send-staff-feedback"
+            >
+              {sendFeedbackMut.isPending ? "Sending..." : "Send email"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={veOpen} onOpenChange={setVeOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1878,6 +2202,111 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={screeningOpen} onOpenChange={(open) => !screeningMut.isPending && setScreeningOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Employment Telephone Screening</AlertDialogTitle>
+            <AlertDialogDescription>
+              This writes a weekday telephone screening trail for every employment on file: an optional
+              failed call (Verbal Enquiry), then a confirmed call with verbally confirmed dates, then
+              officer induction and booklet issued by email. Existing audit events are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={screeningMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={screeningMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                screeningMut.mutate();
+              }}
+              data-testid="button-confirm-employment-telephone-screening"
+            >
+              {screeningMut.isPending ? "Screening..." : "Run screening"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={emailSendingOpen} onOpenChange={(open) => !emailSendingMut.isPending && setEmailSendingOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Employment Email Sending</AlertDialogTitle>
+            <AlertDialogDescription>
+              This writes 1–6 weekday reminder events per employment, starting from each job’s verbal
+              confirmed date. Nothing is emailed and jobs are not marked verified. Existing audit events
+              are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={emailSendingMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={emailSendingMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                emailSendingMut.mutate();
+              }}
+              data-testid="button-confirm-employment-email-sending"
+            >
+              {emailSendingMut.isPending ? "Writing..." : "Write reminders"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={submitVerificationOpen} onOpenChange={(open) => !submitVerificationMut.isPending && setSubmitVerificationOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Employment Submit Verification</AlertDialogTitle>
+            <AlertDialogDescription>
+              This writes a received/verified event for every employment that has email reminders, generates
+              the Confirmation Form (Ex-Employer) PDF, then marks officer vetting complete. Existing audit
+              events are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitVerificationMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={submitVerificationMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                submitVerificationMut.mutate();
+              }}
+              data-testid="button-confirm-employment-submit-verification"
+            >
+              {submitVerificationMut.isPending ? "Verifying..." : "Submit verification"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={completionCertOpen} onOpenChange={(open) => !completionCertMut.isPending && setCompletionCertOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Completion Certification</AlertDialogTitle>
+            <AlertDialogDescription>
+              This generates the Certificate for Completion of Screening PDF onto the officer file.
+              Date of Appointment comes from the officer’s vetting start date and Date Screening Completed
+              from the first VETTING COMPLETE audit event. Signed name, position and signature come from
+              HR / Vetting Signatory in Company Profile. An existing completion certificate is replaced.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={completionCertMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={completionCertMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                completionCertMut.mutate();
+              }}
+              data-testid="button-confirm-completion-certification"
+            >
+              {completionCertMut.isPending ? "Generating..." : "Generate certificate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card className="border-border/70 shadow-sm">
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-semibold">Vetting checks</CardTitle>
@@ -1930,7 +2359,9 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
             <div className="relative space-y-0 pl-1">
               {audit.map((a: any) => (
                 <div key={a.id} className="flex gap-3 text-sm py-3 border-b border-border/40 last:border-0">
-                  <div className="text-[11px] text-muted-foreground w-24 shrink-0 pt-0.5">{formatDate(a.createdAt)}</div>
+                  <div className="text-[11px] text-muted-foreground w-32 shrink-0 pt-0.5">
+                    {formatDateTime(a.eventAt || a.createdAt)}
+                  </div>
                   <div className={`h-6 min-w-[2rem] px-1.5 rounded-md text-[10px] font-bold text-white flex items-center justify-center shrink-0 ${
                     AUDIT_LEGEND.find((l) => l.code === a.code)?.color || "bg-slate-600"
                   }`}>
@@ -1938,6 +2369,9 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
                   </div>
                   <div className="min-w-0">
                     <div className="font-medium">{a.action}</div>
+                    {a.eventType && (
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{a.eventType}</div>
+                    )}
                     {a.details && <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{a.details}</div>}
                   </div>
                 </div>
@@ -2029,10 +2463,11 @@ export function VettingHubTab({ employee, onOpenApplicationForm }: { employee: a
 const EMPLOYEE_DOCUMENT_TYPES = [
   "passport", "visa", "brp", "right_to_work", "sia_licence",
   "dbs_certificate", "first_aid", "driving_licence", "proof_of_address",
-  "contract", "training_certificate", "other",
+  "contract", "training_certificate", "completion_certificate", "staff_feedback", "other",
 ];
 
 function formatDocType(type: string): string {
+  if (type === "staff_feedback") return "Staff Feedback Questionnaire";
   return type
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
@@ -2210,8 +2645,13 @@ export function DocsHubTab({ employeeId, documents, employeeEmail }: { employeeI
                     </>
                   )}
                   {doc.fileUrl && (
-                    <Button size="sm" variant="ghost" asChild>
-                      <a href={doc.fileUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-3.5 h-3.5" /></a>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEmployeeFile(doc.fileUrl, doc.fileName)}
+                      data-testid="button-open-employee-document"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </Button>
                   )}
                 </div>

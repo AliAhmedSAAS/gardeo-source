@@ -1737,6 +1737,9 @@ export async function registerRoutes(
       if (isActive !== undefined) data.isActive = isActive;
       if (req.body.checkinTimeWindowMinutes !== undefined) data.checkinTimeWindowMinutes = req.body.checkinTimeWindowMinutes;
       if (req.body.geofenceRadiusMetres !== undefined) data.geofenceRadiusMetres = req.body.geofenceRadiusMetres;
+      if (req.body.employmentVettingAutomationEnabled !== undefined) {
+        data.employmentVettingAutomationEnabled = !!req.body.employmentVettingAutomationEnabled;
+      }
       const updated = await storage.updateTenant(parseInt(req.params.id), data as any);
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json(updated);
@@ -2118,7 +2121,7 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.status(400).json({ message: "No tenant assigned" });
-      const { isActive, slug, ...allowedUpdates } = req.body;
+      const { isActive, slug, employmentVettingAutomationEnabled: _automation, ...allowedUpdates } = req.body;
       if (allowedUpdates.selfBillingSignatureDate && typeof allowedUpdates.selfBillingSignatureDate === "string") {
         allowedUpdates.selfBillingSignatureDate = new Date(allowedUpdates.selfBillingSignatureDate);
       }
@@ -2871,6 +2874,7 @@ export async function registerRoutes(
         const supplier = await storage.getSupplier(employee.supplierId);
         supplierName = supplier?.companyName || null;
       }
+      const employeeTenant = employee.tenantId ? await storage.getTenant(employee.tenantId) : null;
       res.json({
         ...employee,
         firstName: empUser?.firstName || "",
@@ -2882,6 +2886,7 @@ export async function registerRoutes(
         userIsActive: empUser?.isActive ?? true,
         onboardingStatus: onboarding?.status || "not_started",
         supplierName,
+        employmentVettingAutomationEnabled: !!employeeTenant?.employmentVettingAutomationEnabled,
         vettingRecords: vetting,
         documents: docs,
         emergencyContacts: contacts,
