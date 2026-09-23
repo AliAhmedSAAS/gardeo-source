@@ -70,6 +70,9 @@ const ClientsPage = lazy(() => import("@/pages/clients"));
 const SitesPage = lazy(() => import("@/pages/sites"));
 const SiteDetailPage = lazy(() => import("@/pages/site-detail"));
 const PayrollPage = lazy(() => import("@/pages/payroll"));
+const PayrollSummaryPage = lazy(() => import("@/pages/payroll-summary"));
+const PayrollBillsPage = lazy(() => import("@/pages/payroll-bills"));
+const PayrollPendingPaymentsPage = lazy(() => import("@/pages/payroll-pending-payments"));
 const ReAuditPage = lazy(() => import("@/pages/re-audit"));
 const BatchInvoicesPage = lazy(() => import("@/pages/batch-invoices"));
 const DownloadAuditPackPage = lazy(() => import("@/pages/download-audit-pack"));
@@ -174,6 +177,16 @@ function RequireFm({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function PayrollHome() {
+  const { data, isLoading } = useQuery<{ tenant?: { customPayrollControlEnabled?: boolean } }>({
+    queryKey: ["/api/my-permissions"],
+    staleTime: 1000 * 60 * 5,
+  });
+  if (isLoading) return <PageSpinner />;
+  if (data?.tenant?.customPayrollControlEnabled) return <Redirect to="/payroll/summary" />;
+  return <PayrollPage />;
+}
+
 function PublicOnly({ component: Component }: { component: ComponentType }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   if (isLoading) return <FullScreenSpinner />;
@@ -276,7 +289,10 @@ function AuthenticatedRoutes() {
         <Route path="/clients" component={ClientsPage} />
         <Route path="/sites/:id" component={SiteDetailPage} />
         <Route path="/sites" component={SitesPage} />
-        <Route path="/payroll" component={PayrollPage} />
+        <Route path="/payroll/summary" component={PayrollSummaryPage} />
+        <Route path="/payroll/bills" component={PayrollBillsPage} />
+        <Route path="/payroll/pending-payments" component={PayrollPendingPaymentsPage} />
+        <Route path="/payroll" component={PayrollHome} />
         <Route path="/accounting" component={AccountingPage} />
         <Route path="/remittance-summary" component={RemittanceSummaryPage} />
         <Route path="/financial-documents" component={FinancialDocumentsPage} />

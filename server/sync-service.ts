@@ -31,16 +31,31 @@ function isRestPhpApi(config: { connectionType?: string }): boolean {
   return config.connectionType === "rest_php";
 }
 
+/** Dedicated MAIN / in-house branch sync (e.g. shifts-main.php). Forces supplier_id = null. */
+function isRestPhpInhouseApi(config: { connectionType?: string }): boolean {
+  return config.connectionType === "rest_php_inhouse";
+}
+
 function isPhpEmployeesApi(config: { connectionType?: string }): boolean {
   return config.connectionType === "php_employees";
 }
 
 function needsDateRange(config: { connectionType?: string; apiBaseUrl: string }): boolean {
-  return isPhpApi(config) || isRestPhpApi(config);
+  return isPhpApi(config) || isRestPhpApi(config) || isRestPhpInhouseApi(config);
 }
 
 function stripEntityPrefix(id: string): string {
   return String(id).replace(/^(SUP|CLT|SITE|EMP|SHIFT)-/i, "");
+}
+
+/** MAIN / in-house branch rows from GFMTrack (shifts-main.php). */
+function isMainInhouseShift(item: any): boolean {
+  const name = String(item.supplierName || "").trim().toLowerCase();
+  const id = stripEntityPrefix(String(item.supplierId || "")).toLowerCase();
+  if (!item.supplierId && !item.supplierName) return true;
+  if (["main", "in house", "in-house", "inhouse"].includes(name)) return true;
+  if (id === "1120") return true; // known MAIN supplier external id
+  return false;
 }
 
 /** Bypass HTTP/CDN/browser caches when calling external sync APIs. */
@@ -102,7 +117,9 @@ async function fetchFromRestPhpApi(
     if (supplierId) params.set("supplier_id", supplierId);
 
     const fullUrl = `${url.replace(/\/$/, "")}?${params.toString()}`;
-    const response = await fetch(fullUrl, noCacheFetchInit());
+    const response = await fetch(fullUrl, noCacheFetchInit({
+      "X-API-Key": apiKey,
+    }));
 
     if (!response.ok) {
       throw new Error(`API error ${response.status}: ${await response.text()}`);
@@ -116,6 +133,198 @@ async function fetchFromRestPhpApi(
   }
 
   return allData;
+}
+
+/**
+ * Sync MAIN / in-house shifts only. Never creates suppliers; always supplier_id = null.
+ * Isolated from rest_php / php sync paths.
+ */
+async function syncRestPhpInhouseShifts(
+  tenantId: number,
+  shifts: any[],
+  siteDecisions?: Record<string, { action: "use_existing" | "create_new"; siteId?: number }>,
+): Promise<EntityBreakdown> {
+  const inhouseShifts = shifts.filter(isMainInhouseShift);
+  const entities = extractEntitiesFromRestPhpShifts(inhouseShifts);
+  const breakdown: EntityBreakdown = {
+    clients: newEntitySyncResult(),
+    sites: newEntitySyncResult(),
+    suppliers: newEntitySyncResult(),
+    employees: newEntitySyncResult(),
+    shifts: newEntitySyncResult(),
+  };
+
+  const clientIdMap = new Map<string, number>();
+  for (const [extId, name] of entities.clients) {
+    const id = await upsertClient(tenantId, extId, { companyName: name }, breakdown.clients);
+    if (id) clientIdMap.set(extId, id);
+  }
+
+  const siteIdMap = new Map<string, number>();
+  for (const [extId, info] of entities.sites) {
+    const clientId = clientIdMap.get(info.clientExtId) || null;
+    const id = await upsertSite(tenantId, extId, { name: info.name }, clientId, breakdown.sites, siteDecisions);
+    if (id) siteIdMap.set(extId, id);
+  }
+
+  // Do not upsert MAIN as a supplier — in-house means supplier_id NULL
+  breakdown.suppliers.skipped = entities.suppliers.size;
+
+  const employeeIdMap = new Map<string, number>();
+  for (const [extId, info] of entities.employees) {
+    const empData: Record<string, any> = { fullName: info.name };
+    if (info.email) empData.email = info.email;
+    const { empId } = await upsertEmployee(tenantId, extId, empData, null, breakdown.employees);
+    if (empId) employeeIdMap.set(extId, empId);
+  }
+
+  for (const item of inhouseShifts) {
+    try {
+      const extId = stripEntityPrefix(item.id);
+      const existingResult = await pool.query(
+        `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+        [tenantId, extId],
+      );
+      if (existingResult.rows.length > 0) {
+        await pool.query(`UPDATE shifts SET last_synced_at = NOW() WHERE id = $1`, [existingResult.rows[0].id]);
+        breakdown.shifts.skipped++;
+        continue;
+      }
+
+      const employeeId = item.employeeId ? (employeeIdMap.get(stripEntityPrefix(item.employeeId)) || null) : null;
+      const siteId = item.siteId ? (siteIdMap.get(stripEntityPrefix(item.siteId)) || null) : null;
+      const supplierId = null; // in-house
+
+      if (employeeId && siteId && item.date && item.startTime && item.endTime) {
+        const startNorm = (item.startTime || "").substring(0, 5);
+        const endNorm = (item.endTime || "").substring(0, 5);
+        const compositeKey = `${employeeId}|${siteId}|${item.date}|${startNorm}|${endNorm}`;
+        const compositeCheck = await pool.query(
+          `SELECT id FROM shifts WHERE tenant_id = $1 AND (employee_id::text || '|' || site_id::text || '|' || date::text || '|' ||
+           CASE WHEN start_time LIKE '____-__-__ %' THEN SUBSTRING(start_time FROM 12 FOR 5) ELSE LEFT(start_time::text, 5) END || '|' ||
+           CASE WHEN end_time LIKE '____-__-__ %' THEN SUBSTRING(end_time FROM 12 FOR 5) ELSE LEFT(end_time::text, 5) END) = $2 LIMIT 1`,
+          [tenantId, compositeKey],
+        );
+        if (compositeCheck.rows.length > 0) {
+          await pool.query(
+            `UPDATE shifts SET external_id = COALESCE(external_id, $1), last_synced_at = NOW(), supplier_id = NULL WHERE id = $2`,
+            [extId, compositeCheck.rows[0].id],
+          );
+          breakdown.shifts.skipped++;
+          continue;
+        }
+      }
+
+      const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
+      const payRate = item.hourlyRate != null && item.hourlyRate !== "" ? String(item.hourlyRate) : null;
+
+      await pool.query(
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
+        [
+          tenantId, employeeId, siteId, supplierId,
+          title,
+          item.date,
+          item.startTime || "00:00",
+          item.endTime || "00:00",
+          mapShiftStatus(item.status),
+          item.notes || null,
+          payRate,
+          extId,
+        ],
+      );
+      breakdown.shifts.created++;
+    } catch (err: any) {
+      breakdown.shifts.failed++;
+      breakdown.shifts.errors.push(`Shift ${item.id}: ${err.message}`);
+    }
+  }
+
+  return breakdown;
+}
+
+async function dryRunRestPhpInhouseShifts(tenantId: number, shifts: any[]): Promise<DryRunResult[]> {
+  const inhouseShifts = shifts.filter(isMainInhouseShift);
+  const entities = extractEntitiesFromRestPhpShifts(inhouseShifts);
+  const results: DryRunResult[] = [];
+
+  const clientResult: DryRunResult = { entityType: "clients", totalFetched: entities.clients.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
+  for (const [extId, name] of entities.clients) {
+    const existing = await findClientByNameOrExtId(tenantId, extId, name);
+    if (existing) {
+      clientResult.toSkip++;
+      clientResult.records.push({ action: "skip", entity: "client", externalId: extId, name, reason: "Already exists" });
+    } else {
+      clientResult.toCreate++;
+      clientResult.records.push({ action: "create", entity: "client", externalId: extId, name });
+    }
+  }
+  results.push(clientResult);
+
+  const siteResult: DryRunResult = { entityType: "sites", totalFetched: entities.sites.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
+  for (const [extId, info] of entities.sites) {
+    const { row: existing, fuzzyMatches } = await findSiteByExtIdOrFuzzy(tenantId, extId, info.name);
+    if (existing) {
+      siteResult.toSkip++;
+      siteResult.records.push({ action: "skip", entity: "site", externalId: extId, name: info.name, reason: "Already exists" });
+    } else if (fuzzyMatches && fuzzyMatches.length > 0) {
+      siteResult.toSkip++;
+      const potDups = fuzzyMatches.map(m => ({ matchedId: m.siteId, matchedName: m.siteName, matchReason: m.matchReason, score: m.score }));
+      siteResult.records.push({ action: "skip", entity: "site", externalId: extId, name: info.name, reason: `Fuzzy match: ${fuzzyMatches[0].siteName}`, potentialDuplicates: potDups });
+    } else {
+      siteResult.toCreate++;
+      siteResult.records.push({ action: "create", entity: "site", externalId: extId, name: info.name });
+    }
+  }
+  results.push(siteResult);
+
+  results.push({
+    entityType: "suppliers",
+    totalFetched: entities.suppliers.size,
+    toCreate: 0,
+    toUpdate: 0,
+    toSkip: entities.suppliers.size,
+    records: Array.from(entities.suppliers.entries()).map(([extId, name]) => ({
+      action: "skip" as const,
+      entity: "supplier",
+      externalId: extId,
+      name,
+      reason: "In-house sync — supplier not created (supplier_id forced null)",
+    })),
+  });
+
+  const empResult: DryRunResult = { entityType: "employees", totalFetched: entities.employees.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
+  for (const [extId, info] of entities.employees) {
+    const nameParts = (info.name || "").trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    const existing = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName, info.email);
+    if (existing?.empId) {
+      empResult.toSkip++;
+      empResult.records.push({ action: "skip", entity: "employee", externalId: extId, name: info.name, reason: "Already exists (in-house)" });
+    } else {
+      empResult.toCreate++;
+      empResult.records.push({ action: "create", entity: "employee", externalId: extId, name: info.name, reason: "Will create as in-house (no supplier)" });
+    }
+  }
+  results.push(empResult);
+
+  const shiftResult: DryRunResult = { entityType: "shifts", totalFetched: inhouseShifts.length, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
+  for (const item of inhouseShifts) {
+    const extId = stripEntityPrefix(item.id);
+    const name = `${item.siteName || "Shift"} - ${item.date}`;
+    const existing = await findByExternalId(tenantId, "shifts", extId);
+    if (existing) {
+      shiftResult.toSkip++;
+      shiftResult.records.push({ action: "skip", entity: "shift", externalId: extId, name, reason: "Already exists" });
+    } else {
+      shiftResult.toCreate++;
+      shiftResult.records.push({ action: "create", entity: "shift", externalId: extId, name, reason: "In-house (supplier_id=null)" });
+    }
+  }
+  results.push(shiftResult);
+
+  return results;
 }
 
 function extractEntitiesFromRestPhpShifts(shifts: any[]): {
@@ -1193,6 +1402,17 @@ export async function testConnection(config: SyncConfiguration): Promise<{ succe
       return { success: true, message: `Connected successfully (REST Paginated API, ${data.length} shifts found for today)` };
     }
 
+    if (isRestPhpInhouseApi(config)) {
+      const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
+      const today = new Date().toISOString().split("T")[0];
+      const data = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, today, today);
+      const inhouse = data.filter(isMainInhouseShift);
+      return {
+        success: true,
+        message: `Connected successfully (In-house / MAIN shifts API, ${inhouse.length} in-house of ${data.length} shifts for today)`,
+      };
+    }
+
     if (isPhpApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
       const today = new Date().toISOString().split("T")[0];
@@ -1351,6 +1571,18 @@ export async function runSync(
           } catch {}
         }
       }
+    } else if (isRestPhpInhouseApi(config)) {
+      const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
+      const shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!);
+      const inhouseBreakdown = await syncRestPhpInhouseShifts(tenantId, shifts, siteDecisions);
+      breakdown.clients = inhouseBreakdown.clients;
+      breakdown.sites = inhouseBreakdown.sites;
+      breakdown.suppliers = inhouseBreakdown.suppliers;
+      breakdown.employees = inhouseBreakdown.employees;
+      breakdown.shifts = inhouseBreakdown.shifts;
+      allErrors.push(
+        `[INHOUSE] Synced MAIN/in-house only — suppliers not created; shift supplier_id forced null (${shifts.filter(isMainInhouseShift).length} of ${shifts.length} shifts)`,
+      );
     } else if (isRestPhpApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
       let shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!, supplierId);
@@ -2096,6 +2328,12 @@ export async function runDrySync(
     const dryResult = await dryRunEntity(tenantId, "employees", allData);
     dryResult.totalFetched = allData.length;
     return [dryResult];
+  }
+
+  if (isRestPhpInhouseApi(config)) {
+    const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
+    const shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!);
+    return dryRunRestPhpInhouseShifts(tenantId, shifts);
   }
 
   if (isRestPhpApi(config)) {

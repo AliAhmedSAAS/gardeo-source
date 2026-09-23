@@ -38,6 +38,7 @@ import { generateCallScript } from "./elevenlabs-service";
 import { generateTwiML } from "./twilio-service";
 import { classifyTransactions, learnFromAllocation } from "./auto-classify-service";
 import { registerStaffProfileRoutes } from "./staff-profile-routes";
+import { registerPayrollControlRoutes } from "./payroll-control-routes";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
@@ -788,6 +789,7 @@ export async function registerRoutes(
 
   registerMobileAuthRoutes(app);
   registerStaffProfileRoutes(app, requireRole);
+  registerPayrollControlRoutes(app, requireRole);
 
   // ─── Tenant Onboarding Routes (public) ───
   app.get("/api/subscription-plans", async (_req, res) => {
@@ -1740,6 +1742,9 @@ export async function registerRoutes(
       if (req.body.employmentVettingAutomationEnabled !== undefined) {
         data.employmentVettingAutomationEnabled = !!req.body.employmentVettingAutomationEnabled;
       }
+      if (req.body.customPayrollControlEnabled !== undefined) {
+        data.customPayrollControlEnabled = !!req.body.customPayrollControlEnabled;
+      }
       const updated = await storage.updateTenant(parseInt(req.params.id), data as any);
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json(updated);
@@ -2086,11 +2091,15 @@ export async function registerRoutes(
   app.get("/api/my-permissions", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
-      let tenantInfo: { companyName?: string; logoUrl?: string } = {};
+      let tenantInfo: { companyName?: string; logoUrl?: string; customPayrollControlEnabled?: boolean } = {};
       if (user.tenantId) {
         const tenant = await storage.getTenant(user.tenantId);
         if (tenant) {
-          tenantInfo = { companyName: tenant.name || undefined, logoUrl: tenant.logoUrl || undefined };
+          tenantInfo = {
+            companyName: tenant.name || undefined,
+            logoUrl: tenant.logoUrl || undefined,
+            customPayrollControlEnabled: !!(tenant as any).customPayrollControlEnabled,
+          };
         }
       }
       if (user.role === "super_admin") {
@@ -2121,7 +2130,7 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.status(400).json({ message: "No tenant assigned" });
-      const { isActive, slug, employmentVettingAutomationEnabled: _automation, ...allowedUpdates } = req.body;
+      const { isActive, slug, employmentVettingAutomationEnabled: _automation, customPayrollControlEnabled: _customPayroll, ...allowedUpdates } = req.body;
       if (allowedUpdates.selfBillingSignatureDate && typeof allowedUpdates.selfBillingSignatureDate === "string") {
         allowedUpdates.selfBillingSignatureDate = new Date(allowedUpdates.selfBillingSignatureDate);
       }
@@ -24743,14 +24752,24 @@ Respond in JSON format:
       if (!name || !apiBaseUrl || !apiKey) {
         return res.status(400).json({ message: "Name, API Base URL, and API Key are required" });
       }
-      const resolvedType = connectionType === "php" ? "php" : connectionType === "rest_php" ? "rest_php" : "rest";
+      const resolvedType =
+        connectionType === "php" ? "php"
+        : connectionType === "rest_php" ? "rest_php"
+        : connectionType === "rest_php_inhouse" ? "rest_php_inhouse"
+        : connectionType === "php_employees" ? "php_employees"
+        : "rest";
       const config = await storage.createSyncConfiguration({
         tenantId: user.tenantId,
         name,
         apiBaseUrl: apiBaseUrl.split("?")[0],
         apiKeyEncrypted: apiKey,
         connectionType: resolvedType,
-        syncEntities: resolvedType !== "rest" ? ["shifts"] : (syncEntities || ["employees", "sites", "clients", "suppliers", "shifts"]),
+        syncEntities:
+          resolvedType === "rest"
+            ? (syncEntities || ["employees", "sites", "clients", "suppliers", "shifts"])
+            : resolvedType === "php_employees"
+              ? ["employees"]
+              : ["shifts"],
         isActive: true,
       });
       res.json({ ...config, apiKeyEncrypted: "••••••••" });
@@ -24772,8 +24791,10 @@ Respond in JSON format:
       if (req.body.apiBaseUrl) updates.apiBaseUrl = req.body.apiBaseUrl.split("?")[0];
       if (req.body.apiKey) updates.apiKeyEncrypted = req.body.apiKey;
       if (req.body.connectionType) updates.connectionType = req.body.connectionType;
-      if (req.body.connectionType === "php" || req.body.connectionType === "rest_php") {
+      if (req.body.connectionType === "php" || req.body.connectionType === "rest_php" || req.body.connectionType === "rest_php_inhouse") {
         updates.syncEntities = ["shifts"];
+      } else if (req.body.connectionType === "php_employees") {
+        updates.syncEntities = ["employees"];
       } else if (req.body.syncEntities) {
         updates.syncEntities = req.body.syncEntities;
       }

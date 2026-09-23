@@ -83,6 +83,8 @@ const PERMISSION_GROUPS: { group: string; permissions: { key: string; label: str
     group: "Finance",
     permissions: [
       { key: "screen:finance", label: "Finance" },
+      { key: "screen:payroll", label: "Payroll" },
+      { key: "screen:payroll-control", label: "Custom Payroll Control" },
       { key: "screen:self-billing", label: "Self-Billing" },
       { key: "screen:self-billing-audit", label: "Audit Pack (HMRC)" },
       { key: "screen:supplier-hmrc-audit", label: "HMRC Audit Trail" },

@@ -114,7 +114,7 @@ export default function DataSyncPage() {
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [formApiKey, setFormApiKey] = useState("");
-  const [formType, setFormType] = useState<"rest" | "php" | "rest_php" | "php_employees">("rest");
+  const [formType, setFormType] = useState<"rest" | "php" | "rest_php" | "rest_php_inhouse" | "php_employees">("rest");
   const [formEntities, setFormEntities] = useState<string[]>(["employees", "sites", "clients", "suppliers", "shifts"]);
   const [testingId, setTestingId] = useState<number | null>(null);
   const [syncingId, setSyncingId] = useState<number | null>(null);
@@ -355,12 +355,22 @@ export default function DataSyncPage() {
     setFormName(config.name);
     setFormUrl(config.apiBaseUrl);
     setFormApiKey("");
-    setFormType((config.connectionType === "php" ? "php" : config.connectionType === "rest_php" ? "rest_php" : config.connectionType === "php_employees" ? "php_employees" : "rest") as "rest" | "php" | "rest_php" | "php_employees");
+    setFormType((
+      config.connectionType === "php" ? "php"
+      : config.connectionType === "rest_php" ? "rest_php"
+      : config.connectionType === "rest_php_inhouse" ? "rest_php_inhouse"
+      : config.connectionType === "php_employees" ? "php_employees"
+      : "rest"
+    ) as "rest" | "php" | "rest_php" | "rest_php_inhouse" | "php_employees");
     setFormEntities(config.syncEntities || ["employees", "sites", "clients", "suppliers", "shifts"]);
   }
 
   function needsDateRangeType(type: string) {
-    return type === "php" || type === "rest_php";
+    return type === "php" || type === "rest_php" || type === "rest_php_inhouse";
+  }
+
+  function isInhouseType(type: string) {
+    return type === "rest_php_inhouse";
   }
 
   function isPhpEmployeesType(type: string) {
@@ -429,7 +439,7 @@ export default function DataSyncPage() {
             <div className="space-y-4 py-2">
               <div>
                 <Label className="mb-2 block">Connection Type</Label>
-                <Select value={formType} onValueChange={(v: "rest" | "php" | "rest_php" | "php_employees") => setFormType(v)} data-testid="select-connection-type">
+                <Select value={formType} onValueChange={(v: "rest" | "php" | "rest_php" | "rest_php_inhouse" | "php_employees") => setFormType(v)} data-testid="select-connection-type">
                   <SelectTrigger data-testid="select-trigger-connection-type">
                     <SelectValue />
                   </SelectTrigger>
@@ -458,6 +468,12 @@ export default function DataSyncPage() {
                         REST API (Paginated) — Shifts with date range
                       </div>
                     </SelectItem>
+                    <SelectItem value="rest_php_inhouse" data-testid="select-item-rest-php-inhouse">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        REST API (In-house) — MAIN shifts only
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -467,6 +483,8 @@ export default function DataSyncPage() {
                     ? "PHP employees endpoint with api_key param. Syncs all employee data including bank details, documents, employment history, and passport data."
                     : formType === "php"
                     ? "Single PHP shifts endpoint with flat response. Suppliers, clients, sites, and employees are auto-created from shift data."
+                    : formType === "rest_php_inhouse"
+                    ? "Same paginated shifts endpoint as REST (Paginated), but only imports MAIN / SUP-1120 (in-house) shifts. Suppliers are never created; shift supplier_id is always null."
                     : "Paginated REST shifts endpoint with date range parameters. Entities are auto-created from shift external IDs."}
                 </p>
               </div>
@@ -476,7 +494,23 @@ export default function DataSyncPage() {
               </div>
               <div>
                 <Label htmlFor="conn-url">{formType === "rest" ? "API Base URL" : "Endpoint URL"}</Label>
-                <Input id="conn-url" data-testid="input-api-url" placeholder={formType === "rest" ? "https://your-system.example.com" : formType === "php_employees" ? "https://your-server.com/RESTAPI1/api/employees.php" : formType === "php" ? "https://your-server.com/RestAPI/shifts.php" : "https://your-server.com/RESTAPI1/api/shifts.php"} value={formUrl} onChange={e => setFormUrl(e.target.value)} />
+                <Input
+                  id="conn-url"
+                  data-testid="input-api-url"
+                  placeholder={
+                    formType === "rest"
+                      ? "https://your-system.example.com"
+                      : formType === "php_employees"
+                        ? "https://your-server.com/RESTAPI1/api/employees.php"
+                        : formType === "php"
+                          ? "https://your-server.com/RestAPI/shifts.php"
+                          : formType === "rest_php_inhouse"
+                            ? "https://your-server.com/RESTAPI1/api/shifts-main.php"
+                            : "https://your-server.com/RESTAPI1/api/shifts.php"
+                  }
+                  value={formUrl}
+                  onChange={e => setFormUrl(e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="conn-key">API Key</Label>
@@ -548,6 +582,10 @@ export default function DataSyncPage() {
                           <Badge className="bg-purple-100 text-purple-800 text-xs" data-testid={`badge-type-${config.id}`}>
                             <Code2 className="w-3 h-3 mr-1" /> PHP API
                           </Badge>
+                        ) : config.connectionType === "rest_php_inhouse" ? (
+                          <Badge className="bg-teal-100 text-teal-800 text-xs" data-testid={`badge-type-${config.id}`}>
+                            <Globe className="w-3 h-3 mr-1" /> In-house Shifts
+                          </Badge>
                         ) : config.connectionType === "rest_php" ? (
                           <Badge className="bg-green-100 text-green-800 text-xs" data-testid={`badge-type-${config.id}`}>
                             <Globe className="w-3 h-3 mr-1" /> REST Shifts
@@ -598,7 +636,11 @@ export default function DataSyncPage() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>Last synced: <strong>{formatDate(config.lastSyncAt)}</strong></span>
                     <span>Entities: {needsDateRangeType(config.connectionType) ? (
-                      <Badge variant="secondary" className="mr-1 text-xs">Shifts (auto-creates suppliers, clients, sites, employees)</Badge>
+                      isInhouseType(config.connectionType) ? (
+                        <Badge variant="secondary" className="mr-1 text-xs">MAIN/in-house shifts only (supplier_id null)</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="mr-1 text-xs">Shifts (auto-creates suppliers, clients, sites, employees)</Badge>
+                      )
                     ) : (config.syncEntities || []).map(e => (
                       <Badge key={e} variant="secondary" className="mr-1 text-xs">{e}</Badge>
                     ))}</span>
@@ -629,6 +671,7 @@ export default function DataSyncPage() {
                         data-testid={`input-date-to-${config.id}`}
                       />
                     </div>
+                    {!isInhouseType(config.connectionType) && (
                     <div className="flex-1 min-w-[200px]">
                       <Label className="text-xs font-medium text-blue-800 mb-1 block">Supplier (optional)</Label>
                       <SearchableSelect
@@ -647,6 +690,7 @@ export default function DataSyncPage() {
                         data-testid={`select-trigger-supplier-${config.id}`}
                       />
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -762,7 +806,7 @@ export default function DataSyncPage() {
             <div className="space-y-4 py-2">
               <div>
                 <Label className="mb-2 block">Connection Type</Label>
-                <Select value={formType} onValueChange={(v: "rest" | "php" | "rest_php" | "php_employees") => setFormType(v)} data-testid="select-edit-connection-type">
+                <Select value={formType} onValueChange={(v: "rest" | "php" | "rest_php" | "rest_php_inhouse" | "php_employees") => setFormType(v)} data-testid="select-edit-connection-type">
                   <SelectTrigger data-testid="select-trigger-edit-type">
                     <SelectValue />
                   </SelectTrigger>
@@ -789,6 +833,12 @@ export default function DataSyncPage() {
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4" />
                         REST API (Paginated) — Shifts with date range
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="rest_php_inhouse" data-testid="select-edit-item-rest-php-inhouse">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        REST API (In-house) — MAIN shifts only
                       </div>
                     </SelectItem>
                   </SelectContent>

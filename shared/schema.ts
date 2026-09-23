@@ -103,6 +103,7 @@ export const tenants = pgTable("tenants", {
   defaultProbationWeeks: integer("default_probation_weeks").default(12),
   deploymentGateSettings: jsonb("deployment_gate_settings").$type<DeploymentGateSettings>().default(DEFAULT_DEPLOYMENT_GATE_SETTINGS),
   employmentVettingAutomationEnabled: boolean("employment_vetting_automation_enabled").default(false),
+  customPayrollControlEnabled: boolean("custom_payroll_control_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1277,6 +1278,166 @@ export const payrollRunItems = pgTable("payroll_run_items", {
   index("idx_payroll_run_items_employee").on(table.employeeId),
 ]);
 
+export const payrollControlMonths = pgTable("payroll_control_months", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  periodMonth: date("period_month").notNull(),
+  rulesOfPayment: text("rules_of_payment").notNull().default("full_paye"),
+  payrollSource: text("payroll_source").notNull().default("first4_paye"),
+  niUsed: integer("ni_used").notNull().default(0),
+  hrStatus: text("hr_status").notNull().default("approved"),
+  remarks: text("remarks"),
+  accountsRemarks: text("accounts_remarks"),
+  first4Hours: numeric("first4_hours", { precision: 10, scale: 2 }).default("0"),
+  first4Wages: numeric("first4_wages", { precision: 12, scale: 2 }).default("0"),
+  first4Paid: boolean("first4_paid").default(false),
+  gfmHours: numeric("gfm_hours", { precision: 10, scale: 2 }).default("0"),
+  gfmWages: numeric("gfm_wages", { precision: 12, scale: 2 }).default("0"),
+  gfmPaid: boolean("gfm_paid").default(false),
+  selfHours: numeric("self_hours", { precision: 10, scale: 2 }).default("0"),
+  selfWages: numeric("self_wages", { precision: 12, scale: 2 }).default("0"),
+  selfPaid: boolean("self_paid").default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_payroll_control_month").on(table.tenantId, table.employeeId, table.periodMonth),
+  index("idx_pcm_tenant_month").on(table.tenantId, table.periodMonth),
+]);
+
+export const payrollRuleChangeRequests = pgTable("payroll_rule_change_requests", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  monthRowId: integer("month_row_id").references(() => payrollControlMonths.id, { onDelete: "cascade" }).notNull(),
+  fromRule: text("from_rule").notNull(),
+  fromSource: text("from_source").notNull(),
+  toRule: text("to_rule").notNull(),
+  toSource: text("to_source").notNull(),
+  controlStatus: text("control_status").notNull().default("pending"),
+  hrStatus: text("hr_status").notNull().default("pending"),
+  accountsStatus: text("accounts_status").notNull().default("pending"),
+  controlBy: varchar("control_by").references(() => users.id),
+  hrBy: varchar("hr_by").references(() => users.id),
+  accountsBy: varchar("accounts_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_prcr_month").on(table.monthRowId),
+  index("idx_prcr_tenant").on(table.tenantId),
+]);
+
+export const payrollAppliedLines = pgTable("payroll_applied_lines", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  monthRowId: integer("month_row_id").references(() => payrollControlMonths.id, { onDelete: "cascade" }).notNull(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  shiftId: integer("shift_id").references(() => shifts.id).notNull(),
+  hours: numeric("hours", { precision: 10, scale: 2 }).notNull(),
+  holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
+  expense: numeric("expense", { precision: 12, scale: 2 }).default("0"),
+  wages: numeric("wages", { precision: 12, scale: 2 }).notNull(),
+  bucket: text("bucket").notNull(),
+  payeeToClaim: boolean("payee_to_claim").notNull().default(true),
+  claimable: boolean("claimable").notNull().default(true),
+  billed: boolean("billed").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_pal_tenant_emp").on(table.tenantId, table.employeeId),
+  index("idx_pal_shift").on(table.shiftId),
+  index("idx_pal_month").on(table.monthRowId),
+]);
+
+export const payrollBills = pgTable("payroll_bills", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  billNumber: text("bill_number").notNull(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  billDate: date("bill_date").notNull(),
+  dueDate: date("due_date").notNull(),
+  claimFrom: date("claim_from").notNull(),
+  claimTo: date("claim_to").notNull(),
+  payeeType: text("payee_type").notNull(),
+  branchType: text("branch_type").notNull(),
+  payrollProvider: text("payroll_provider"),
+  empLevel: integer("emp_level").default(0),
+  particulars: text("particulars"),
+  accountTitle: text("account_title"),
+  accountNumber: text("account_number"),
+  sortCode: text("sort_code"),
+  bankName: text("bank_name"),
+  niNumber: text("ni_number"),
+  billAmount: numeric("bill_amount", { precision: 12, scale: 2 }).notNull(),
+  paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).default("0"),
+  balance: numeric("balance", { precision: 12, scale: 2 }).notNull(),
+  status: text("status").notNull().default("UNPAID"),
+  remarks: text("remarks"),
+  terms: text("terms"),
+  remittance: boolean("remittance").default(false),
+  postDate: date("post_date"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_pb_tenant_status").on(table.tenantId, table.status),
+  index("idx_pb_tenant_emp").on(table.tenantId, table.employeeId),
+]);
+
+export const payrollBillLines = pgTable("payroll_bill_lines", {
+  id: serial("id").primaryKey(),
+  billId: integer("bill_id").references(() => payrollBills.id, { onDelete: "cascade" }).notNull(),
+  appliedLineId: integer("applied_line_id").references(() => payrollAppliedLines.id).notNull(),
+  shiftId: integer("shift_id").references(() => shifts.id).notNull(),
+  hours: numeric("hours", { precision: 10, scale: 2 }).notNull(),
+  holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
+  wages: numeric("wages", { precision: 12, scale: 2 }).notNull(),
+}, (table) => [
+  index("idx_pbl_bill").on(table.billId),
+]);
+
+export const payrollPayments = pgTable("payroll_payments", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  billId: integer("bill_id").references(() => payrollBills.id, { onDelete: "cascade" }).notNull(),
+  paymentType: text("payment_type").notNull().default("PMT"),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  postDate: date("post_date").notNull(),
+  bankName: text("bank_name"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_pp_bill").on(table.billId),
+]);
+
+export const payrollPayslips = pgTable("payroll_payslips", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  billId: integer("bill_id").references(() => payrollBills.id, { onDelete: "cascade" }).notNull(),
+  employeeId: integer("employee_id").references(() => employees.id).notNull(),
+  fileUrl: text("file_url"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id),
+}, (table) => [
+  index("idx_pps_bill").on(table.billId),
+]);
+
+export const payrollControlComms = pgTable("payroll_control_comms", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  billId: integer("bill_id").references(() => payrollBills.id, { onDelete: "cascade" }).notNull(),
+  channel: text("channel").notNull(),
+  status: text("status").notNull(),
+  subject: text("subject"),
+  body: text("body"),
+  errorMessage: text("error_message"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_pcc_bill").on(table.billId),
+]);
+
 export const disputes = pgTable("disputes", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
@@ -1793,6 +1954,14 @@ export type PayrollRun = typeof payrollRuns.$inferSelect;
 export type InsertPayrollRun = z.infer<typeof insertPayrollRunSchema>;
 export type PayrollRunItem = typeof payrollRunItems.$inferSelect;
 export type InsertPayrollRunItem = z.infer<typeof insertPayrollRunItemSchema>;
+export type PayrollControlMonth = typeof payrollControlMonths.$inferSelect;
+export type PayrollRuleChangeRequest = typeof payrollRuleChangeRequests.$inferSelect;
+export type PayrollAppliedLine = typeof payrollAppliedLines.$inferSelect;
+export type PayrollBill = typeof payrollBills.$inferSelect;
+export type PayrollBillLine = typeof payrollBillLines.$inferSelect;
+export type PayrollPayment = typeof payrollPayments.$inferSelect;
+export type PayrollPayslip = typeof payrollPayslips.$inferSelect;
+export type PayrollControlComm = typeof payrollControlComms.$inferSelect;
 export type JobPosting = typeof jobPostings.$inferSelect;
 export type InsertJobPosting = z.infer<typeof insertJobPostingSchema>;
 export type Applicant = typeof applicants.$inferSelect;

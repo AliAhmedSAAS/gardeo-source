@@ -603,6 +603,156 @@ app.use((req, res, next) => {
   }
 
   try {
+    await pool.query(`
+      ALTER TABLE tenants
+      ADD COLUMN IF NOT EXISTS custom_payroll_control_enabled boolean DEFAULT false
+    `);
+    log("Ensured tenants.custom_payroll_control_enabled exists");
+  } catch (e) {
+    log("Could not add tenants.custom_payroll_control_enabled: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payroll_control_months (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        employee_id integer NOT NULL REFERENCES employees(id),
+        period_month date NOT NULL,
+        rules_of_payment text NOT NULL DEFAULT 'full_paye',
+        payroll_source text NOT NULL DEFAULT 'first4_paye',
+        ni_used integer NOT NULL DEFAULT 0,
+        hr_status text NOT NULL DEFAULT 'approved',
+        remarks text,
+        accounts_remarks text,
+        first4_hours numeric(10,2) DEFAULT 0,
+        first4_wages numeric(12,2) DEFAULT 0,
+        first4_paid boolean DEFAULT false,
+        gfm_hours numeric(10,2) DEFAULT 0,
+        gfm_wages numeric(12,2) DEFAULT 0,
+        gfm_paid boolean DEFAULT false,
+        self_hours numeric(10,2) DEFAULT 0,
+        self_wages numeric(12,2) DEFAULT 0,
+        self_paid boolean DEFAULT false,
+        updated_at timestamp DEFAULT NOW(),
+        created_at timestamp DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_payroll_control_month ON payroll_control_months (tenant_id, employee_id, period_month);
+      CREATE TABLE IF NOT EXISTS payroll_rule_change_requests (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        month_row_id integer NOT NULL REFERENCES payroll_control_months(id) ON DELETE CASCADE,
+        from_rule text NOT NULL,
+        from_source text NOT NULL,
+        to_rule text NOT NULL,
+        to_source text NOT NULL,
+        control_status text NOT NULL DEFAULT 'pending',
+        hr_status text NOT NULL DEFAULT 'pending',
+        accounts_status text NOT NULL DEFAULT 'pending',
+        control_by varchar REFERENCES users(id),
+        hr_by varchar REFERENCES users(id),
+        accounts_by varchar REFERENCES users(id),
+        resolved_at timestamp,
+        created_by varchar REFERENCES users(id),
+        created_at timestamp DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payroll_applied_lines (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        month_row_id integer NOT NULL REFERENCES payroll_control_months(id) ON DELETE CASCADE,
+        employee_id integer NOT NULL REFERENCES employees(id),
+        shift_id integer NOT NULL REFERENCES shifts(id),
+        hours numeric(10,2) NOT NULL,
+        holiday_hours numeric(10,2) DEFAULT 0,
+        rate numeric(10,2) NOT NULL,
+        expense numeric(12,2) DEFAULT 0,
+        wages numeric(12,2) NOT NULL,
+        bucket text NOT NULL,
+        payee_to_claim boolean NOT NULL DEFAULT true,
+        claimable boolean NOT NULL DEFAULT true,
+        billed boolean NOT NULL DEFAULT false,
+        created_at timestamp DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payroll_bills (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        bill_number text NOT NULL,
+        employee_id integer NOT NULL REFERENCES employees(id),
+        bill_date date NOT NULL,
+        due_date date NOT NULL,
+        claim_from date NOT NULL,
+        claim_to date NOT NULL,
+        payee_type text NOT NULL,
+        branch_type text NOT NULL,
+        payroll_provider text,
+        emp_level integer DEFAULT 0,
+        particulars text,
+        account_title text,
+        account_number text,
+        sort_code text,
+        bank_name text,
+        ni_number text,
+        bill_amount numeric(12,2) NOT NULL,
+        paid_amount numeric(12,2) DEFAULT 0,
+        balance numeric(12,2) NOT NULL,
+        status text NOT NULL DEFAULT 'UNPAID',
+        remarks text,
+        terms text,
+        remittance boolean DEFAULT false,
+        post_date date,
+        created_by varchar REFERENCES users(id),
+        created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payroll_bill_lines (
+        id serial PRIMARY KEY,
+        bill_id integer NOT NULL REFERENCES payroll_bills(id) ON DELETE CASCADE,
+        applied_line_id integer NOT NULL REFERENCES payroll_applied_lines(id),
+        shift_id integer NOT NULL REFERENCES shifts(id),
+        hours numeric(10,2) NOT NULL,
+        holiday_hours numeric(10,2) DEFAULT 0,
+        rate numeric(10,2) NOT NULL,
+        wages numeric(12,2) NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS payroll_payments (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        bill_id integer NOT NULL REFERENCES payroll_bills(id) ON DELETE CASCADE,
+        payment_type text NOT NULL DEFAULT 'PMT',
+        amount numeric(12,2) NOT NULL,
+        post_date date NOT NULL,
+        bank_name text,
+        created_by varchar REFERENCES users(id),
+        created_at timestamp DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payroll_payslips (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        bill_id integer NOT NULL REFERENCES payroll_bills(id) ON DELETE CASCADE,
+        employee_id integer NOT NULL REFERENCES employees(id),
+        file_url text,
+        generated_at timestamp DEFAULT NOW(),
+        generated_by varchar REFERENCES users(id)
+      );
+      CREATE TABLE IF NOT EXISTS payroll_control_comms (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id),
+        bill_id integer NOT NULL REFERENCES payroll_bills(id) ON DELETE CASCADE,
+        channel text NOT NULL,
+        status text NOT NULL,
+        subject text,
+        body text,
+        error_message text,
+        created_by varchar REFERENCES users(id),
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    log("Ensured custom payroll control tables exist");
+  } catch (e) {
+    log("Could not create custom payroll control tables: " + (e as Error).message);
+  }
+
+  try {
     await pool.query("UPDATE users SET role = 'admin' WHERE username = 'testadmin' AND role != 'admin'");
     log("Ensured testadmin has admin role");
   } catch (e) {
@@ -614,23 +764,23 @@ app.use((req, res, next) => {
     if (parseInt(rows[0].cnt) === 0) {
       log("Seeding default role permissions...");
       const defaults: Record<string, string[]> = {
-        tenant_admin: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:addons","screen:clients","screen:sites","screen:payroll","screen:leave-requests","screen:absences"],
-        ceo: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:company-profile","screen:compliance-settings","screen:addons","screen:clients","screen:sites","screen:payroll","screen:leave-requests","screen:absences"],
+        tenant_admin: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:addons","screen:clients","screen:sites","screen:payroll","screen:payroll-control","screen:leave-requests","screen:absences"],
+        ceo: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:company-profile","screen:compliance-settings","screen:addons","screen:clients","screen:sites","screen:payroll","screen:payroll-control","screen:leave-requests","screen:absences"],
         operations_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:company-profile","screen:compliance-settings","screen:addons","screen:clients","screen:sites","screen:leave-requests","screen:absences"],
         regional_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:company-profile","screen:clients","screen:sites","screen:leave-requests","screen:absences"],
-        admin: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:clients","screen:sites","screen:leave-requests","screen:absences"],
-        controller: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:clients","screen:sites"],
+        admin: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:clients","screen:sites","screen:payroll-control","screen:leave-requests","screen:absences"],
+        controller: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:clients","screen:sites","screen:payroll-control"],
         scheduler: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:scheduling","screen:timesheets","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:clients","screen:sites"],
-        hr_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:data-import","screen:compliance-settings","screen:clients","screen:sites","screen:leave-requests","screen:absences"],
+        hr_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:data-import","screen:compliance-settings","screen:clients","screen:sites","screen:payroll-control","screen:leave-requests","screen:absences"],
         compliance_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:vetting","screen:compliance","screen:supplier-hmrc-audit","screen:reports","screen:compliance-settings","screen:clients","screen:sites"],
-        accountant: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:payroll"],
-        payroll_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:supplier-timesheets","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:payroll"],
+        accountant: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:payroll","screen:payroll-control"],
+        payroll_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:employees","screen:supplier-timesheets","screen:finance","screen:self-billing","screen:self-billing-audit","screen:supplier-hmrc-audit","screen:reports","screen:payroll","screen:payroll-control"],
         training_manager: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:admin-onboarding","screen:employees","screen:compliance"],
         supplier: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:disputes","screen:supplier-portal","screen:my-officers","screen:supplier-timesheets-portal","screen:supplier-invoices","screen:supplier-documents","screen:supplier-policies","screen:self-billing-agreement"],
         employee: ["screen:dashboard","screen:communications","screen:privacy-settings","screen:onboarding","screen:my-shifts","screen:my-documents","screen:my-profile","screen:my-pay"],
       };
       const allPerms = [
-        "screen:dashboard","screen:communications","screen:privacy-settings","screen:onboarding","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:supplier-portal","screen:my-officers","screen:supplier-timesheets-portal","screen:supplier-invoices","screen:supplier-documents","screen:supplier-policies","screen:self-billing-agreement","screen:my-shifts","screen:my-documents","screen:my-profile","screen:addons","screen:supplier-audit-portal","screen:supplier-hmrc-audit","screen:clients","screen:sites","screen:payroll","screen:my-pay","screen:leave-requests","screen:absences"
+        "screen:dashboard","screen:communications","screen:privacy-settings","screen:onboarding","screen:admin-onboarding","screen:employees","screen:recruitment","screen:vetting","screen:compliance","screen:scheduling","screen:timesheets","screen:control-room","screen:deployment-map","screen:ai-scheduling","screen:ai-analytics","screen:suppliers","screen:supplier-timesheets","screen:disputes","screen:finance","screen:self-billing","screen:self-billing-audit","screen:reports","screen:audit-trail","screen:data-import","screen:company-profile","screen:compliance-settings","screen:settings","screen:supplier-portal","screen:my-officers","screen:supplier-timesheets-portal","screen:supplier-invoices","screen:supplier-documents","screen:supplier-policies","screen:self-billing-agreement","screen:my-shifts","screen:my-documents","screen:my-profile","screen:addons","screen:supplier-audit-portal","screen:supplier-hmrc-audit","screen:clients","screen:sites","screen:payroll","screen:payroll-control","screen:my-pay","screen:leave-requests","screen:absences"
       ];
       const values: string[] = [];
       const params: any[] = [];
@@ -646,6 +796,7 @@ app.use((req, res, next) => {
     } else {
       const newPerms: Record<string, string[]> = {
         "screen:payroll": ["tenant_admin","ceo","accountant","payroll_manager"],
+        "screen:payroll-control": ["tenant_admin","ceo","admin","controller","hr_manager","accountant","payroll_manager"],
         "screen:my-pay": ["employee"],
         "screen:leave-requests": ["tenant_admin","ceo","operations_manager","regional_manager","admin","hr_manager"],
         "screen:absences": ["tenant_admin","ceo","operations_manager","regional_manager","admin","hr_manager"],

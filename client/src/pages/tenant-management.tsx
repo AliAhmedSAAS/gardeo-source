@@ -88,7 +88,7 @@ export default function TenantManagementPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<typeof emptyTenantForm & { isActive: boolean; employmentVettingAutomationEnabled: boolean }> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<typeof emptyTenantForm & { isActive: boolean; employmentVettingAutomationEnabled: boolean; customPayrollControlEnabled: boolean }> }) => {
       const res = await apiRequest("PATCH", `/api/admin/tenants/${id}`, data);
       return res.json();
     },
@@ -117,6 +117,28 @@ export default function TenantManagementPage() {
         title: updated.employmentVettingAutomationEnabled
           ? "Employment vetting automation enabled"
           : "Employment vetting automation disabled",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const togglePayrollMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/tenants/${id}`, {
+        customPayrollControlEnabled: enabled,
+      });
+      return res.json() as Promise<Tenant>;
+    },
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tenants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-permissions"] });
+      setSelectedTenant(updated);
+      toast({
+        title: (updated as any).customPayrollControlEnabled
+          ? "Custom payroll control enabled"
+          : "Custom payroll control disabled",
       });
     },
     onError: (error: Error) => {
@@ -493,6 +515,25 @@ export default function TenantManagementPage() {
               />
             </div>
           )}
+          {selectedTenant && (
+            <div className="flex items-center justify-between gap-3 border-t pt-3">
+              <div>
+                <Label htmlFor="custom-payroll-control">Customize payroll</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Replace simple payroll with Summary, Bill Section, and Pending Payment.
+                </p>
+              </div>
+              <Switch
+                id="custom-payroll-control"
+                checked={!!(selectedTenant as any).customPayrollControlEnabled}
+                disabled={togglePayrollMutation.isPending}
+                onCheckedChange={(enabled) => {
+                  togglePayrollMutation.mutate({ id: selectedTenant.id, enabled });
+                }}
+                data-testid="switch-custom-payroll-control"
+              />
+            </div>
+          )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
             <Button
@@ -560,6 +601,22 @@ export default function TenantManagementPage() {
                       toggleAutomationMutation.mutate({ id: selectedTenant.id, enabled });
                     }}
                     data-testid="switch-employment-vetting-automation-detail"
+                  />
+                </div>
+                <div className="col-span-2 flex items-center justify-between gap-3 rounded-md border border-border/70 p-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Customize payroll</p>
+                    <p className="text-sm">
+                      {(selectedTenant as any).customPayrollControlEnabled ? "Enabled" : "Disabled"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!(selectedTenant as any).customPayrollControlEnabled}
+                    disabled={togglePayrollMutation.isPending}
+                    onCheckedChange={(enabled) => {
+                      togglePayrollMutation.mutate({ id: selectedTenant.id, enabled });
+                    }}
+                    data-testid="switch-custom-payroll-control-detail"
                   />
                 </div>
                 {selectedTenant.companyRegNumber && (

@@ -12,7 +12,7 @@ import {
   LayoutDashboard, ClipboardList, Users, ShieldCheck, FileText,
   LogOut, UserPlus, Shield, CalendarDays, Radio, Clock, User, MapPin, PoundSterling,
   Truck, Briefcase, Settings, BarChart3, UserCheck, Brain, ScrollText, DatabaseBackup, Building2, Lock, TrendingUp, MessageSquare,
-  AlertTriangle, Receipt, ClipboardCheck, Sparkles, ChevronDown, Building, MapPinned, Banknote, RotateCcw, FileStack, Download, History, X, Calculator, RefreshCw, FileSpreadsheet, FolderOpen, CalendarOff, Mail, LayoutGrid, Scale, GraduationCap, Wrench, BookOpen,
+  AlertTriangle, Receipt, ClipboardCheck, Sparkles, ChevronDown, Building, MapPinned, Banknote, RotateCcw, FileStack, Download, History, X, Calculator, RefreshCw, FileSpreadsheet, FolderOpen, CalendarOff, Mail, LayoutGrid, Scale, GraduationCap, Wrench, BookOpen, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -165,7 +165,7 @@ export function AppSidebar() {
   const userRole = user?.role || "employee";
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-  const { data: permData, isLoading: permLoading } = useQuery<{ role: string; permissions: string[]; tenant?: { companyName?: string; logoUrl?: string } }>({
+  const { data: permData, isLoading: permLoading } = useQuery<{ role: string; permissions: string[]; tenant?: { companyName?: string; logoUrl?: string; customPayrollControlEnabled?: boolean } }>({
     queryKey: ["/api/my-permissions"],
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
@@ -194,9 +194,28 @@ export function AppSidebar() {
     ],
   };
 
-  const effectiveNavGroups = fmEnabled
-    ? [...navGroups.slice(0, 5), fmNavGroup, ...navGroups.slice(5)]
-    : navGroups;
+  const customPayrollEnabled = !!permData?.tenant?.customPayrollControlEnabled;
+
+  const resolvedNavGroups = useMemo(() => {
+    const groups = fmEnabled
+      ? [...navGroups.slice(0, 5), fmNavGroup, ...navGroups.slice(5)]
+      : navGroups;
+    return groups.map((g) => {
+      if (g.label !== "Finance & Billing") return g;
+      return {
+        ...g,
+        items: g.items.flatMap((item) => {
+          if (item.url !== "/payroll") return [item];
+          if (!customPayrollEnabled) return [item];
+          return [
+            { title: "Payroll Summary", url: "/payroll/summary", icon: Banknote, permKey: "screen:payroll-control" },
+            { title: "Bill Section", url: "/payroll/bills", icon: FileText, permKey: "screen:payroll-control" },
+            { title: "Pending Payment", url: "/payroll/pending-payments", icon: CreditCard, permKey: "screen:payroll-control" },
+          ];
+        }),
+      };
+    });
+  }, [fmEnabled, customPayrollEnabled]);
 
   const permsReady = !!permData;
 
@@ -218,11 +237,11 @@ export function AppSidebar() {
 
   const allNavItems = useMemo(() => {
     const items: NavItem[] = [];
-    for (const g of effectiveNavGroups) {
+    for (const g of resolvedNavGroups) {
       for (const item of g.items) items.push(item);
     }
     return items;
-  }, [effectiveNavGroups]);
+  }, [resolvedNavGroups]);
 
   const getQuickAccessData = useCallback((): QuickAccessEntry[] => {
     try {
@@ -358,7 +377,7 @@ export function AppSidebar() {
   };
 
   const renderGroupedNav = () => {
-    return effectiveNavGroups.map((group, groupIndex) => {
+    return resolvedNavGroups.map((group, groupIndex) => {
       const visibleItems = group.items.filter(item => hasPermission(item.permKey));
       if (visibleItems.length === 0) return null;
 
