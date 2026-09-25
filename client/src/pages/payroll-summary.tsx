@@ -21,7 +21,7 @@ import {
   canControllerRemarks, canAccountsRemarks, isFinanceRole, canApplyRules, ruleLabel, sourceLabel,
   selfShiftPayDisplay,
 } from "@shared/payrollControl";
-import { Loader2, RefreshCw, Play } from "lucide-react";
+import { Loader2, RefreshCw, Play, Download, FileSpreadsheet } from "lucide-react";
 
 type ChangeRequest = {
   id: number;
@@ -76,6 +76,78 @@ function requestKind(req: ChangeRequest): "rule" | "source" | "self_source" | "b
 
 function gbp(n: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n || 0);
+}
+
+function escapeCsv(val: unknown): string {
+  const s = String(val ?? "");
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function escapeXml(val: unknown): string {
+  return String(val ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function downloadBlob(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+type SummaryExportRow = {
+  wid: string;
+  name: string;
+  bank: string;
+  empType: string;
+  agent: string;
+  hrStatus: string;
+  rules: string;
+  niSource: string;
+  selfSource: string;
+  niUsed: number;
+  first4Hours: number;
+  first4Wages: number;
+  first4Paid: string;
+  gfmHours: number;
+  gfmWages: number;
+  gfmPaid: string;
+  selfHours: number;
+  selfWages: number;
+  selfPaid: string;
+  totalHours: number;
+  totalWages: number;
+  remarks: string;
+  accountsRemarks: string;
+};
+
+const SUMMARY_EXPORT_HEADERS = [
+  "WID", "Name", "Bank", "Emp type", "Agent", "Hold/Approved", "Rules of Payment",
+  "NI source", "Self source", "NI used",
+  "1st4 hours", "1st4 wages", "1st4 paid",
+  "GFM hours", "GFM wages", "GFM paid",
+  "Self hours", "Self wages", "Self paid",
+  "Total hours", "Total wages", "Remarks", "Accounts remarks",
+] as const;
+
+function summaryExportCells(row: SummaryExportRow): (string | number)[] {
+  return [
+    row.wid, row.name, row.bank, row.empType, row.agent, row.hrStatus, row.rules,
+    row.niSource, row.selfSource, row.niUsed,
+    row.first4Hours, row.first4Wages, row.first4Paid,
+    row.gfmHours, row.gfmWages, row.gfmPaid,
+    row.selfHours, row.selfWages, row.selfPaid,
+    row.totalHours, row.totalWages, row.remarks, row.accountsRemarks,
+  ];
 }
 
 /** Avoid timezone shifting DATE → previous calendar day in the UI. */
@@ -352,6 +424,81 @@ export default function PayrollSummaryPage() {
     requestMutation.mutate({ monthId: monthId!, sourceScope: "self", toSelfSource });
   }
 
+  function buildExportRows(): SummaryExportRow[] {
+    return officers.map((o) => {
+      const totalHours = o.first4Hours + o.gfmHours + o.selfHours;
+      const totalWages = o.first4Wages + o.gfmWages + o.selfWages;
+      return {
+        wid: o.wid,
+        name: o.name,
+        bank: o.bank || "",
+        empType: o.empType || "",
+        agent: o.agent || "",
+        hrStatus: o.hrStatus || "",
+        rules: ruleLabel(o.rulesOfPayment),
+        niSource: labelSource(o.payrollSource),
+        selfSource: labelSource(o.selfPayrollSource || o.payrollSource),
+        niUsed: o.niUsed,
+        first4Hours: o.first4Hours,
+        first4Wages: o.first4Wages,
+        first4Paid: o.first4Paid ? "Yes" : "No",
+        gfmHours: o.gfmHours,
+        gfmWages: o.gfmWages,
+        gfmPaid: o.gfmPaid ? "Yes" : "No",
+        selfHours: o.selfHours,
+        selfWages: o.selfWages,
+        selfPaid: o.selfPaid ? "Yes" : "No",
+        totalHours,
+        totalWages,
+        remarks: o.remarks || "",
+        accountsRemarks: o.accountsRemarks || "",
+      };
+    });
+  }
+
+  function exportCsv() {
+    const rows = buildExportRows();
+    if (rows.length === 0) {
+      toast({ title: "Nothing to export", description: "No officers match the current filters.", variant: "destructive" });
+      return;
+    }
+    const lines = [
+      SUMMARY_EXPORT_HEADERS.map(escapeCsv).join(","),
+      ...rows.map((r) => summaryExportCells(r).map(escapeCsv).join(",")),
+    ];
+    downloadBlob(`\uFEFF${lines.join("\n")}`, `payroll-summary-${month}.csv`, "text/csv;charset=utf-8;");
+    toast({ title: "CSV downloaded", description: `${rows.length} row(s)` });
+  }
+
+  function exportExcel() {
+    const rows = buildExportRows();
+    if (rows.length === 0) {
+      toast({ title: "Nothing to export", description: "No officers match the current filters.", variant: "destructive" });
+      return;
+    }
+    const headerXml = SUMMARY_EXPORT_HEADERS.map((h) => `<Cell><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`).join("");
+    const bodyXml = rows.map((r) => {
+      const cells = summaryExportCells(r).map((cell) => {
+        const isNum = typeof cell === "number";
+        return `<Cell><Data ss:Type="${isNum ? "Number" : "String"}">${escapeXml(cell)}</Data></Cell>`;
+      }).join("");
+      return `<Row>${cells}</Row>`;
+    }).join("");
+    const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="Payroll Summary">
+  <Table>
+   <Row>${headerXml}</Row>
+   ${bodyXml}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+    downloadBlob(xml, `payroll-summary-${month}.xls`, "application/vnd.ms-excel");
+    toast({ title: "Excel downloaded", description: `${rows.length} row(s)` });
+  }
+
   return (
     <div className="p-6 space-y-4" data-testid="payroll-summary-page">
       <div>
@@ -405,6 +552,24 @@ export default function PayrollSummaryPage() {
         <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
           Refresh
+        </Button>
+        <Button
+          variant="outline"
+          onClick={exportCsv}
+          disabled={officers.length === 0}
+          data-testid="btn-export-csv"
+        >
+          <Download className="w-4 h-4 mr-1" />
+          CSV
+        </Button>
+        <Button
+          variant="outline"
+          onClick={exportExcel}
+          disabled={officers.length === 0}
+          data-testid="btn-export-excel"
+        >
+          <FileSpreadsheet className="w-4 h-4 mr-1" />
+          Excel
         </Button>
         {canApplyRules(role) && (
           <Button
