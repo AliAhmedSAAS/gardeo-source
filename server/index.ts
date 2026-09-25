@@ -440,6 +440,54 @@ app.use((req, res, next) => {
 
   try {
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenant_payroll_sources (
+        id serial PRIMARY KEY,
+        tenant_id integer NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        value text NOT NULL,
+        label text NOT NULL,
+        wage_bucket text NOT NULL DEFAULT 'first4_paye',
+        is_system boolean NOT NULL DEFAULT false,
+        sort_order integer NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_payroll_sources_tenant_value ON tenant_payroll_sources (tenant_id, value)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tenant_payroll_sources_tenant ON tenant_payroll_sources (tenant_id)`);
+    log("Ensured tenant_payroll_sources exists");
+  } catch (e) {
+    log("Could not ensure tenant_payroll_sources: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE payroll_control_months
+      ADD COLUMN IF NOT EXISTS self_payroll_source text NOT NULL DEFAULT 'self_employed'
+    `);
+    await pool.query(`
+      UPDATE payroll_control_months
+      SET self_payroll_source = CASE
+        WHEN payroll_source = 'self_employed' THEN 'self_employed'
+        WHEN self_payroll_source IS NULL OR self_payroll_source = '' THEN 'self_employed'
+        ELSE self_payroll_source
+      END
+    `);
+    log("Ensured payroll_control_months.self_payroll_source exists");
+  } catch (e) {
+    log("Could not add payroll_control_months.self_payroll_source: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE payroll_rule_change_requests
+      ADD COLUMN IF NOT EXISTS source_scope text NOT NULL DEFAULT 'ni'
+    `);
+    log("Ensured payroll_rule_change_requests.source_scope exists");
+  } catch (e) {
+    log("Could not add payroll_rule_change_requests.source_scope: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
       ALTER TABLE sites
         ADD COLUMN IF NOT EXISTS manager_name text,
         ADD COLUMN IF NOT EXISTS manager_email text,
@@ -614,6 +662,32 @@ app.use((req, res, next) => {
 
   try {
     await pool.query(`
+      ALTER TABLE bank_details
+      ADD COLUMN IF NOT EXISTS account_purpose text NOT NULL DEFAULT 'default'
+    `);
+    await pool.query(`
+      UPDATE bank_details SET account_purpose = 'default'
+      WHERE account_purpose IS NULL OR account_purpose = ''
+    `);
+    // Deduplicate so unique (employee_id, account_purpose) can be applied
+    await pool.query(`
+      DELETE FROM bank_details a
+      USING bank_details b
+      WHERE a.employee_id = b.employee_id
+        AND COALESCE(a.account_purpose, 'default') = COALESCE(b.account_purpose, 'default')
+        AND a.id > b.id
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_bank_details_employee_purpose
+      ON bank_details (employee_id, account_purpose)
+    `);
+    log("Ensured bank_details.account_purpose exists");
+  } catch (e) {
+    log("Could not add bank_details.account_purpose: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS payroll_control_months (
         id serial PRIMARY KEY,
         tenant_id integer NOT NULL REFERENCES tenants(id),
@@ -638,6 +712,7 @@ app.use((req, res, next) => {
         created_at timestamp DEFAULT NOW()
       );
       CREATE UNIQUE INDEX IF NOT EXISTS uq_payroll_control_month ON payroll_control_months (tenant_id, employee_id, period_month);
+      CREATE INDEX IF NOT EXISTS idx_pcm_tenant_period ON payroll_control_months (tenant_id, period_month);
       CREATE TABLE IF NOT EXISTS payroll_rule_change_requests (
         id serial PRIMARY KEY,
         tenant_id integer NOT NULL REFERENCES tenants(id),
@@ -750,6 +825,20 @@ app.use((req, res, next) => {
     log("Ensured custom payroll control tables exist");
   } catch (e) {
     log("Could not create custom payroll control tables: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_shifts_tenant_date_status_emp
+        ON shifts (tenant_id, date, status, employee_id);
+      CREATE INDEX IF NOT EXISTS idx_pcm_tenant_period
+        ON payroll_control_months (tenant_id, period_month);
+      CREATE INDEX IF NOT EXISTS idx_prcr_month_unresolved
+        ON payroll_rule_change_requests (month_row_id) WHERE resolved_at IS NULL;
+    `);
+    log("Ensured payroll summary performance indexes");
+  } catch (e) {
+    log("Could not create payroll summary indexes: " + (e as Error).message);
   }
 
   try {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { isFinanceRole, PAYROLL_SOURCES, sourceLabel } from "@shared/payrollControl";
+import { canApplyRules, PAYROLL_SOURCES, sourceLabel, selfShiftPayDisplay } from "@shared/payrollControl";
 import { Loader2 } from "lucide-react";
 
 type Payee = {
@@ -23,6 +23,8 @@ type Payee = {
   accountTitle: string | null;
   lines: any[];
 };
+
+type PayrollSourceOption = { value: string; label: string };
 
 function gbp(n: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n || 0);
@@ -50,6 +52,16 @@ export default function PayrollBillsPage() {
   const [viewed, setViewed] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [activePayee, setActivePayee] = useState<number | null>(null);
+
+  const { data: sourcesData } = useQuery<any[]>({
+    queryKey: ["/api/tenant/payroll-sources"],
+  });
+  const sources: PayrollSourceOption[] = (sourcesData || []).map((s) => ({
+    value: s.value,
+    label: s.label,
+  }));
+  const sourceOptions = sources.length > 0 ? sources : PAYROLL_SOURCES.map((s) => ({ value: s.value, label: s.label }));
+  const labelFor = (value: string) => sourceOptions.find((s) => s.value === value)?.label || sourceLabel(value);
 
   const params = new URLSearchParams({ claimFrom, claimTo, dueDate, payeeType, branch, provider });
   const { data, isFetching, refetch } = useQuery<{ payees: Payee[]; total: number }>({
@@ -84,6 +96,25 @@ export default function PayrollBillsPage() {
       refetch();
     },
     onError: (err: Error) => toast({ title: "Create Bill failed", description: err.message, variant: "destructive" }),
+  });
+
+  const changeSourceMutation = useMutation({
+    mutationFn: async ({ employeeId, toSource }: { employeeId: number; toSource: string }) => {
+      const res = await apiRequest("POST", "/api/payroll-control/claimable/change-source", {
+        employeeId,
+        claimFrom,
+        claimTo,
+        payeeType,
+        toSource,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Source updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll-control/claimable"] });
+      refetch();
+    },
+    onError: (err: Error) => toast({ title: "Source change failed", description: err.message, variant: "destructive" }),
   });
 
   return (
@@ -124,7 +155,7 @@ export default function PayrollBillsPage() {
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">ALL</SelectItem>
-              {PAYROLL_SOURCES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {sourceOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -132,25 +163,42 @@ export default function PayrollBillsPage() {
           {isFetching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
           View
         </Button>
-        {isFinanceRole(user?.role) && (
+        {canApplyRules(user?.role) && (
           <Button
             onClick={() => createMutation.mutate()}
             disabled={createMutation.isPending || selected.size === 0 || !viewed}
             data-testid="btn-create-bill"
           >
+            {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
             Create Bill
           </Button>
         )}
       </div>
+      {canApplyRules(user?.role) && viewed && selected.size === 0 && payees.length > 0 && (
+        <p className="text-sm text-amber-800">Tick one or more payees, then click Create Bill.</p>
+      )}
 
       {!viewed ? (
         <p className="text-sm text-muted-foreground">Set filters and click View. Bills are not created until you press Create Bill.</p>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           <div className="border rounded-lg overflow-auto max-h-[70vh]">
-            <div className="p-3 border-b font-medium flex justify-between">
+            <div className="p-3 border-b font-medium flex justify-between items-center gap-2">
               <span>Payees</span>
-              <span>Total {gbp(data?.total || 0)}</span>
+              <span className="flex items-center gap-2">
+                <span>Total {gbp(data?.total || 0)}</span>
+                {canApplyRules(user?.role) && (
+                  <Button
+                    size="sm"
+                    onClick={() => createMutation.mutate()}
+                    disabled={createMutation.isPending || selected.size === 0}
+                    data-testid="btn-create-bill-list"
+                  >
+                    {createMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                    Create Bill{selected.size > 0 ? ` (${selected.size})` : ""}
+                  </Button>
+                )}
+              </span>
             </div>
             <table className="w-full text-sm">
               <thead>
@@ -159,7 +207,7 @@ export default function PayrollBillsPage() {
                   <th className="p-2">Payee</th>
                   <th className="p-2">Shifts</th>
                   <th className="p-2">Amount</th>
-                  <th className="p-2">Source</th>
+                  <th className="p-2">{payeeType === "PAYE" ? "NI source" : "Self source"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,7 +230,29 @@ export default function PayrollBillsPage() {
                     <td className="p-2">{p.payeeName}</td>
                     <td className="p-2">{p.shiftCount}</td>
                     <td className="p-2">{gbp(p.amount)}</td>
-                    <td className="p-2">{sourceLabel(p.source)}</td>
+                    <td className="p-2" onClick={(e) => e.stopPropagation()}>
+                      {canApplyRules(user?.role) ? (
+                        <Select
+                          value={p.source}
+                          disabled={changeSourceMutation.isPending}
+                          onValueChange={(v) => {
+                            if (v === p.source) return;
+                            changeSourceMutation.mutate({ employeeId: p.employeeId, toSource: v });
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-36 text-xs">
+                            <SelectValue>{labelFor(p.source)}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sourceOptions.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        labelFor(p.source)
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -194,23 +264,41 @@ export default function PayrollBillsPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left bg-muted">
-                    <th className="p-2">Date</th><th className="p-2">Site</th><th className="p-2">Hours</th><th className="p-2">Rate</th><th className="p-2">Wages</th>
+                    <th className="p-2">Date</th>
+                    <th className="p-2">Site</th>
+                    <th className="p-2">Hours</th>
+                    <th className="p-2">Rate</th>
+                    <th className="p-2">Wages</th>
+                    <th className="p-2">Deduction</th>
+                    <th className="p-2">Net</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {active.lines.map((l: any) => (
-                    <tr key={l.id} className="border-t">
-                      <td className="p-2">{String(l.shift_date).slice(0, 10)}</td>
-                      <td className="p-2">{l.site_name || l.title}</td>
-                      <td className="p-2">{l.hours}</td>
-                      <td className="p-2">{gbp(Number(l.rate))}</td>
-                      <td className="p-2">{gbp(Number(l.wages))}</td>
-                    </tr>
-                  ))}
+                  {active.lines.map((l: any) => {
+                    const pay = selfShiftPayDisplay({
+                      hours: Number(l.hours) || 0,
+                      rate: Number(l.rate) || 0,
+                      wages: Number(l.wages) || 0,
+                      bucket: l.bucket,
+                    });
+                    return (
+                      <tr key={l.id} className="border-t">
+                        <td className="p-2">{String(l.shift_date || l.date || "").slice(0, 10)}</td>
+                        <td className="p-2">{l.site_name || "—"}</td>
+                        <td className="p-2">{l.hours}</td>
+                        <td className="p-2">{gbp(pay.rate)}</td>
+                        <td className="p-2">{gbp(pay.wages)}</td>
+                        <td className={`p-2 ${pay.deduction > 0 ? "text-red-600" : ""}`}>
+                          {pay.deduction > 0 ? gbp(pay.deduction) : "—"}
+                        </td>
+                        <td className="p-2">{pay.deduction > 0 ? gbp(pay.net) : "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (
-              <p className="p-4 text-sm text-muted-foreground">Click a payee to see shift lines.</p>
+              <p className="p-4 text-sm text-muted-foreground">Select a payee to see shift lines.</p>
             )}
           </div>
         </div>

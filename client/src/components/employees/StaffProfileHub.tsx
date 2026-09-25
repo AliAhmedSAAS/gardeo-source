@@ -2788,45 +2788,67 @@ export function DocsHubTab({ employeeId, documents, employeeEmail }: { employeeI
 
 export function BankDetailsTab({ employee }: { employee: any }) {
   const employeeId = employee.id;
+  const customPayroll = !!employee.customPayrollControlEnabled;
   const bankDetails = employee.bankDetails;
+  const payeeBankDetails = employee.payeeBankDetails;
+  const selfBankDetails = employee.selfBankDetails;
   const pendingChanges: any[] = employee.pendingBankChanges || [];
   const pending = pendingChanges.find((c) => c.status === "pending");
+
+  if (customPayroll) {
+    return (
+      <div className="space-y-4">
+        {pending && (
+          <PendingBankChangeCard
+            pending={pending}
+            employeeId={employeeId}
+          />
+        )}
+        <BankAccountCard
+          title="Payee bank account"
+          description="Used for PAYE bills (1st4 / GFM)"
+          employeeId={employeeId}
+          accountPurpose="payee"
+          bankDetails={payeeBankDetails}
+          testIdPrefix="payee"
+        />
+        <BankAccountCard
+          title="Self bank account"
+          description="Used for Self-employed bills"
+          employeeId={employeeId}
+          accountPurpose="self"
+          bankDetails={selfBankDetails}
+          testIdPrefix="self"
+        />
+        {pendingChanges.filter((c) => c.status !== "pending").length > 0 && (
+          <BankChangeHistory pendingChanges={pendingChanges} />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {pending && (
+        <PendingBankChangeCard pending={pending} employeeId={employeeId} />
+      )}
+      <BankAccountCard
+        title="Bank details"
+        description="Add account details for payroll processing"
+        employeeId={employeeId}
+        accountPurpose="default"
+        bankDetails={bankDetails}
+        testIdPrefix="bank"
+      />
+      {pendingChanges.filter((c) => c.status !== "pending").length > 0 && (
+        <BankChangeHistory pendingChanges={pendingChanges} />
+      )}
+    </div>
+  );
+}
+
+function PendingBankChangeCard({ pending, employeeId }: { pending: any; employeeId: number }) {
   const { toast } = useToast();
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    accountName: "",
-    bankName: "",
-    sortCode: "",
-    accountNumber: "",
-    buildingSocietyRef: "",
-  });
-
-  const syncForm = () => {
-    setForm({
-      accountName: bankDetails?.accountName || "",
-      bankName: bankDetails?.bankName || "",
-      sortCode: bankDetails?.sortCode || "",
-      accountNumber: bankDetails?.accountNumber || "",
-      buildingSocietyRef: bankDetails?.buildingSocietyRef || "",
-    });
-  };
-
-  useEffect(() => {
-    if (!editing) syncForm();
-  }, [employee.bankDetails, editing]);
-
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      await apiRequest("PUT", `/api/admin/employees/${employeeId}/bank-details`, form);
-    },
-    onSuccess: () => {
-      invalidateEmployee(employeeId);
-      setEditing(false);
-      toast({ title: "Bank details saved" });
-    },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
   const approveMut = useMutation({
     mutationFn: async (changeId: number) => {
       await apiRequest("POST", `/api/admin/pending-bank-changes/${changeId}/approve`, {});
@@ -2849,6 +2871,106 @@ export function BankDetailsTab({ employee }: { employee: any }) {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  return (
+    <Card className="border-amber-300/60 bg-amber-50/50 shadow-sm">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start gap-2 text-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-900">Pending bank details change</p>
+            <p className="text-xs text-amber-800 mt-1">
+              {pending.bankName} · {pending.accountName} · Sort {pending.sortCode} · Account ****{String(pending.accountNumber).slice(-4)}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => approveMut.mutate(pending.id)} disabled={approveMut.isPending || rejectMut.isPending} data-testid="button-approve-bank-change">
+            Approve
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => rejectMut.mutate(pending.id)} disabled={approveMut.isPending || rejectMut.isPending} data-testid="button-reject-bank-change">
+            Reject
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BankChangeHistory({ pendingChanges }: { pendingChanges: any[] }) {
+  return (
+    <Card className="border-border/70 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Change history</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {pendingChanges.filter((c) => c.status !== "pending").slice(0, 5).map((c) => (
+          <div key={c.id} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border/60 bg-muted/10 p-3">
+            <div>
+              <div className="font-medium">{c.bankName} · ****{String(c.accountNumber).slice(-4)}</div>
+              <div className="text-xs text-muted-foreground">{formatDate(c.createdAt)}</div>
+            </div>
+            <Badge variant={c.status === "approved" ? "default" : "secondary"} className="capitalize">{c.status}</Badge>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BankAccountCard({
+  title,
+  description,
+  employeeId,
+  accountPurpose,
+  bankDetails,
+  testIdPrefix,
+}: {
+  title: string;
+  description?: string;
+  employeeId: number;
+  accountPurpose: "default" | "payee" | "self";
+  bankDetails: any;
+  testIdPrefix: string;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    accountName: "",
+    bankName: "",
+    sortCode: "",
+    accountNumber: "",
+    buildingSocietyRef: "",
+  });
+
+  const syncForm = () => {
+    setForm({
+      accountName: bankDetails?.accountName || "",
+      bankName: bankDetails?.bankName || "",
+      sortCode: bankDetails?.sortCode || "",
+      accountNumber: bankDetails?.accountNumber || "",
+      buildingSocietyRef: bankDetails?.buildingSocietyRef || "",
+    });
+  };
+
+  useEffect(() => {
+    if (!editing) syncForm();
+  }, [bankDetails, editing]);
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PUT", `/api/admin/employees/${employeeId}/bank-details`, {
+        ...form,
+        accountPurpose,
+      });
+    },
+    onSuccess: () => {
+      invalidateEmployee(employeeId);
+      setEditing(false);
+      toast({ title: `${title} saved` });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const displayValue = (value: string | null | undefined) => {
     if (!value?.trim()) return <span className="text-muted-foreground font-normal">Not set</span>;
     return value;
@@ -2862,125 +2984,85 @@ export function BankDetailsTab({ employee }: { employee: any }) {
   );
 
   return (
-    <div className="space-y-4">
-      {pending && (
-        <Card className="border-amber-300/60 bg-amber-50/50 shadow-sm">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-start gap-2 text-sm">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-900">Pending bank details change</p>
-                <p className="text-xs text-amber-800 mt-1">
-                  {pending.bankName} · {pending.accountName} · Sort {pending.sortCode} · Account ****{String(pending.accountNumber).slice(-4)}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => approveMut.mutate(pending.id)} disabled={approveMut.isPending || rejectMut.isPending} data-testid="button-approve-bank-change">
-                Approve
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => rejectMut.mutate(pending.id)} disabled={approveMut.isPending || rejectMut.isPending} data-testid="button-reject-bank-change">
-                Reject
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="border-border/70 shadow-sm">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+    <Card className="border-border/70 shadow-sm">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+        <div>
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-muted-foreground" />
-            Bank details
+            {title}
           </CardTitle>
-          {!editing ? (
+          {description && accountPurpose !== "default" && (
+            <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          )}
+        </div>
+        {!editing ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { syncForm(); setEditing(true); }}
+            data-testid={`button-edit-${testIdPrefix}-bank-details`}
+          >
+            <Pencil className="w-3.5 h-3.5 mr-1" /> {bankDetails ? "Edit" : "Add"}
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => { syncForm(); setEditing(true); }}
-              data-testid="button-edit-bank-details"
+              onClick={() => saveMut.mutate()}
+              disabled={saveMut.isPending || !form.accountName || !form.bankName || !form.sortCode || !form.accountNumber}
+              data-testid={`button-save-${testIdPrefix}-bank-details`}
             >
-              <Pencil className="w-3.5 h-3.5 mr-1" /> {bankDetails ? "Edit" : "Add"}
+              {saveMut.isPending ? "Saving..." : "Save"}
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button
-                size="sm"
-                onClick={() => saveMut.mutate()}
-                disabled={saveMut.isPending || !form.accountName || !form.bankName || !form.sortCode || !form.accountNumber}
-                data-testid="button-save-bank-details"
-              >
-                {saveMut.isPending ? "Saving..." : "Save"}
-              </Button>
+          </div>
+        )}
+      </CardHeader>
+      <CardContent className="pt-1">
+        {!editing ? (
+          bankDetails ? (
+            <div>
+              <FieldRow label="Account name">{displayValue(bankDetails.accountName)}</FieldRow>
+              <FieldRow label="Bank name">{displayValue(bankDetails.bankName)}</FieldRow>
+              <FieldRow label="Sort code">{displayValue(bankDetails.sortCode)}</FieldRow>
+              <FieldRow label="Account number">{displayValue(bankDetails.accountNumber)}</FieldRow>
+              <FieldRow label="Building society ref">{displayValue(bankDetails.buildingSocietyRef)}</FieldRow>
             </div>
-          )}
-        </CardHeader>
-        <CardContent className="pt-1">
-          {!editing ? (
-            bankDetails ? (
-              <div>
-                <FieldRow label="Account name">{displayValue(bankDetails.accountName)}</FieldRow>
-                <FieldRow label="Bank name">{displayValue(bankDetails.bankName)}</FieldRow>
-                <FieldRow label="Sort code">{displayValue(bankDetails.sortCode)}</FieldRow>
-                <FieldRow label="Account number">{displayValue(bankDetails.accountNumber)}</FieldRow>
-                <FieldRow label="Building society ref">{displayValue(bankDetails.buildingSocietyRef)}</FieldRow>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center">
-                <CreditCard className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No bank details on file</p>
-                <p className="text-xs text-muted-foreground mt-1">Add account details for payroll processing</p>
-              </div>
-            )
           ) : (
-            <div className="space-y-3 pt-1">
+            <div className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-4 py-8 text-center">
+              <CreditCard className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No bank details on file</p>
+              {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+            </div>
+          )
+        ) : (
+          <div className="space-y-3 pt-1">
+            <div>
+              <Label className="text-xs">Account name *</Label>
+              <Input value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} data-testid={`input-${testIdPrefix}-bank-account-name`} />
+            </div>
+            <div>
+              <Label className="text-xs">Bank name *</Label>
+              <Input value={form.bankName} onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} data-testid={`input-${testIdPrefix}-bank-name`} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Account name *</Label>
-                <Input value={form.accountName} onChange={(e) => setForm((f) => ({ ...f, accountName: e.target.value }))} data-testid="input-bank-account-name" />
+                <Label className="text-xs">Sort code *</Label>
+                <Input value={form.sortCode} onChange={(e) => setForm((f) => ({ ...f, sortCode: e.target.value }))} placeholder="00-00-00" data-testid={`input-${testIdPrefix}-sort-code`} />
               </div>
               <div>
-                <Label className="text-xs">Bank name *</Label>
-                <Input value={form.bankName} onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} data-testid="input-bank-name" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Sort code *</Label>
-                  <Input value={form.sortCode} onChange={(e) => setForm((f) => ({ ...f, sortCode: e.target.value }))} placeholder="00-00-00" data-testid="input-sort-code" />
-                </div>
-                <div>
-                  <Label className="text-xs">Account number *</Label>
-                  <Input value={form.accountNumber} onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))} data-testid="input-account-number" />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Building society ref</Label>
-                <Input value={form.buildingSocietyRef} onChange={(e) => setForm((f) => ({ ...f, buildingSocietyRef: e.target.value }))} data-testid="input-building-society-ref" />
+                <Label className="text-xs">Account number *</Label>
+                <Input value={form.accountNumber} onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))} data-testid={`input-${testIdPrefix}-account-number`} />
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {pendingChanges.filter((c) => c.status !== "pending").length > 0 && (
-        <Card className="border-border/70 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Change history</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {pendingChanges.filter((c) => c.status !== "pending").slice(0, 5).map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border/60 bg-muted/10 p-3">
-                <div>
-                  <div className="font-medium">{c.bankName} · ****{String(c.accountNumber).slice(-4)}</div>
-                  <div className="text-xs text-muted-foreground">{formatDate(c.createdAt)}</div>
-                </div>
-                <Badge variant={c.status === "approved" ? "default" : "secondary"} className="capitalize">{c.status}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            <div>
+              <Label className="text-xs">Building society ref</Label>
+              <Input value={form.buildingSocietyRef} onChange={(e) => setForm((f) => ({ ...f, buildingSocietyRef: e.target.value }))} data-testid={`input-${testIdPrefix}-building-society-ref`} />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

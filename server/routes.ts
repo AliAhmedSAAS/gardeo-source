@@ -2057,6 +2057,79 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/tenant/payroll-sources", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "controller", "hr_manager", "accountant", "payroll_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!(tenant as any)?.customPayrollControlEnabled) {
+        return res.status(403).json({ message: "Custom payroll is not enabled" });
+      }
+      const sources = await storage.ensureDefaultPayrollSources(user.tenantId);
+      res.json(sources);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/tenant/payroll-sources", requireRole("super_admin", "tenant_admin", "ceo", "admin", "payroll_manager", "accountant"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!(tenant as any)?.customPayrollControlEnabled) {
+        return res.status(403).json({ message: "Custom payroll is not enabled" });
+      }
+      const created = await storage.createTenantPayrollSource(user.tenantId, {
+        label: String(req.body.label || ""),
+        wageBucket: req.body.wageBucket,
+        value: req.body.value,
+      });
+      res.status(201).json(created);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/tenant/payroll-sources/:id", requireRole("super_admin", "tenant_admin", "ceo", "admin", "payroll_manager", "accountant"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!(tenant as any)?.customPayrollControlEnabled) {
+        return res.status(403).json({ message: "Custom payroll is not enabled" });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const updated = await storage.updateTenantPayrollSource(user.tenantId, id, {
+        label: req.body.label,
+        wageBucket: req.body.wageBucket,
+      });
+      if (!updated) return res.status(404).json({ message: "Source not found" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/tenant/payroll-sources/:id", requireRole("super_admin", "tenant_admin", "ceo", "admin", "payroll_manager", "accountant"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!(tenant as any)?.customPayrollControlEnabled) {
+        return res.status(403).json({ message: "Custom payroll is not enabled" });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const deleted = await storage.deleteTenantPayrollSource(user.tenantId, id);
+      if (!deleted) return res.status(404).json({ message: "Source not found" });
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   // ─── Role Permissions Management ───
 
   app.get("/api/role-permissions", requireRole("super_admin", "tenant_admin"), async (req, res) => {
@@ -2868,6 +2941,7 @@ export async function registerRoutes(
       const pdfPersonalRefIds = await getSubmittedPersonalReferenceIds(employee.id);
       const immigration = await storage.getEmployeeImmigration(employee.id);
       const bankDetails = await storage.getBankDetails(employee.id);
+      const allBankDetails = await storage.listBankDetails(employee.id);
       const pendingBankChanges = await storage.getPendingBankChangesForEmployee(employee.id);
       const extras = await staffProfileStorage.getStaffProfileExtras(employee.id);
       const { rows: policies } = await pool.query(
@@ -2896,6 +2970,7 @@ export async function registerRoutes(
         onboardingStatus: onboarding?.status || "not_started",
         supplierName,
         employmentVettingAutomationEnabled: !!employeeTenant?.employmentVettingAutomationEnabled,
+        customPayrollControlEnabled: !!(employeeTenant as any)?.customPayrollControlEnabled,
         vettingRecords: vetting,
         documents: docs,
         emergencyContacts: contacts,
@@ -2903,6 +2978,8 @@ export async function registerRoutes(
         employmentHistory: empHistory,
         immigration: immigration || null,
         bankDetails: bankDetails || null,
+        payeeBankDetails: allBankDetails.find((b: any) => b.accountPurpose === "payee") || null,
+        selfBankDetails: allBankDetails.find((b: any) => b.accountPurpose === "self") || null,
         pendingBankChanges,
         policies,
         auditTrail,

@@ -30,6 +30,7 @@ import {
 import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
 import { TenantOfficerTypesSettingsCard } from "@/components/settings/TenantOfficerTypesSettingsCard";
 import { TenantDutyTypesSettingsCard } from "@/components/settings/TenantDutyTypesSettingsCard";
+import { TenantPayrollSourcesSettingsCard } from "@/components/settings/TenantPayrollSourcesSettingsCard";
 import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_DEPLOYMENT_GATE_SETTINGS,
@@ -1255,6 +1256,11 @@ export default function SettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const { data: permData } = useQuery<{ tenant?: { customPayrollControlEnabled?: boolean } }>({
+    queryKey: ["/api/my-permissions"],
+    staleTime: 1000 * 60 * 5,
+  });
+  const customPayrollEnabled = !!permData?.tenant?.customPayrollControlEnabled;
 
   // Xero integration state
   const [xeroClientId, setXeroClientId] = useState("");
@@ -2320,6 +2326,7 @@ export default function SettingsPage() {
           <LeaveEntitlementSettingsCard />
           <TenantOfficerTypesSettingsCard />
           <TenantDutyTypesSettingsCard />
+          {customPayrollEnabled && <TenantPayrollSourcesSettingsCard />}
           <GeofenceSettingsCard />
           <DeploymentValidationSettingsCard />
           <SupplierVisibilitySettingsCard />

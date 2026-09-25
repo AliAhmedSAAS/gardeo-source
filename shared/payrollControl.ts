@@ -12,7 +12,12 @@ export const PAYMENT_RULES = [
   { value: "full_paye", label: "Full PAYE", niCap: 0, restRate: null as number | null, mode: "full_paye" as const },
   { value: "full_paye_10_9", label: "Full PAYE 10.9", niCap: 0, restRate: 10.9, mode: "full_paye_rate" as const },
   { value: "full_self", label: "Full Self-Employed", niCap: 0, restRate: null, mode: "full_self" as const },
-  { value: "low_rates", label: "Low rates (9–11.5)", niCap: 0, restRate: null, mode: "low_rates" as const },
+  { value: "full_self_9", label: "Full Self employee 9", niCap: 0, restRate: 9, mode: "full_self_rate" as const },
+  { value: "full_self_9_5", label: "Self employee 9.5", niCap: 0, restRate: 9.5, mode: "full_self_rate" as const },
+  { value: "full_self_10", label: "Self employee 10", niCap: 0, restRate: 10, mode: "full_self_rate" as const },
+  { value: "full_self_10_5", label: "Self employee 10.5", niCap: 0, restRate: 10.5, mode: "full_self_rate" as const },
+  { value: "full_self_11", label: "Self employee 11", niCap: 0, restRate: 11, mode: "full_self_rate" as const },
+  { value: "full_self_11_5", label: "Self employee 11.5", niCap: 0, restRate: 11.5, mode: "full_self_rate" as const },
   { value: "ni_80", label: "80 hrs on NI", niCap: 80, restRate: null, mode: "ni_rest" as const },
   { value: "ni_80_rest_9", label: "80 hrs on NI Rest on 9", niCap: 80, restRate: 9, mode: "ni_rest" as const },
   { value: "ni_80_rest_9_5", label: "80 hrs on NI Rest on 9.5", niCap: 80, restRate: 9.5, mode: "ni_rest" as const },
@@ -60,8 +65,14 @@ export function isAdminRole(role: string | undefined | null): boolean {
   return !!role && (ADMIN_ROLES as readonly string[]).includes(role);
 }
 
+/** Apply Rules + money tagging — finance or tenant admins. */
+export function canApplyRules(role: string | undefined | null): boolean {
+  return isFinanceRole(role) || isAdminRole(role);
+}
+
 export function canControlApprove(role: string | undefined | null): boolean {
-  return role === "controller" || role === "super_admin";
+  // Controllers own this column; tenant admins can also complete the 3-way flow.
+  return role === "controller" || isAdminRole(role);
 }
 
 export function canHrApprove(role: string | undefined | null): boolean {
@@ -84,8 +95,25 @@ export function canAccountsRemarks(role: string | undefined | null): boolean {
   return isAdminRole(role) || isFinanceRole(role);
 }
 
+export function ruleRateText(value: string): string {
+  const r = PAYMENT_RULES.find((x) => x.value === value);
+  if (!r) return "";
+  if (r.mode === "full_paye") return `£${PAYE_RATE}`;
+  if (r.mode === "full_paye_rate") return `£${r.restRate}`;
+  if (r.mode === "full_self") return "officer rate";
+  if (r.mode === "full_self_rate") return `£${r.restRate}`;
+  if (r.mode === "ni_rest") {
+    if (r.restRate == null) return `NI £${PAYE_RATE} / rest officer rate`;
+    return `NI £${PAYE_RATE} / rest £${r.restRate}`;
+  }
+  return "";
+}
+
 export function ruleLabel(value: string): string {
-  return PAYMENT_RULES.find((r) => r.value === value)?.label || value;
+  const r = PAYMENT_RULES.find((x) => x.value === value);
+  if (!r) return value;
+  const rates = ruleRateText(value);
+  return rates ? `${r.label} (${rates})` : r.label;
 }
 
 export function sourceLabel(value: string): string {
@@ -96,8 +124,50 @@ export function getRuleDef(value: string) {
   return PAYMENT_RULES.find((r) => r.value === value) || PAYMENT_RULES[0];
 }
 
-export function payeBucketForSource(source: string): WageBucket {
-  return source === "gfm_paye" ? "gfm_paye" : "first4_paye";
+export function payeBucketForSource(source: string, wageBucketHint?: string | null): WageBucket {
+  if (wageBucketHint === "gfm_paye" || wageBucketHint === "first4_paye") return wageBucketHint;
+  if (source === "gfm_paye") return "gfm_paye";
+  return "first4_paye";
+}
+
+export function slugifyPayrollSource(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64) || "source";
+}
+
+export function money2(n: number): number {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+/** Self-employed lines: book rate below £12.71 stays at PAYE rate, with a deduction for the gap. */
+export function selfShiftPayDisplay(params: {
+  hours: number;
+  rate: number;
+  wages: number;
+  bucket?: string | null;
+}): { rate: number; wages: number; deduction: number; net: number } {
+  const hours = Number(params.hours) || 0;
+  const storedRate = Number(params.rate) || 0;
+  const net = Number(params.wages) || 0;
+  if (params.bucket !== "self") {
+    return { rate: storedRate, wages: net, deduction: 0, net };
+  }
+  const impliedBook = hours > 0 ? money2(net / hours) : storedRate;
+  const bookRate = impliedBook > 0 ? impliedBook : storedRate;
+  if (bookRate + 0.001 >= PAYE_RATE) {
+    return { rate: storedRate || PAYE_RATE, wages: net, deduction: 0, net };
+  }
+  const gross = money2(hours * PAYE_RATE);
+  return {
+    rate: PAYE_RATE,
+    wages: gross,
+    deduction: money2(gross - net),
+    net,
+  };
 }
 
 export function monthStart(month: string): string {

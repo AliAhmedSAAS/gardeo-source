@@ -255,9 +255,15 @@ export const emergencyContacts = pgTable("emergency_contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/** default = normal payroll single account; payee / self = custom payroll split */
+export const BANK_ACCOUNT_PURPOSES = ["default", "payee", "self"] as const;
+export type BankAccountPurpose = (typeof BANK_ACCOUNT_PURPOSES)[number];
+
 export const bankDetails = pgTable("bank_details", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").references(() => employees.id),
+  /** default | payee | self — unique per employee */
+  accountPurpose: text("account_purpose").notNull().default("default"),
   accountName: text("account_name").notNull(),
   bankName: text("bank_name").notNull(),
   sortCode: text("sort_code").notNull(),
@@ -265,7 +271,9 @@ export const bankDetails = pgTable("bank_details", {
   buildingSocietyRef: text("building_society_ref"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_bank_details_employee_purpose").on(table.employeeId, table.accountPurpose),
+]);
 
 export const pendingBankChanges = pgTable("pending_bank_changes", {
   id: serial("id").primaryKey(),
@@ -1284,7 +1292,10 @@ export const payrollControlMonths = pgTable("payroll_control_months", {
   employeeId: integer("employee_id").references(() => employees.id).notNull(),
   periodMonth: date("period_month").notNull(),
   rulesOfPayment: text("rules_of_payment").notNull().default("full_paye"),
+  /** NI / PAYE provider (1st4, GFM, …) */
   payrollSource: text("payroll_source").notNull().default("first4_paye"),
+  /** Self-employed bill provider */
+  selfPayrollSource: text("self_payroll_source").notNull().default("self_employed"),
   niUsed: integer("ni_used").notNull().default(0),
   hrStatus: text("hr_status").notNull().default("approved"),
   remarks: text("remarks"),
@@ -1313,6 +1324,8 @@ export const payrollRuleChangeRequests = pgTable("payroll_rule_change_requests",
   fromSource: text("from_source").notNull(),
   toRule: text("to_rule").notNull(),
   toSource: text("to_source").notNull(),
+  /** ni = payroll_source; self = self_payroll_source */
+  sourceScope: text("source_scope").notNull().default("ni"),
   controlStatus: text("control_status").notNull().default("pending"),
   hrStatus: text("hr_status").notNull().default("pending"),
   accountsStatus: text("accounts_status").notNull().default("pending"),
@@ -3272,6 +3285,26 @@ export const tenantDutyTypes = pgTable("tenant_duty_types", {
 export const insertTenantDutyTypeSchema = createInsertSchema(tenantDutyTypes).omit({ id: true, createdAt: true });
 export type TenantDutyType = typeof tenantDutyTypes.$inferSelect;
 export type InsertTenantDutyType = z.infer<typeof insertTenantDutyTypeSchema>;
+
+/** Custom payroll provider/sources (1st4, GFM, plus tenant-defined). */
+export const tenantPayrollSources = pgTable("tenant_payroll_sources", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  value: text("value").notNull(),
+  label: text("label").notNull(),
+  /** Where PAYE hours land in month totals: first4_paye | gfm_paye */
+  wageBucket: text("wage_bucket").notNull().default("first4_paye"),
+  isSystem: boolean("is_system").notNull().default(false),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_tenant_payroll_sources_tenant_value").on(table.tenantId, table.value),
+  index("idx_tenant_payroll_sources_tenant").on(table.tenantId),
+]);
+
+export const insertTenantPayrollSourceSchema = createInsertSchema(tenantPayrollSources).omit({ id: true, createdAt: true });
+export type TenantPayrollSource = typeof tenantPayrollSources.$inferSelect;
+export type InsertTenantPayrollSource = z.infer<typeof insertTenantPayrollSourceSchema>;
 
 export const shiftCheckCalls = pgTable("shift_check_calls", {
   id: serial("id").primaryKey(),

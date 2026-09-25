@@ -160,6 +160,7 @@ export async function sendViaTenantEmailSettings(params: {
   subject: string;
   html: string;
   replyTo?: string | null;
+  attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
 }): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
   const row = await storage.getTenantEmailSettings(params.tenantId);
   if (!row || !row.enabled) {
@@ -173,6 +174,7 @@ export async function sendViaTenantEmailSettings(params: {
 
   const replyTo = (params.replyTo || row.replyToEmail || "").trim() || undefined;
   const from = formatFrom(row.fromName, fromEmail);
+  const attachments = params.attachments || [];
 
   if (row.provider === "resend") {
     if (!row.resendApiKeyEncrypted) {
@@ -187,6 +189,14 @@ export async function sendViaTenantEmailSettings(params: {
         ...(replyTo ? { replyTo } : {}),
         subject: params.subject,
         html: params.html,
+        ...(attachments.length
+          ? {
+              attachments: attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content,
+              })),
+            }
+          : {}),
       });
       if (error) {
         await storage.upsertTenantEmailSettings(params.tenantId, {
@@ -230,6 +240,15 @@ export async function sendViaTenantEmailSettings(params: {
       ...(replyTo ? { replyTo } : {}),
       subject: params.subject,
       html: params.html,
+      ...(attachments.length
+        ? {
+            attachments: attachments.map((a) => ({
+              filename: a.filename,
+              content: a.content,
+              contentType: a.contentType || "application/pdf",
+            })),
+          }
+        : {}),
     });
 
     return { ok: true, via: "smtp" };

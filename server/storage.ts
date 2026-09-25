@@ -111,6 +111,8 @@ import {
   tenantOfficerTypes,
   type TenantDutyType, type InsertTenantDutyType,
   tenantDutyTypes,
+  type TenantPayrollSource, type InsertTenantPayrollSource,
+  tenantPayrollSources,
   type TenantXeroConnection, type InsertTenantXeroConnection,
   tenantXeroConnections,
   type XeroSyncRecord, type InsertXeroSyncRecord,
@@ -132,6 +134,7 @@ import {
 } from "@shared/schema";
 import { DEFAULT_OFFICER_TYPES } from "@shared/defaultOfficerTypes";
 import { DEFAULT_DUTY_TYPES } from "@shared/defaultDutyTypes";
+import { PAYROLL_SOURCES, slugifyPayrollSource } from "@shared/payrollControl";
 import { db, pool } from "./db";
 import { invalidateSessionUser, setCachedSessionUser } from "./session-user-cache";
 import { eq, and, desc, gte, lte, isNotNull, sql, inArray, asc } from "drizzle-orm";
@@ -189,6 +192,9 @@ export interface IStorage {
   deleteEmergencyContact(id: number): Promise<void>;
 
   getBankDetails(employeeId: number): Promise<BankDetail | undefined>;
+  getBankDetailsByPurpose(employeeId: number, purpose: string): Promise<BankDetail | undefined>;
+  listBankDetails(employeeId: number): Promise<BankDetail[]>;
+  upsertBankDetailsByPurpose(employeeId: number, purpose: string, data: Omit<InsertBankDetail, "employeeId" | "accountPurpose">): Promise<BankDetail>;
   createBankDetails(details: InsertBankDetail): Promise<BankDetail>;
   updateBankDetails(id: number, data: Partial<InsertBankDetail>): Promise<BankDetail | undefined>;
 
@@ -713,12 +719,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBankDetails(employeeId: number): Promise<BankDetail | undefined> {
-    const [detail] = await db.select().from(bankDetails).where(eq(bankDetails.employeeId, employeeId));
+    const rows = await db.select().from(bankDetails).where(eq(bankDetails.employeeId, employeeId));
+    return rows.find((r) => (r as any).accountPurpose === "default") || rows[0];
+  }
+
+  async getBankDetailsByPurpose(employeeId: number, purpose: string): Promise<BankDetail | undefined> {
+    const [detail] = await db.select().from(bankDetails).where(
+      and(eq(bankDetails.employeeId, employeeId), eq(bankDetails.accountPurpose, purpose)),
+    );
     return detail;
   }
 
+  async listBankDetails(employeeId: number): Promise<BankDetail[]> {
+    return db.select().from(bankDetails).where(eq(bankDetails.employeeId, employeeId));
+  }
+
+  async upsertBankDetailsByPurpose(
+    employeeId: number,
+    purpose: string,
+    data: Omit<InsertBankDetail, "employeeId" | "accountPurpose">,
+  ): Promise<BankDetail> {
+    const existing = await this.getBankDetailsByPurpose(employeeId, purpose);
+    if (existing) {
+      const updated = await this.updateBankDetails(existing.id, data);
+      return updated!;
+    }
+    return this.createBankDetails({
+      ...data,
+      employeeId,
+      accountPurpose: purpose,
+    } as InsertBankDetail);
+  }
+
   async createBankDetails(details: InsertBankDetail): Promise<BankDetail> {
-    const [created] = await db.insert(bankDetails).values(details).returning();
+    const [created] = await db.insert(bankDetails).values({
+      accountPurpose: "default",
+      ...details,
+    }).returning();
     return created;
   }
 
@@ -766,19 +803,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pendingBankChanges.id, id))
       .returning();
 
-    const existing = await this.getBankDetails(change.employeeId);
+    const existing = await this.getBankDetailsByPurpose(change.employeeId, "default")
+      ?? await this.getBankDetails(change.employeeId);
     const bankData = {
-      employeeId: change.employeeId,
       accountName: change.accountName,
       bankName: change.bankName,
       sortCode: change.sortCode,
       accountNumber: change.accountNumber,
       buildingSocietyRef: change.buildingSocietyRef ?? undefined,
     };
-    if (existing) {
+    if (existing && ((existing as any).accountPurpose === "default" || !(existing as any).accountPurpose)) {
       await this.updateBankDetails(existing.id, bankData);
     } else {
-      await this.createBankDetails(bankData);
+      await this.upsertBankDetailsByPurpose(change.employeeId, "default", bankData);
     }
 
     return updated;
@@ -2444,6 +2481,110 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(tenantDutyTypes)
       .where(and(eq(tenantDutyTypes.id, id), eq(tenantDutyTypes.tenantId, tenantId)))
       .returning({ id: tenantDutyTypes.id });
+    return result.length > 0;
+  }
+
+  async getTenantPayrollSources(tenantId: number): Promise<TenantPayrollSource[]> {
+    return db.select().from(tenantPayrollSources)
+      .where(eq(tenantPayrollSources.tenantId, tenantId))
+      .orderBy(asc(tenantPayrollSources.sortOrder), asc(tenantPayrollSources.label));
+  }
+
+  async getTenantPayrollSource(tenantId: number, id: number): Promise<TenantPayrollSource | undefined> {
+    const [row] = await db.select().from(tenantPayrollSources)
+      .where(and(eq(tenantPayrollSources.id, id), eq(tenantPayrollSources.tenantId, tenantId)))
+      .limit(1);
+    return row;
+  }
+
+  async getTenantPayrollSourceByValue(tenantId: number, value: string): Promise<TenantPayrollSource | undefined> {
+    const [row] = await db.select().from(tenantPayrollSources)
+      .where(and(eq(tenantPayrollSources.tenantId, tenantId), eq(tenantPayrollSources.value, value)))
+      .limit(1);
+    return row;
+  }
+
+  async ensureDefaultPayrollSources(tenantId: number): Promise<TenantPayrollSource[]> {
+    const existing = await this.getTenantPayrollSources(tenantId);
+    const existingValues = new Set(existing.map((t) => t.value));
+    const missing = PAYROLL_SOURCES.filter((s) => !existingValues.has(s.value));
+    if (missing.length > 0) {
+      const maxSort = existing.reduce((max, t) => Math.max(max, t.sortOrder ?? 0), 0);
+      await db.insert(tenantPayrollSources).values(
+        missing.map((s, index) => ({
+          tenantId,
+          value: s.value,
+          label: s.label,
+          wageBucket: s.value === "gfm_paye" ? "gfm_paye" : "first4_paye",
+          isSystem: true,
+          sortOrder: maxSort + index + 1,
+        })),
+      ).onConflictDoNothing({ target: [tenantPayrollSources.tenantId, tenantPayrollSources.value] });
+    }
+    return this.getTenantPayrollSources(tenantId);
+  }
+
+  async createTenantPayrollSource(
+    tenantId: number,
+    data: { label: string; wageBucket?: string; value?: string },
+  ): Promise<TenantPayrollSource> {
+    const label = data.label.trim().replace(/\s+/g, " ");
+    if (!label) throw new Error("Source label is required");
+    const wageBucket = data.wageBucket === "gfm_paye" ? "gfm_paye" : "first4_paye";
+    let value = (data.value || slugifyPayrollSource(label)).trim().toLowerCase();
+    if (!value) value = slugifyPayrollSource(label);
+
+    const existing = await this.getTenantPayrollSources(tenantId);
+    if (existing.some((s) => s.value === value)) {
+      throw new Error("A source with this value already exists");
+    }
+    if (existing.some((s) => s.label.toLowerCase() === label.toLowerCase())) {
+      throw new Error("A source with this label already exists");
+    }
+
+    const maxSort = existing.reduce((max, t) => Math.max(max, t.sortOrder ?? 0), 0);
+    const [created] = await db.insert(tenantPayrollSources).values({
+      tenantId,
+      value,
+      label,
+      wageBucket,
+      isSystem: false,
+      sortOrder: maxSort + 1,
+    }).returning();
+    return created;
+  }
+
+  async updateTenantPayrollSource(
+    tenantId: number,
+    id: number,
+    data: { label?: string; wageBucket?: string },
+  ): Promise<TenantPayrollSource | undefined> {
+    const patch: Partial<InsertTenantPayrollSource> = {};
+    if (typeof data.label === "string") {
+      const label = data.label.trim().replace(/\s+/g, " ");
+      if (!label) throw new Error("Source label is required");
+      patch.label = label;
+    }
+    if (data.wageBucket === "gfm_paye" || data.wageBucket === "first4_paye") {
+      patch.wageBucket = data.wageBucket;
+    }
+    if (Object.keys(patch).length === 0) {
+      return this.getTenantPayrollSource(tenantId, id);
+    }
+    const [updated] = await db.update(tenantPayrollSources)
+      .set(patch)
+      .where(and(eq(tenantPayrollSources.id, id), eq(tenantPayrollSources.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteTenantPayrollSource(tenantId: number, id: number): Promise<boolean> {
+    const row = await this.getTenantPayrollSource(tenantId, id);
+    if (!row) return false;
+    if (row.isSystem) throw new Error("Default sources cannot be deleted");
+    const result = await db.delete(tenantPayrollSources)
+      .where(and(eq(tenantPayrollSources.id, id), eq(tenantPayrollSources.tenantId, tenantId)))
+      .returning({ id: tenantPayrollSources.id });
     return result.length > 0;
   }
 

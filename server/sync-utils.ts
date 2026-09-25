@@ -532,7 +532,7 @@ export async function syncEmployeeBankDetails(
   if (!bankData.bankname && !bankData.sortcode && !bankData.account && !bankData.acctitle) return false;
 
   const existing = await pool.query(
-    `SELECT id FROM bank_details WHERE employee_id = $1 LIMIT 1`,
+    `SELECT id FROM bank_details WHERE employee_id = $1 AND account_purpose = 'default' LIMIT 1`,
     [employeeId]
   );
 
@@ -545,23 +545,23 @@ export async function syncEmployeeBankDetails(
     if (bankData.sortcode) { sets.push(`sort_code = $${idx}`); vals.push(bankData.sortcode); idx++; }
     if (bankData.account) { sets.push(`account_number = $${idx}`); vals.push(bankData.account); idx++; }
     sets.push("updated_at = NOW()");
-    vals.push(employeeId);
+    vals.push(existing.rows[0].id);
     await pool.query(
-      `UPDATE bank_details SET ${sets.join(", ")} WHERE employee_id = $${idx}`,
+      `UPDATE bank_details SET ${sets.join(", ")} WHERE id = $${idx}`,
       vals
     );
     return true;
   }
 
   await pool.query(
-    `INSERT INTO bank_details (employee_id, account_name, bank_name, sort_code, account_number)
-     VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO bank_details (employee_id, account_purpose, account_name, bank_name, sort_code, account_number)
+     VALUES ($1, 'default', $2, $3, $4, $5)`,
     [
       employeeId,
       bankData.acctitle || "Unknown",
       bankData.bankname || "Unknown",
-      bankData.sortcode || "",
-      bankData.account || "",
+      bankData.sortcode || "000000",
+      bankData.account || "00000000",
     ]
   );
   return true;

@@ -929,9 +929,17 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
     try {
       const ctx = await loadEmployeeScoped(req, res);
       if (!ctx) return;
-      const { accountName, bankName, sortCode, accountNumber, buildingSocietyRef } = req.body;
+      const { accountName, bankName, sortCode, accountNumber, buildingSocietyRef, accountPurpose } = req.body;
       if (!accountName || !bankName || !sortCode || !accountNumber) {
         return res.status(400).json({ message: "Account name, bank name, sort code, and account number are required" });
+      }
+      const purposeRaw = String(accountPurpose || "default").trim().toLowerCase();
+      const purpose = purposeRaw === "payee" || purposeRaw === "self" ? purposeRaw : "default";
+      if (purpose === "payee" || purpose === "self") {
+        const tenant = ctx.employee.tenantId ? await storage.getTenant(ctx.employee.tenantId) : null;
+        if (!(tenant as any)?.customPayrollControlEnabled) {
+          return res.status(400).json({ message: "Payee/Self bank accounts require custom payroll to be enabled" });
+        }
       }
       const payload = {
         accountName: String(accountName).trim(),
@@ -940,10 +948,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
         accountNumber: String(accountNumber).trim(),
         buildingSocietyRef: buildingSocietyRef ? String(buildingSocietyRef).trim() : null,
       };
-      const existing = await storage.getBankDetails(ctx.employeeId);
-      const row = existing
-        ? await storage.updateBankDetails(existing.id, payload)
-        : await storage.createBankDetails({ ...payload, employeeId: ctx.employeeId });
+      const row = await storage.upsertBankDetailsByPurpose(ctx.employeeId, purpose, payload);
       res.json(row);
     } catch (err: any) {
       res.status(500).json({ message: err.message });

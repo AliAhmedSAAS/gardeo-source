@@ -7,16 +7,20 @@ import { sendViaTenantEmailSettings } from "./tenant-email-settings";
 import {
   PAYROLL_CONTROL_VIEW_ROLES,
   FINANCE_ROLES,
+  ADMIN_ROLES,
   currentPayrollMonth,
   monthStart,
   monthEnd,
   isFinanceRole,
+  isAdminRole,
   canControlApprove,
   canHrApprove,
   canAccountsApprove,
   canHrHold,
   canControllerRemarks,
   canAccountsRemarks,
+  PAYE_RATE,
+  getRuleDef,
 } from "@shared/payrollControl";
 import {
   applyRulesForOfficer,
@@ -27,8 +31,13 @@ import {
   createBills,
   markBillPaid,
   loadBillReview,
+  deleteBill,
+  deleteBills,
+  changeClaimableSource,
+  openSelfSourceRequest,
   num,
   money,
+  shiftHours,
 } from "./payroll-control";
 import { generatePayslipPdf, generateRemittanceAdvicePdf } from "./payroll-control-pdf";
 
@@ -40,7 +49,7 @@ function paramId(value: string | string[] | undefined): number {
 }
 
 const VIEW_ROLES = [...PAYROLL_CONTROL_VIEW_ROLES];
-const MONEY_ROLES = [...FINANCE_ROLES];
+const MONEY_ROLES = [...FINANCE_ROLES, ...ADMIN_ROLES];
 
 async function requireCustomPayroll(req: Request, res: Response): Promise<{ user: User; tenantId: number } | null> {
   const user = req.user as User;
@@ -62,8 +71,8 @@ async function requireCustomPayroll(req: Request, res: Response): Promise<{ user
 }
 
 function financeOnly(user: User, res: Response): boolean {
-  if (isFinanceRole(user.role)) return true;
-  res.status(403).json({ message: "Finance only" });
+  if (isFinanceRole(user.role) || isAdminRole(user.role)) return true;
+  res.status(403).json({ message: "Finance/Admin only" });
   return false;
 }
 
@@ -147,12 +156,13 @@ async function payslipPayload(tenantId: number, billId: number) {
 async function sendRemittance(tenantId: number, bill: any, userId: string) {
   const contact = await officerContact(bill.employee_id);
   const tenant = await storage.getTenant(tenantId);
+  const amount = num(bill.paid_amount) > 0 ? num(bill.paid_amount) : num(bill.bill_amount);
   const pdf = await generateRemittanceAdvicePdf({
     companyName: tenant?.name || "Gardeo",
     billNumber: bill.bill_number,
     officerName: contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "Officer",
-    amount: num(bill.paid_amount) || num(bill.bill_amount),
-    postDate: String(bill.post_date || "").slice(0, 10),
+    amount,
+    postDate: String(bill.post_date || bill.bill_date || "").slice(0, 10),
     bankName: bill.bank_name,
     accountTitle: bill.account_title,
     accountNumber: bill.account_number,
@@ -160,19 +170,27 @@ async function sendRemittance(tenantId: number, bill: any, userId: string) {
   });
   const to = contact?.email || contact?.portal_email;
   if (!to) throw new Error("No email address for remittance");
+  const filename = `remittance-${bill.bill_number}.pdf`;
   const sent = await sendViaTenantEmailSettings({
     tenantId,
     to,
     subject: `Remittance advice ${bill.bill_number}`,
-    html: `<p>Please find remittance advice for bill ${bill.bill_number}.</p>`,
+    html: `<p>Dear ${contact ? `${contact.first_name || ""}`.trim() || "Officer" : "Officer"},</p>
+<p>Please find attached remittance advice for bill <strong>${bill.bill_number}</strong> (${gbp(amount)}).</p>
+<p>Regards,<br/>${tenant?.name || "Payroll"}</p>`,
+    attachments: [{ filename, content: pdf, contentType: "application/pdf" }],
   });
   await pool.query(
     `INSERT INTO payroll_control_comms (tenant_id, bill_id, channel, status, subject, body, error_message, created_by)
      VALUES ($1,$2,'remittance',$3,$4,$5,$6,$7)`,
     [tenantId, bill.id, sent.ok ? "sent" : "failed", `Remittance ${bill.bill_number}`, null, sent.error || null, userId],
   );
-  void pdf;
   if (!sent.ok) throw new Error(sent.error || "Remittance email failed");
+  await pool.query(
+    `UPDATE payroll_bills SET remittance = true, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`,
+    [bill.id, tenantId],
+  );
+  return { ok: true, to, amount };
 }
 
 export function registerPayrollControlRoutes(app: Express, requireRole: RequireRole) {
@@ -181,86 +199,190 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const ctx = await requireCustomPayroll(req, res);
       if (!ctx) return;
       const month = String(req.query.month || currentPayrollMonth());
+      // Search is applied client-side; keep param for backwards compat but do not force full recompute.
       const search = String(req.query.search || "").trim().toLowerCase();
       const rule = String(req.query.rule || "ALL");
       const source = String(req.query.source || "ALL");
       const from = monthStart(month);
       const to = monthEnd(month);
 
+      // Fast path: eligible employees = those with verified/completed shifts in month
+      // OR an existing payroll_control_months row (no correlated EXISTS per employee).
       const { rows } = await pool.query(
-        `SELECT e.id AS employee_id, e.employee_number, e.external_id, e.employment_type, e.officer_step,
+        `WITH eligible AS (
+           SELECT DISTINCT sh.employee_id
+           FROM shifts sh
+           WHERE sh.tenant_id = $1
+             AND sh.date >= $2 AND sh.date <= $3
+             AND sh.status IN ('verified','completed')
+             AND sh.employee_id IS NOT NULL
+           UNION
+           SELECT m.employee_id
+           FROM payroll_control_months m
+           WHERE m.tenant_id = $1 AND m.period_month = $2
+         )
+         SELECT e.id AS employee_id, e.employee_number, e.external_id, e.employment_type, e.officer_step,
                 e.national_insurance, e.supplier_id, e.hourly_rate,
                 u.first_name, u.last_name,
-                s.name AS agent_name,
+                s.company_name AS agent_name,
                 b.account_name, b.account_number, b.sort_code, b.bank_name,
-                m.id AS month_id, m.rules_of_payment, m.payroll_source, m.ni_used, m.hr_status,
+                m.id AS month_id, m.rules_of_payment, m.payroll_source, m.self_payroll_source, m.ni_used, m.hr_status,
                 m.remarks, m.accounts_remarks, m.first4_hours, m.first4_wages, m.first4_paid,
-                m.gfm_hours, m.gfm_wages, m.gfm_paid, m.self_hours, m.self_wages, m.self_paid,
-                r.id AS request_id, r.from_rule, r.from_source, r.to_rule, r.to_source,
-                r.control_status, r.hr_status AS req_hr_status, r.accounts_status
-         FROM employees e
+                m.gfm_hours, m.gfm_wages, m.gfm_paid, m.self_hours, m.self_wages, m.self_paid
+         FROM eligible el
+         JOIN employees e ON e.id = el.employee_id
          LEFT JOIN users u ON u.id = e.user_id
          LEFT JOIN suppliers s ON s.id = e.supplier_id
-         LEFT JOIN bank_details b ON b.employee_id = e.id
+         LEFT JOIN bank_details b ON b.employee_id = e.id AND b.account_purpose = 'default'
          LEFT JOIN payroll_control_months m
            ON m.employee_id = e.id AND m.tenant_id = e.tenant_id AND m.period_month = $2
-         LEFT JOIN payroll_rule_change_requests r
-           ON r.month_row_id = m.id AND r.resolved_at IS NULL
          WHERE e.tenant_id = $1 AND COALESCE(e.is_merged, false) = false
-           AND (
-             EXISTS (
-               SELECT 1 FROM shifts sh
-               WHERE sh.employee_id = e.id AND sh.tenant_id = e.tenant_id
-                 AND sh.date >= $2 AND sh.date <= $3
-                 AND sh.status IN ('verified','completed')
-             )
-             OR m.id IS NOT NULL
-           )`,
+         ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
         [ctx.tenantId, from, to],
       );
 
-      let officers = rows.map((r: any) => ({
-        employeeId: r.employee_id,
-        monthId: r.month_id,
-        wid: widOf(r),
-        name: `${r.first_name || ""} ${r.last_name || ""}`.trim() || `Officer ${r.employee_id}`,
-        bank: [r.account_name, r.sort_code, r.account_number].filter(Boolean).join(" · ") || "—",
-        empType: r.employment_type || "—",
-        agent: r.agent_name || "In-house",
-        hrStatus: r.hr_status || "approved",
-        rulesOfPayment: r.rules_of_payment || "full_paye",
-        payrollSource: r.payroll_source || "first4_paye",
-        niUsed: Number(r.ni_used || 0),
-        first4Hours: num(r.first4_hours),
-        first4Wages: num(r.first4_wages),
-        first4Paid: !!r.first4_paid,
-        gfmHours: num(r.gfm_hours),
-        gfmWages: num(r.gfm_wages),
-        gfmPaid: !!r.gfm_paid,
-        selfHours: num(r.self_hours),
-        selfWages: num(r.self_wages),
-        selfPaid: !!r.self_paid,
-        remarks: r.remarks,
-        accountsRemarks: r.accounts_remarks,
-        request: r.request_id ? {
-          id: r.request_id,
-          fromRule: r.from_rule,
-          fromSource: r.from_source,
-          toRule: r.to_rule,
-          toSource: r.to_source,
-          controlStatus: r.control_status,
-          hrStatus: r.req_hr_status,
-          accountsStatus: r.accounts_status,
-        } : null,
-      }));
+      const monthIds = rows.map((r: any) => r.month_id).filter(Boolean);
+      const requestsByMonth = new Map<number, any[]>();
+      if (monthIds.length > 0) {
+        const reqs = await pool.query(
+          `SELECT id, month_row_id, from_rule, from_source, to_rule, to_source, source_scope,
+                  control_status, hr_status, accounts_status
+           FROM payroll_rule_change_requests
+           WHERE resolved_at IS NULL AND month_row_id = ANY($1::int[])
+           ORDER BY id ASC`,
+          [monthIds],
+        );
+        for (const r of reqs.rows) {
+          const list = requestsByMonth.get(Number(r.month_row_id)) || [];
+          const scope = r.source_scope || "ni";
+          let kind: "rule" | "source" | "self_source" | "both" = "source";
+          if (scope === "self") {
+            kind = "self_source";
+          } else if (r.from_rule !== r.to_rule && r.from_source !== r.to_source) {
+            kind = "both";
+          } else if (r.from_rule !== r.to_rule) {
+            kind = "rule";
+          } else {
+            kind = "source";
+          }
+          list.push({
+            id: r.id,
+            fromRule: r.from_rule,
+            fromSource: r.from_source,
+            toRule: r.to_rule,
+            toSource: r.to_source,
+            sourceScope: scope,
+            controlStatus: r.control_status,
+            hrStatus: r.hr_status,
+            accountsStatus: r.accounts_status,
+            kind,
+          });
+          requestsByMonth.set(Number(r.month_row_id), list);
+        }
+      }
 
+      // Only load raw shifts for officers whose applied buckets are still empty
+      // (skip when Apply Rules already filled month totals — big win).
+      const needCoveredIds = rows
+        .filter((r: any) => num(r.first4_hours) + num(r.gfm_hours) + num(r.self_hours) <= 0)
+        .map((r: any) => Number(r.employee_id));
+
+      const coveredByEmp = new Map<number, { hours: number; wages: number }>();
+      if (needCoveredIds.length > 0) {
+        const covered = await pool.query(
+          `SELECT sh.employee_id, sh.start_time, sh.end_time, sh.break_minutes, sh.pay_rate, e.hourly_rate
+           FROM shifts sh
+           INNER JOIN employees e ON e.id = sh.employee_id
+           WHERE sh.tenant_id = $1
+             AND sh.date >= $2 AND sh.date <= $3
+             AND sh.status IN ('verified','completed')
+             AND sh.employee_id = ANY($4::int[])`,
+          [ctx.tenantId, from, to, needCoveredIds],
+        );
+        for (const sh of covered.rows) {
+          const hours = shiftHours(sh.start_time, sh.end_time, sh.break_minutes);
+          if (hours <= 0) continue;
+          const rate = num(sh.pay_rate) || num(sh.hourly_rate) || PAYE_RATE;
+          const cur = coveredByEmp.get(Number(sh.employee_id)) || { hours: 0, wages: 0 };
+          cur.hours = money(cur.hours + hours);
+          cur.wages = money(cur.wages + hours * rate);
+          coveredByEmp.set(Number(sh.employee_id), cur);
+        }
+      }
+
+      let officers = rows.map((r: any) => {
+        let first4Hours = num(r.first4_hours);
+        let first4Wages = num(r.first4_wages);
+        let gfmHours = num(r.gfm_hours);
+        let gfmWages = num(r.gfm_wages);
+        let selfHours = num(r.self_hours);
+        let selfWages = num(r.self_wages);
+
+        if (first4Hours + gfmHours + selfHours <= 0) {
+          const cov = coveredByEmp.get(Number(r.employee_id));
+          if (cov && cov.hours > 0) {
+            const src = r.payroll_source || "first4_paye";
+            const ruleVal = r.rules_of_payment || "full_paye";
+            const mode = getRuleDef(ruleVal).mode;
+            if (
+              src === "self_employed" ||
+              ruleVal === "low_rates" ||
+              mode === "full_self" ||
+              mode === "full_self_rate"
+            ) {
+              selfHours = cov.hours;
+              selfWages = cov.wages;
+            } else if (src === "gfm_paye") {
+              gfmHours = cov.hours;
+              gfmWages = cov.wages;
+            } else {
+              first4Hours = cov.hours;
+              first4Wages = cov.wages;
+            }
+          }
+        }
+
+        return {
+          employeeId: r.employee_id,
+          monthId: r.month_id,
+          wid: widOf(r),
+          name: `${r.first_name || ""} ${r.last_name || ""}`.trim() || `Officer ${r.employee_id}`,
+          bank: [r.account_name, r.sort_code, r.account_number].filter(Boolean).join(" · ") || "—",
+          empType: r.employment_type || "—",
+          agent: r.agent_name || "In-house",
+          hrStatus: r.hr_status || "approved",
+          rulesOfPayment: r.rules_of_payment || "full_paye",
+          payrollSource: r.payroll_source || "first4_paye",
+          selfPayrollSource: r.self_payroll_source || r.payroll_source || "self_employed",
+          niUsed: Number(r.ni_used || 0),
+          first4Hours,
+          first4Wages,
+          first4Paid: !!r.first4_paid,
+          gfmHours,
+          gfmWages,
+          gfmPaid: !!r.gfm_paid,
+          selfHours,
+          selfWages,
+          selfPaid: !!r.self_paid,
+          remarks: r.remarks,
+          accountsRemarks: r.accounts_remarks,
+          requests: r.month_id ? (requestsByMonth.get(Number(r.month_id)) || []) : [],
+          request: (r.month_id ? (requestsByMonth.get(Number(r.month_id)) || [])[0] : null) || null,
+        };
+      });
+
+      // Optional server-side filters (search usually done client-side now).
       if (search) {
         officers = officers.filter((o) =>
           o.name.toLowerCase().includes(search) || o.wid.toLowerCase().includes(search),
         );
       }
       if (rule !== "ALL") officers = officers.filter((o) => o.rulesOfPayment === rule);
-      if (source !== "ALL") officers = officers.filter((o) => o.payrollSource === source);
+      if (source !== "ALL") {
+        officers = officers.filter((o) =>
+          o.payrollSource === source || o.selfPayrollSource === source,
+        );
+      }
 
       const withHours = officers.filter((o) => o.first4Hours + o.gfmHours + o.selfHours > 0);
       const fullSelf = withHours.filter((o) => o.selfHours > 0 && o.first4Hours + o.gfmHours === 0).length;
@@ -297,25 +419,50 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const ctx = await requireCustomPayroll(req, res);
       if (!ctx) return;
       const monthId = paramId(req.params.id);
+      const bucket = req.query.bucket ? String(req.query.bucket) : "";
+      const taggedOnly = req.query.tagged === "1" || req.query.tagged === "true";
       const month = await pool.query(
         `SELECT * FROM payroll_control_months WHERE id = $1 AND tenant_id = $2`,
         [monthId, ctx.tenantId],
       );
       if (!month.rows[0]) return res.status(404).json({ message: "Not found" });
       const row = month.rows[0];
-      const from = String(row.period_month).slice(0, 10);
-      const to = monthEnd(from.slice(0, 7));
+
+      // Tagged / bucket clicks: read from applied lines (no JS date-range — avoids TZ bugs).
+      if (bucket || taggedOnly) {
+        const params: any[] = [monthId, ctx.tenantId];
+        let bucketClause = "";
+        if (bucket) {
+          params.push(bucket);
+          bucketClause = ` AND l.bucket = $${params.length}`;
+        }
+        const { rows } = await pool.query(
+          `SELECT s.id, to_char(s.date, 'YYYY-MM-DD') AS date, s.start_time, s.end_time, s.title, s.status, s.break_minutes,
+                  st.name AS site_name, l.hours, l.rate, l.wages, l.expense, l.bucket, l.billed
+           FROM payroll_applied_lines l
+           JOIN shifts s ON s.id = l.shift_id
+           LEFT JOIN sites st ON st.id = s.site_id
+           WHERE l.month_row_id = $1 AND l.tenant_id = $2
+             ${bucketClause}
+           ORDER BY s.date, s.start_time, l.id`,
+          params,
+        );
+        return res.json(rows);
+      }
+
+      // Details: all verified/completed shifts in the month (SQL date math, no locale strings).
       const { rows } = await pool.query(
-        `SELECT s.id, s.date, s.start_time, s.end_time, s.title, s.status, s.break_minutes,
-                st.name AS site_name, l.hours, l.rate, l.wages, l.bucket, l.billed
+        `SELECT s.id, to_char(s.date, 'YYYY-MM-DD') AS date, s.start_time, s.end_time, s.title, s.status, s.break_minutes,
+                st.name AS site_name, l.hours, l.rate, l.wages, l.expense, l.bucket, l.billed
          FROM shifts s
          LEFT JOIN sites st ON st.id = s.site_id
-         LEFT JOIN payroll_applied_lines l ON l.shift_id = s.id AND l.month_row_id = $4
-         WHERE s.tenant_id = $1 AND s.employee_id = $2
-           AND s.date >= $3 AND s.date <= $5
+         LEFT JOIN payroll_applied_lines l ON l.shift_id = s.id AND l.month_row_id = $1
+         WHERE s.tenant_id = $2 AND s.employee_id = $3
+           AND s.date >= $4::date
+           AND s.date < ($4::date + interval '1 month')
            AND s.status IN ('verified','completed')
          ORDER BY s.date, s.start_time`,
-        [ctx.tenantId, row.employee_id, from, monthId, to],
+        [monthId, ctx.tenantId, row.employee_id, row.period_month],
       );
       res.json(rows);
     } catch (err: any) {
@@ -361,6 +508,9 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         }
         push("ni_used", ni);
       }
+      if (req.body.selfPayrollSource !== undefined) {
+        return res.status(400).json({ message: "Self source changes require Control/HR/Accounts approval" });
+      }
       if (req.body.first4Paid !== undefined || req.body.gfmPaid !== undefined || req.body.selfPaid !== undefined) {
         if (!financeOnly(ctx.user, res)) return;
         if (req.body.first4Paid !== undefined) push("first4_paid", !!req.body.first4Paid);
@@ -394,7 +544,16 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
     try {
       const ctx = await requireCustomPayroll(req, res);
       if (!ctx) return;
-      const { monthId, toRule, toSource } = req.body;
+      const { monthId, toRule, toSource, toSelfSource, sourceScope } = req.body;
+      if (sourceScope === "self" || toSelfSource) {
+        const row = await openSelfSourceRequest({
+          tenantId: ctx.tenantId,
+          monthRowId: Number(monthId),
+          toSelfSource: String(toSelfSource || toSource),
+          userId: ctx.user.id,
+        });
+        return res.json(row);
+      }
       const row = await openRuleRequest({
         tenantId: ctx.tenantId,
         monthRowId: Number(monthId),
@@ -420,7 +579,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       if (!["approved", "denied"].includes(decision)) {
         return res.status(400).json({ message: "decision must be approved or denied" });
       }
-      if (column === "control" && !canControlApprove(ctx.user.role)) return res.status(403).json({ message: "Controller only" });
+      if (column === "control" && !canControlApprove(ctx.user.role)) return res.status(403).json({ message: "Controller/Admin only" });
       if (column === "hr" && !canHrApprove(ctx.user.role)) return res.status(403).json({ message: "HR/Admin/Finance only" });
       if (column === "accounts" && !canAccountsApprove(ctx.user.role)) return res.status(403).json({ message: "Admin/Finance only" });
       const result = await decideRuleRequest({
@@ -483,6 +642,25 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
     }
   });
 
+  app.post("/api/payroll-control/claimable/change-source", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const result = await changeClaimableSource({
+        tenantId: ctx.tenantId,
+        employeeId: Number(req.body.employeeId),
+        claimFrom: String(req.body.claimFrom),
+        claimTo: String(req.body.claimTo),
+        payeeType: req.body.payeeType === "Self-employed" ? "Self-employed" : "PAYE",
+        toSource: String(req.body.toSource || "").trim(),
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   app.post("/api/payroll-control/bills", requireRole(...MONEY_ROLES), async (req, res) => {
     try {
       const ctx = await requireCustomPayroll(req, res);
@@ -500,6 +678,31 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         userId: ctx.user.id,
       });
       res.json({ bills: created });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/payroll-control/bills/:id", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const result = await deleteBill({ tenantId: ctx.tenantId, billId: paramId(req.params.id) });
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/payroll-control/bills/delete", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const billIds = Array.isArray(req.body.billIds) ? req.body.billIds.map(Number) : [];
+      const results = await deleteBills({ tenantId: ctx.tenantId, billIds });
+      res.json({ deleted: results.length, results });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }
@@ -692,6 +895,84 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
     }
   });
 
+  app.post("/api/payroll-control/bills/:id/remittance", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const bill = await pool.query(`SELECT * FROM payroll_bills WHERE id = $1 AND tenant_id = $2`, [
+        paramId(req.params.id), ctx.tenantId,
+      ]);
+      if (!bill.rows[0]) return res.status(404).json({ message: "Bill not found" });
+      const result = await sendRemittance(ctx.tenantId, bill.rows[0], ctx.user.id);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/payroll-control/remittance", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const billIds: number[] = Array.isArray(req.body.billIds) ? req.body.billIds.map(Number) : [];
+      if (!billIds.length) return res.status(400).json({ message: "Tick bills first" });
+      const results: any[] = [];
+      for (const id of billIds) {
+        try {
+          const bill = await pool.query(`SELECT * FROM payroll_bills WHERE id = $1 AND tenant_id = $2`, [
+            id, ctx.tenantId,
+          ]);
+          if (!bill.rows[0]) {
+            results.push({ billId: id, ok: false, error: "Bill not found" });
+            continue;
+          }
+          const sent = await sendRemittance(ctx.tenantId, bill.rows[0], ctx.user.id);
+          results.push({ billId: id, ...sent });
+        } catch (e: any) {
+          results.push({ billId: id, ok: false, error: e.message });
+        }
+      }
+      const failed = results.filter((r) => !r.ok);
+      res.json({ sent: results.length - failed.length, failed: failed.length, results });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/payroll-control/bills/:id/remittance", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+      const billQ = await pool.query(`SELECT * FROM payroll_bills WHERE id = $1 AND tenant_id = $2`, [
+        paramId(req.params.id), ctx.tenantId,
+      ]);
+      const bill = billQ.rows[0];
+      if (!bill) return res.status(404).json({ message: "Bill not found" });
+      const contact = await officerContact(bill.employee_id);
+      const tenant = await storage.getTenant(ctx.tenantId);
+      const amount = num(bill.paid_amount) > 0 ? num(bill.paid_amount) : num(bill.bill_amount);
+      const pdf = await generateRemittanceAdvicePdf({
+        companyName: tenant?.name || "Gardeo",
+        billNumber: bill.bill_number,
+        officerName: contact ? `${contact.first_name || ""} ${contact.last_name || ""}`.trim() : "Officer",
+        amount,
+        postDate: String(bill.post_date || bill.bill_date || "").slice(0, 10),
+        bankName: bill.bank_name,
+        accountTitle: bill.account_title,
+        accountNumber: bill.account_number,
+        sortCode: bill.sort_code,
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="remittance-${bill.bill_number}.pdf"`);
+      res.send(pdf);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
   app.post("/api/payroll-control/bills/:id/sms", requireRole(...MONEY_ROLES), async (req, res) => {
     try {
       const ctx = await requireCustomPayroll(req, res);
@@ -801,13 +1082,20 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
            bank_name = COALESCE($5, bank_name), updated_at = NOW() WHERE id = $1`,
         [bill.rows[0].id, accountTitle, accountNumber, sortCode, bankName],
       );
-      const existing = await storage.getBankDetails(bill.rows[0].employee_id);
-      if (existing) {
-        await storage.updateBankDetails(existing.id, {
-          accountName: accountTitle ?? existing.accountName,
-          accountNumber: accountNumber ?? existing.accountNumber,
-          sortCode: sortCode ?? existing.sortCode,
-          bankName: bankName ?? existing.bankName,
+      const purpose = bill.rows[0].payee_type === "Self-employed" ? "self" : "payee";
+      const existing = await storage.getBankDetailsByPurpose(bill.rows[0].employee_id, purpose)
+        ?? await storage.getBankDetailsByPurpose(bill.rows[0].employee_id, "default");
+      const nextAccountName = accountTitle ?? existing?.accountName;
+      const nextAccountNumber = accountNumber ?? existing?.accountNumber;
+      const nextSortCode = sortCode ?? existing?.sortCode;
+      const nextBankName = bankName ?? existing?.bankName;
+      if (nextAccountName && nextAccountNumber && nextSortCode && nextBankName) {
+        await storage.upsertBankDetailsByPurpose(bill.rows[0].employee_id, purpose, {
+          accountName: nextAccountName,
+          accountNumber: nextAccountNumber,
+          sortCode: nextSortCode,
+          bankName: nextBankName,
+          buildingSocietyRef: existing?.buildingSocietyRef ?? null,
         });
       }
       res.json({ ok: true });

@@ -14,8 +14,8 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { isFinanceRole } from "@shared/payrollControl";
-import { Loader2, RefreshCw, Download } from "lucide-react";
+import { isFinanceRole, canApplyRules, selfShiftPayDisplay } from "@shared/payrollControl";
+import { Loader2, RefreshCw, Download, Eye, Trash2, Mail } from "lucide-react";
 
 type QueueBill = {
   id: number;
@@ -51,6 +51,7 @@ function gbp(n: number) {
 export default function PayrollPendingPaymentsPage() {
   const { user } = useAuth();
   const finance = isFinanceRole(user?.role);
+  const canManageBills = canApplyRules(user?.role);
   const { toast } = useToast();
   const [paid, setPaid] = useState(false);
   const [search, setSearch] = useState("");
@@ -126,6 +127,51 @@ export default function PayrollPendingPaymentsPage() {
     onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (billIds: number[]) => {
+      if (billIds.length === 1) {
+        const res = await apiRequest("DELETE", `/api/payroll-control/bills/${billIds[0]}`);
+        return res.json();
+      }
+      const res = await apiRequest("POST", "/api/payroll-control/bills/delete", { billIds });
+      return res.json();
+    },
+    onSuccess: (_data, billIds) => {
+      toast({ title: billIds.length === 1 ? "Bill deleted" : `${billIds.length} bills deleted` });
+      invalidate();
+      setSelected(new Set());
+      setConfirmAction(null);
+    },
+    onError: (err: Error) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
+  const remittanceMutation = useMutation({
+    mutationFn: async (billIds: number[]) => {
+      if (billIds.length === 1) {
+        const res = await apiRequest("POST", `/api/payroll-control/bills/${billIds[0]}/remittance`);
+        if (!res.ok) throw new Error((await res.json()).message || "Failed");
+        return res.json();
+      }
+      const res = await apiRequest("POST", "/api/payroll-control/remittance", { billIds });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed");
+      return res.json();
+    },
+    onSuccess: (data: any, billIds) => {
+      if (billIds.length === 1) {
+        toast({ title: "Remittance emailed to officer" });
+      } else {
+        const failed = Number(data?.failed || 0);
+        toast({
+          title: failed ? `Remittance sent (${data.sent || 0}), ${failed} failed` : `Remittance sent to ${data.sent || billIds.length} officer(s)`,
+          variant: failed ? "destructive" : "default",
+        });
+      }
+      invalidate();
+      setConfirmAction(null);
+    },
+    onError: (err: Error) => toast({ title: "Remittance failed", description: err.message, variant: "destructive" }),
+  });
+
   const bulkEmailMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/payroll-control/send-email", {
@@ -155,6 +201,22 @@ export default function PayrollPendingPaymentsPage() {
   async function runConfirmed() {
     if (!confirmAction) return;
     const { type, id } = confirmAction;
+    if (type === "delete") {
+      deleteMutation.mutate([id]);
+      return;
+    }
+    if (type === "delete-bulk") {
+      deleteMutation.mutate(Array.from(selected));
+      return;
+    }
+    if (type === "remittance") {
+      remittanceMutation.mutate([id]);
+      return;
+    }
+    if (type === "remittance-bulk") {
+      remittanceMutation.mutate(Array.from(selected));
+      return;
+    }
     setConfirmAction(null);
     try {
       if (type === "sms") {
@@ -260,6 +322,25 @@ export default function PayrollPendingPaymentsPage() {
             <Button variant="outline" disabled={selected.size === 0} onClick={() => apiRequest("POST", "/api/payroll-control/payslips/bulk", { billIds: Array.from(selected), email: false }).then(() => toast({ title: "Payslips generated" }))}>Payslips</Button>
           </>
         )}
+        {canManageBills && (
+          <Button
+            variant="outline"
+            disabled={selected.size === 0 || remittanceMutation.isPending}
+            onClick={() => setConfirmAction({ type: "remittance-bulk", id: 0 })}
+          >
+            <Mail className="w-4 h-4 mr-1" />
+            Send Remittance
+          </Button>
+        )}
+        {canManageBills && (
+          <Button
+            variant="destructive"
+            disabled={selected.size === 0 || deleteMutation.isPending}
+            onClick={() => setConfirmAction({ type: "delete-bulk", id: 0 })}
+          >
+            Delete selected
+          </Button>
+        )}
         <Button variant="outline" onClick={() => refetch()}><RefreshCw className="w-4 h-4 mr-1" />Refresh</Button>
       </div>
 
@@ -327,13 +408,56 @@ export default function PayrollPendingPaymentsPage() {
                 <td className="p-2 max-w-[120px]">{b.remarks}</td>
                 <td className="p-2">{b.niNumber}</td>
                 <td className="p-2">
-                  <div className="flex flex-col gap-1">
-                    <Button size="sm" variant="outline" onClick={() => setReviewId(b.id)}>Review</Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8"
+                      title="Review"
+                      onClick={() => setReviewId(b.id)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     {finance && <Button size="sm" onClick={() => markPaidMutation.mutate(payItems([b.id]))}>Save / pay</Button>}
                     {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "sms", id: b.id })}>SMS</Button>}
                     {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "email", id: b.id })}>Email</Button>}
                     {finance && <Button size="sm" variant="outline" onClick={() => window.open(`/api/payroll-control/bills/${b.id}/payslip`, "_blank")}>Payslip</Button>}
                     {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "payslip-email", id: b.id })}>Email payslip</Button>}
+                    {canManageBills && (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                        title="Send remittance"
+                        disabled={remittanceMutation.isPending}
+                        onClick={() => setConfirmAction({ type: "remittance", id: b.id })}
+                      >
+                        <Mail className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canManageBills && (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8"
+                        title="View remittance PDF"
+                        onClick={() => window.open(`/api/payroll-control/bills/${b.id}/remittance`, "_blank")}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canManageBills && (
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="h-8 w-8"
+                        title="Delete"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => setConfirmAction({ type: "delete", id: b.id })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </td>
                 <td className="p-2">{b.payrollProvider}</td>
@@ -364,27 +488,50 @@ export default function PayrollPendingPaymentsPage() {
       </div>
 
       <Dialog open={!!reviewId} onOpenChange={() => setReviewId(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle>Review shifts {review?.bill?.bill_number}</DialogTitle></DialogHeader>
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left border-b">
-                <th className="p-1">Date</th><th className="p-1">Officer</th><th className="p-1">Site</th><th className="p-1">In</th><th className="p-1">Out</th><th className="p-1">Hours</th><th className="p-1">Holiday</th><th className="p-1">Rate</th>
+                <th className="p-1">Date</th>
+                <th className="p-1">Officer</th>
+                <th className="p-1">Site</th>
+                <th className="p-1">In</th>
+                <th className="p-1">Out</th>
+                <th className="p-1">Hours</th>
+                <th className="p-1">Holiday</th>
+                <th className="p-1">Rate</th>
+                <th className="p-1">Wages</th>
+                <th className="p-1">Deduction</th>
+                <th className="p-1">Net</th>
               </tr>
             </thead>
             <tbody>
-              {(review?.lines || []).map((l: any) => (
-                <tr key={l.id} className="border-b">
-                  <td className="p-1">{String(l.date).slice(0, 10)}</td>
-                  <td className="p-1">{l.first_name} {l.last_name}</td>
-                  <td className="p-1">{l.site_name}</td>
-                  <td className="p-1">{l.start_time}</td>
-                  <td className="p-1">{l.end_time}</td>
-                  <td className="p-1">{l.hours}</td>
-                  <td className="p-1">{l.holiday_hours}</td>
-                  <td className="p-1">{gbp(Number(l.rate))}</td>
-                </tr>
-              ))}
+              {(review?.lines || []).map((l: any) => {
+                const pay = selfShiftPayDisplay({
+                  hours: Number(l.hours) || 0,
+                  rate: Number(l.rate) || 0,
+                  wages: Number(l.wages) || 0,
+                  bucket: review?.bill?.payee_type === "Self-employed" ? "self" : l.bucket,
+                });
+                return (
+                  <tr key={l.id} className="border-b">
+                    <td className="p-1">{String(l.date).slice(0, 10)}</td>
+                    <td className="p-1">{l.first_name} {l.last_name}</td>
+                    <td className="p-1">{l.site_name}</td>
+                    <td className="p-1">{l.start_time}</td>
+                    <td className="p-1">{l.end_time}</td>
+                    <td className="p-1">{l.hours}</td>
+                    <td className="p-1">{l.holiday_hours}</td>
+                    <td className="p-1">{gbp(pay.rate)}</td>
+                    <td className="p-1">{gbp(pay.wages)}</td>
+                    <td className={`p-1 ${pay.deduction > 0 ? "text-red-600" : ""}`}>
+                      {pay.deduction > 0 ? gbp(pay.deduction) : "—"}
+                    </td>
+                    <td className="p-1">{pay.deduction > 0 ? gbp(pay.net) : "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </DialogContent>
@@ -405,11 +552,39 @@ export default function PayrollPendingPaymentsPage() {
 
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Confirm</DialogTitle></DialogHeader>
-          <p className="text-sm">Send this {confirmAction?.type.replace("-", " ")} now?</p>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction?.type === "delete" || confirmAction?.type === "delete-bulk"
+                ? "Delete bill?"
+                : confirmAction?.type === "remittance" || confirmAction?.type === "remittance-bulk"
+                  ? "Send remittance?"
+                  : "Confirm"}
+            </DialogTitle>
+          </DialogHeader>
+          {confirmAction?.type === "delete" || confirmAction?.type === "delete-bulk" ? (
+            <p className="text-sm">
+              {confirmAction.type === "delete-bulk"
+                ? `Delete ${selected.size} selected bill(s)? Shifts will become claimable again on Bill Section.`
+                : "Delete this bill? Shifts will become claimable again on Bill Section."}
+            </p>
+          ) : confirmAction?.type === "remittance" || confirmAction?.type === "remittance-bulk" ? (
+            <p className="text-sm">
+              {confirmAction.type === "remittance-bulk"
+                ? `Email remittance advice PDF to ${selected.size} selected officer(s)?`
+                : "Email remittance advice PDF to this officer?"}
+            </p>
+          ) : (
+            <p className="text-sm">Send this {confirmAction?.type.replace("-", " ")} now?</p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
-            <Button onClick={runConfirmed}>Confirm</Button>
+            <Button
+              variant={confirmAction?.type === "delete" || confirmAction?.type === "delete-bulk" ? "destructive" : "default"}
+              disabled={deleteMutation.isPending || remittanceMutation.isPending}
+              onClick={runConfirmed}
+            >
+              {deleteMutation.isPending || remittanceMutation.isPending ? "Working..." : "Confirm"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
