@@ -110,6 +110,7 @@ const FmBillingPage = lazy(() => import("@/pages/fm-billing"));
 const FmWorkerPortalPage = lazy(() => import("@/pages/fm-worker-portal"));
 const FmWorkerJobPage = lazy(() => import("@/pages/fm-worker-job"));
 const WagesLedgerPage = lazy(() => import("@/pages/wages-ledger"));
+const PanlReconciliationPage = lazy(() => import("@/pages/panl-reconciliation"));
 
 function PageSpinner() {
   return (
@@ -322,6 +323,7 @@ function AuthenticatedRoutes() {
         <Route path="/fm-worker" component={FmWorkerPortalPage} />
         <Route path="/fm-worker/jobs/:id" component={FmWorkerJobPage} />
         <Route path="/wages-ledger" component={WagesLedgerPage} />
+        <Route path="/panl" component={PanlReconciliationPage} />
         <Route component={NotFound} />
       </Switch>
     </RequireAuth>

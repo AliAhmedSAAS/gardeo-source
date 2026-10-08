@@ -103,6 +103,7 @@ const navGroups: NavGroup[] = [
       { title: "Pre-Audit Check", url: "/pre-audit-check", icon: ShieldCheck, permKey: "screen:finance" },
       { title: "Purchase Ledger", url: "/purchase-ledger", icon: BookOpen, permKey: "screen:finance" },
       { title: "Wages Ledger", url: "/wages-ledger", icon: Banknote, permKey: "screen:finance" },
+      { title: "P&L Reconciliation", url: "/panl", icon: PoundSterling, permKey: "screen:finance" },
     ],
   },
   {

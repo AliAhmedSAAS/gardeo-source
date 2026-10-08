@@ -577,6 +577,19 @@ app.use((req, res, next) => {
 
   try {
     await pool.query(`
+      ALTER TABLE shifts
+        ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS hours_override numeric(10, 2)
+    `);
+    log("Ensured shifts PANL columns exist");
+  } catch (e) {
+    log("Could not ensure shifts PANL columns: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS employee_charge_rates (
         id serial PRIMARY KEY,
         tenant_id integer NOT NULL REFERENCES tenants(id),

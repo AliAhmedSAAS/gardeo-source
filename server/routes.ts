@@ -39,6 +39,8 @@ import { generateTwiML } from "./twilio-service";
 import { classifyTransactions, learnFromAllocation } from "./auto-classify-service";
 import { registerStaffProfileRoutes } from "./staff-profile-routes";
 import { registerPayrollControlRoutes } from "./payroll-control-routes";
+import { shiftHours as calcShiftHours } from "./payroll-control";
+import { registerPanlRoutes } from "./panl-routes";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
@@ -790,6 +792,7 @@ export async function registerRoutes(
   registerMobileAuthRoutes(app);
   registerStaffProfileRoutes(app, requireRole);
   registerPayrollControlRoutes(app, requireRole);
+  registerPanlRoutes(app, requireRole);
 
   // ─── Tenant Onboarding Routes (public) ───
   app.get("/api/subscription-plans", async (_req, res) => {
@@ -4970,7 +4973,19 @@ export async function registerRoutes(
   app.get("/api/finance-approval/shifts", requireRole("super_admin", "tenant_admin", "ceo", "accountant", "operations_manager", "regional_manager", "admin", "payroll_manager"), async (req, res) => {
     try {
       const user = req.user as User;
-      if (!user.tenantId) return res.json({ data: [], total: 0, page: 1, limit: 50, stats: { total: 0, pending: 0, approved: 0, rejected: 0, lateArrivals: 0 }, sites: [] });
+      if (!user.tenantId) {
+        return res.json({
+          data: [],
+          total: 0,
+          page: 1,
+          limit: 50,
+          stats: { total: 0, pending: 0, approved: 0, rejected: 0, lateArrivals: 0 },
+          sites: [],
+          clients: [],
+          officers: [],
+          suppliers: [],
+        });
+      }
 
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
@@ -4978,6 +4993,11 @@ export async function registerRoutes(
       const financeStatus = req.query.financeStatus as string || null;
       const shiftStatus = req.query.shiftStatus as string || null;
       const siteId = req.query.siteId ? parseInt(req.query.siteId as string) : null;
+      const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : null;
+      const officerId = req.query.officerId || req.query.employeeId
+        ? parseInt(String(req.query.officerId || req.query.employeeId))
+        : null;
+      const supplierId = req.query.supplierId ? parseInt(req.query.supplierId as string) : null;
       const dateFrom = req.query.dateFrom as string || null;
       const dateTo = req.query.dateTo as string || null;
       const search = (req.query.search as string || "").trim().toLowerCase();
@@ -5000,9 +5020,24 @@ export async function registerRoutes(
         params.push(shiftStatus);
         paramIdx++;
       }
-      if (siteId) {
+      if (siteId && Number.isFinite(siteId)) {
         conditions.push(`sh.site_id = $${paramIdx}`);
         params.push(siteId);
+        paramIdx++;
+      }
+      if (clientId && Number.isFinite(clientId)) {
+        conditions.push(`si.client_id = $${paramIdx}`);
+        params.push(clientId);
+        paramIdx++;
+      }
+      if (officerId && Number.isFinite(officerId)) {
+        conditions.push(`sh.employee_id = $${paramIdx}`);
+        params.push(officerId);
+        paramIdx++;
+      }
+      if (supplierId && Number.isFinite(supplierId)) {
+        conditions.push(`sh.supplier_id = $${paramIdx}`);
+        params.push(supplierId);
         paramIdx++;
       }
       if (dateFrom) {
@@ -5016,36 +5051,65 @@ export async function registerRoutes(
         paramIdx++;
       }
       if (search) {
-        conditions.push(`(LOWER(COALESCE(si.name, '')) LIKE $${paramIdx} OR LOWER(COALESCE(u.first_name || ' ' || u.last_name, '')) LIKE $${paramIdx} OR LOWER(COALESCE(sh.title, '')) LIKE $${paramIdx} OR sh.date::text LIKE $${paramIdx})`);
+        conditions.push(`(
+          LOWER(COALESCE(si.name, '')) LIKE $${paramIdx}
+          OR LOWER(COALESCE(u.first_name || ' ' || u.last_name, '')) LIKE $${paramIdx}
+          OR LOWER(COALESCE(sh.title, '')) LIKE $${paramIdx}
+          OR LOWER(COALESCE(cl.company_name, si.client_name, '')) LIKE $${paramIdx}
+          OR LOWER(COALESCE(su.company_name, '')) LIKE $${paramIdx}
+          OR sh.date::text LIKE $${paramIdx}
+        )`);
         params.push(`%${search}%`);
         paramIdx++;
       }
 
       const whereClause = conditions.join(" AND ");
-
-      const [dataResult, countResult, statsResult, sitesResult] = await Promise.all([
-        pool.query(
-          `SELECT sh.id, sh.title, sh.date, sh.start_time, sh.end_time, sh.status, sh.finance_status,
-            sh.finance_note, sh.finance_approved_by, sh.finance_approved_at, sh.employee_id, sh.site_id,
-            sh.supplier_id, sh.booked_on_at, sh.booked_off_at, sh.late_minutes, sh.verified_at, sh.shift_code,
-            COALESCE(si.name, 'Unassigned') AS site_name,
-            COALESCE(u.first_name || ' ' || u.last_name, 'Unassigned') AS employee_name,
-            COALESCE(su.company_name, '') AS supplier_name
+      const fromJoins = `
           FROM shifts sh
           LEFT JOIN sites si ON sh.site_id = si.id
+          LEFT JOIN clients cl ON si.client_id = cl.id
           LEFT JOIN employees e ON sh.employee_id = e.id
           LEFT JOIN users u ON e.user_id = u.id
-          LEFT JOIN suppliers su ON sh.supplier_id = su.id
+          LEFT JOIN suppliers su ON sh.supplier_id = su.id`;
+
+      // Optional PANL columns may not exist until bootstrap/migration runs.
+      let panlSelect = `0::numeric AS holiday_hours, 0::numeric AS deduction_hours, NULL::numeric AS hours_override, 0::numeric AS expense`;
+      try {
+        await pool.query(`
+          ALTER TABLE shifts
+            ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS hours_override numeric(10, 2)
+        `);
+        panlSelect = `COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+            COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+            sh.hours_override,
+            COALESCE(sh.expense, 0) AS expense`;
+      } catch {
+        /* keep defaults */
+      }
+
+      const [dataResult, countResult, statsResult, sitesResult, clientsResult, officersResult, suppliersResult] = await Promise.all([
+        pool.query(
+          `SELECT sh.id, sh.title, sh.date::text AS date, sh.start_time, sh.end_time, sh.break_minutes, sh.status, sh.finance_status,
+            sh.finance_note, sh.finance_approved_by, sh.finance_approved_at, sh.employee_id, sh.site_id,
+            sh.supplier_id, sh.booked_on_at, sh.booked_off_at, sh.late_minutes, sh.verified_at, sh.shift_code,
+            sh.pay_rate, sh.charge_rate, sh.duty_type_id,
+            ${panlSelect},
+            COALESCE(si.name, 'Unassigned') AS site_name,
+            si.client_id,
+            COALESCE(cl.company_name, si.client_name, '') AS client_name,
+            COALESCE(u.first_name || ' ' || u.last_name, 'Unassigned') AS employee_name,
+            COALESCE(su.company_name, '') AS supplier_name
+          ${fromJoins}
           WHERE ${whereClause}
           ORDER BY sh.date ASC, sh.start_time ASC
           LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
           [...params, limit, offset]
         ),
         pool.query(
-          `SELECT COUNT(*)::int AS total FROM shifts sh
-          LEFT JOIN sites si ON sh.site_id = si.id
-          LEFT JOIN employees e ON sh.employee_id = e.id
-          LEFT JOIN users u ON e.user_id = u.id
+          `SELECT COUNT(*)::int AS total ${fromJoins}
           WHERE ${whereClause}`,
           params
         ),
@@ -5065,31 +5129,125 @@ export async function registerRoutes(
           WHERE si.tenant_id = $1 ORDER BY si.name`,
           [user.tenantId]
         ),
+        pool.query(
+          `SELECT DISTINCT cl.id, cl.company_name AS name
+           FROM clients cl
+           INNER JOIN sites si ON si.client_id = cl.id
+           INNER JOIN shifts sh ON sh.site_id = si.id AND sh.tenant_id = $1
+           WHERE cl.tenant_id = $1
+           ORDER BY cl.company_name`,
+          [user.tenantId]
+        ),
+        pool.query(
+          `SELECT DISTINCT e.id,
+                  COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''), e.employee_number, CAST(e.id AS text)) AS name
+           FROM employees e
+           INNER JOIN shifts sh ON sh.employee_id = e.id AND sh.tenant_id = $1
+           LEFT JOIN users u ON u.id = e.user_id
+           WHERE e.tenant_id = $1 AND COALESCE(e.is_merged, false) = false
+           ORDER BY 2`,
+          [user.tenantId]
+        ),
+        pool.query(
+          `SELECT DISTINCT su.id, su.company_name AS name
+           FROM suppliers su
+           INNER JOIN shifts sh ON sh.supplier_id = su.id AND sh.tenant_id = $1
+           WHERE su.tenant_id = $1
+           ORDER BY su.company_name`,
+          [user.tenantId]
+        ),
       ]);
 
-      const data = dataResult.rows.map((r: any) => ({
-        id: r.id,
-        title: r.title,
-        date: r.date,
-        startTime: r.start_time,
-        endTime: r.end_time,
-        status: r.status,
-        financeStatus: r.finance_status,
-        financeNote: r.finance_note,
-        financeApprovedBy: r.finance_approved_by,
-        financeApprovedAt: r.finance_approved_at,
-        employeeId: r.employee_id,
-        siteId: r.site_id,
-        supplierId: r.supplier_id,
-        bookedOnAt: r.booked_on_at,
-        bookedOffAt: r.booked_off_at,
-        lateMinutes: r.late_minutes,
-        verifiedAt: r.verified_at,
-        shiftCode: r.shift_code,
-        employeeName: r.employee_name,
-        siteName: r.site_name,
-        supplierName: r.supplier_name,
-      }));
+      const siteIds = Array.from(
+        new Set(dataResult.rows.map((r: any) => r.site_id).filter((id: any) => id != null)),
+      );
+      const employeeIds = Array.from(
+        new Set(
+          dataResult.rows
+            .filter((r: any) => r.pay_rate == null && r.employee_id != null)
+            .map((r: any) => r.employee_id),
+        ),
+      );
+
+      const chargeBySite = new Map<number, number>();
+      const payByEmployee = new Map<number, number>();
+
+      if (siteIds.length > 0) {
+        const { rows: chargeRows } = await pool.query(
+          `SELECT DISTINCT ON (r.site_id) r.site_id, r.hourly_charge_rate
+           FROM site_charge_rates r
+           WHERE r.tenant_id = $1 AND r.site_id = ANY($2::int[])
+             AND r.effective_from <= CURRENT_DATE
+             AND (r.effective_to IS NULL OR r.effective_to >= CURRENT_DATE)
+           ORDER BY r.site_id, r.effective_from DESC`,
+          [user.tenantId, siteIds],
+        );
+        for (const row of chargeRows) {
+          chargeBySite.set(Number(row.site_id), parseFloat(String(row.hourly_charge_rate)));
+        }
+      }
+
+      if (employeeIds.length > 0) {
+        const { rows: payRows } = await pool.query(
+          `SELECT DISTINCT ON (r.employee_id) r.employee_id, r.hourly_rate
+           FROM employee_pay_rates r
+           WHERE r.tenant_id = $1 AND r.employee_id = ANY($2::int[])
+             AND r.effective_from <= CURRENT_DATE
+             AND (r.effective_to IS NULL OR r.effective_to >= CURRENT_DATE)
+           ORDER BY r.employee_id, r.effective_from DESC`,
+          [user.tenantId, employeeIds],
+        );
+        for (const row of payRows) {
+          payByEmployee.set(Number(row.employee_id), parseFloat(String(row.hourly_rate)));
+        }
+      }
+
+      const data = dataResult.rows.map((r: any) => {
+        const calculatedHours = calcShiftHours(r.start_time, r.end_time, r.break_minutes);
+        const hoursOverride = r.hours_override != null && r.hours_override !== ""
+          ? parseFloat(String(r.hours_override))
+          : null;
+        const hours = Number.isFinite(hoursOverride as number) ? (hoursOverride as number) : calculatedHours;
+        let payRate = r.pay_rate != null ? parseFloat(String(r.pay_rate)) : null;
+        if (payRate == null || Number.isNaN(payRate)) {
+          payRate = r.employee_id != null ? (payByEmployee.get(Number(r.employee_id)) ?? null) : null;
+        }
+        let chargeRate = r.charge_rate != null ? parseFloat(String(r.charge_rate)) : null;
+        if (chargeRate == null || Number.isNaN(chargeRate)) {
+          chargeRate = r.site_id != null ? (chargeBySite.get(Number(r.site_id)) ?? null) : null;
+        }
+        return {
+          id: r.id,
+          title: r.title,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          status: r.status,
+          financeStatus: r.finance_status,
+          financeNote: r.finance_note,
+          financeApprovedBy: r.finance_approved_by,
+          financeApprovedAt: r.finance_approved_at,
+          employeeId: r.employee_id,
+          siteId: r.site_id,
+          supplierId: r.supplier_id,
+          clientId: r.client_id,
+          bookedOnAt: r.booked_on_at,
+          bookedOffAt: r.booked_off_at,
+          lateMinutes: r.late_minutes,
+          verifiedAt: r.verified_at,
+          shiftCode: r.shift_code,
+          employeeName: r.employee_name,
+          siteName: r.site_name,
+          clientName: r.client_name,
+          supplierName: r.supplier_name,
+          payRate: payRate != null && !Number.isNaN(payRate) ? payRate : null,
+          chargeRate: chargeRate != null && !Number.isNaN(chargeRate) ? chargeRate : null,
+          hours,
+          holidayHours: parseFloat(String(r.holiday_hours ?? 0)) || 0,
+          deductionHours: parseFloat(String(r.deduction_hours ?? 0)) || 0,
+          expense: parseFloat(String(r.expense ?? 0)) || 0,
+        };
+      });
 
       res.json({
         data,
@@ -5098,6 +5256,9 @@ export async function registerRoutes(
         limit,
         stats: statsResult.rows[0] || { total: 0, pending: 0, approved: 0, rejected: 0, late_arrivals: 0 },
         sites: sitesResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
+        clients: clientsResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
+        officers: officersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
+        suppliers: suppliersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });

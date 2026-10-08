@@ -23,6 +23,10 @@ import {
   getRuleDef,
 } from "@shared/payrollControl";
 import {
+  buildPayrollDatasheetCsv,
+  buildPayrollDatasheetRow,
+} from "@shared/payrollDatasheet";
+import {
   applyRulesForOfficer,
   ensureMonthRow,
   openRuleRequest,
@@ -409,6 +413,118 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
           totalPayStatusPct: pct(paidReady, withHours.length),
         },
       });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  /** Sage / UK payroll datasheet CSV for officers on the Payroll Summary month. */
+  app.get("/api/payroll-control/summary/payroll-datasheet.csv", requireRole(...VIEW_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      const month = String(req.query.month || currentPayrollMonth());
+      const from = monthStart(month);
+      const idsRaw = String(req.query.employeeIds || "").trim();
+      const employeeIds = idsRaw
+        ? idsRaw.split(",").map((x) => Number(x.trim())).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+
+      const params: any[] = [ctx.tenantId, from];
+      let idFilter = "";
+      if (employeeIds.length > 0) {
+        params.push(employeeIds);
+        idFilter = `AND e.id = ANY($${params.length}::int[])`;
+      }
+
+      const { rows } = await pool.query(
+        `WITH eligible AS (
+           SELECT DISTINCT sh.employee_id
+           FROM shifts sh
+           WHERE sh.tenant_id = $1
+             AND sh.date >= $2 AND sh.date < ($2::date + interval '1 month')
+             AND sh.status IN ('verified','completed')
+             AND sh.employee_id IS NOT NULL
+           UNION
+           SELECT m.employee_id
+           FROM payroll_control_months m
+           WHERE m.tenant_id = $1 AND m.period_month = $2
+         )
+         SELECT e.id AS employee_id, e.employee_number, e.external_id,
+                e.date_of_birth, e.national_insurance, e.marital_status, e.gender,
+                e.nationality, e.ethnic_origin, e.address_line_1, e.address_line_2,
+                e.city, e.county, e.postcode, e.start_date, e.job_title, e.department,
+                e.employment_type, e.phone AS emp_phone, e.second_phone,
+                u.first_name, u.last_name, u.email, u.phone AS user_phone,
+                COALESCE(bp.account_name, bd.account_name) AS account_name,
+                COALESCE(bp.account_number, bd.account_number) AS account_number,
+                COALESCE(bp.sort_code, bd.sort_code) AS sort_code,
+                COALESCE(bp.bank_name, bd.bank_name) AS bank_name,
+                ec.name AS contact_name, ec.relationship AS contact_relationship,
+                ec.phone AS contact_phone, ec.email AS contact_email, ec.address AS contact_address
+         FROM eligible el
+         JOIN employees e ON e.id = el.employee_id
+         LEFT JOIN users u ON u.id = e.user_id
+         LEFT JOIN bank_details bp ON bp.employee_id = e.id AND bp.account_purpose = 'payee'
+         LEFT JOIN bank_details bd ON bd.employee_id = e.id AND bd.account_purpose = 'default'
+         LEFT JOIN LATERAL (
+           SELECT name, relationship, phone, email, address
+           FROM emergency_contacts
+           WHERE employee_id = e.id
+           ORDER BY is_primary DESC NULLS LAST, id ASC
+           LIMIT 1
+         ) ec ON true
+         WHERE e.tenant_id = $1 AND COALESCE(e.is_merged, false) = false
+           ${idFilter}
+         ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
+        params,
+      );
+
+      const sheetRows = rows.map((r: any) =>
+        buildPayrollDatasheetRow({
+          employeeId: Number(r.employee_id),
+          employeeNumber: r.employee_number,
+          externalId: r.external_id,
+          firstName: r.first_name,
+          lastName: r.last_name,
+          addressLine1: r.address_line_1,
+          addressLine2: r.address_line_2,
+          city: r.city,
+          county: r.county,
+          postcode: r.postcode,
+          phone: r.emp_phone || r.user_phone,
+          mobile: r.second_phone || r.emp_phone || r.user_phone,
+          email: r.email,
+          gender: r.gender,
+          maritalStatus: r.marital_status,
+          dateOfBirth: r.date_of_birth,
+          nationality: r.nationality,
+          ethnicOrigin: r.ethnic_origin,
+          nationalInsurance: r.national_insurance,
+          jobTitle: r.job_title,
+          employmentType: r.employment_type,
+          department: r.department,
+          startDate: r.start_date,
+          workStartDate: from,
+          contactName: r.contact_name,
+          contactRelationship: r.contact_relationship,
+          contactPhone: r.contact_phone,
+          contactEmail: r.contact_email,
+          contactAddress: r.contact_address,
+          sortCode: r.sort_code,
+          accountNumber: r.account_number,
+          accountName: r.account_name,
+          bankName: r.bank_name,
+        }),
+      );
+
+      const csv = buildPayrollDatasheetCsv(sheetRows);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="payroll-data-sheet-${month}.csv"`,
+      );
+      res.send(csv);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

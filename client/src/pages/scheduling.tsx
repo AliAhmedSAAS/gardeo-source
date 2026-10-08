@@ -786,14 +786,6 @@ export default function SchedulingPage() {
     return `${formatShortDate(first)} - ${formatShortDate(last)} ${last.getFullYear()}`;
   }, [calendarDays, calendarView, currentDate]);
 
-  const stats = useMemo(() => ({
-    total: shifts.length,
-    scheduled: shifts.filter((s) => s.status === "scheduled").length,
-    inProgress: shifts.filter((s) => s.status === "in_progress").length,
-    completed: shifts.filter((s) => s.status === "completed").length,
-    noShow: shifts.filter((s) => s.status === "no_show").length,
-  }), [shifts]);
-
   const filteredSitesForFilter = useMemo(() => {
     if (searchClient === "all") return sites;
     return sites.filter((s) => String(s.clientId) === searchClient);
@@ -890,6 +882,14 @@ export default function SchedulingPage() {
       return true;
     });
   }, [shifts, searchQuery, searchDateFrom, searchDateTo, searchStatus, searchSite, searchClient, searchSupplier, searchOfficer, searchAssignment]);
+
+  const stats = useMemo(() => ({
+    total: filteredShifts.length,
+    scheduled: filteredShifts.filter((s) => s.status === "scheduled").length,
+    inProgress: filteredShifts.filter((s) => s.status === "in_progress").length,
+    completed: filteredShifts.filter((s) => s.status === "completed").length,
+    noShow: filteredShifts.filter((s) => s.status === "no_show").length,
+  }), [filteredShifts]);
 
   const getStatusBorderColor = (status: string | null) => {
     switch (status) {

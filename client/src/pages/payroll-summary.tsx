@@ -21,7 +21,7 @@ import {
   canControllerRemarks, canAccountsRemarks, isFinanceRole, canApplyRules, ruleLabel, sourceLabel,
   selfShiftPayDisplay,
 } from "@shared/payrollControl";
-import { Loader2, RefreshCw, Play, Download, FileSpreadsheet } from "lucide-react";
+import { Loader2, RefreshCw, Play, Download, FileSpreadsheet, FileText } from "lucide-react";
 
 type ChangeRequest = {
   id: number;
@@ -499,6 +499,41 @@ export default function PayrollSummaryPage() {
     toast({ title: "Excel downloaded", description: `${rows.length} row(s)` });
   }
 
+  async function exportPayrollDatasheet() {
+    const ids = selected.size > 0
+      ? Array.from(selected)
+      : officers.map((o) => o.employeeId);
+    if (ids.length === 0) {
+      toast({ title: "Nothing to export", description: "No officers match the current filters.", variant: "destructive" });
+      return;
+    }
+    try {
+      const params = new URLSearchParams({ month, employeeIds: ids.join(",") });
+      const res = await fetch(`/api/payroll-control/summary/payroll-datasheet.csv?${params}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Download failed");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payroll-data-sheet-${month}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Payroll datasheet downloaded",
+        description: selected.size > 0 ? `${ids.length} selected officer(s)` : `${ids.length} filtered officer(s)`,
+      });
+    } catch (err: any) {
+      toast({ title: "Datasheet export failed", description: err.message, variant: "destructive" });
+    }
+  }
+
   return (
     <div className="p-6 space-y-4" data-testid="payroll-summary-page">
       <div>
@@ -570,6 +605,16 @@ export default function PayrollSummaryPage() {
         >
           <FileSpreadsheet className="w-4 h-4 mr-1" />
           Excel
+        </Button>
+        <Button
+          variant="outline"
+          onClick={exportPayrollDatasheet}
+          disabled={officers.length === 0}
+          title={selected.size > 0 ? "Export selected officers in Sage payroll datasheet format" : "Export filtered officers in Sage payroll datasheet format"}
+          data-testid="btn-export-payroll-datasheet"
+        >
+          <FileText className="w-4 h-4 mr-1" />
+          Payroll datasheet
         </Button>
         {canApplyRules(role) && (
           <Button

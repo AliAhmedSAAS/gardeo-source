@@ -75,6 +75,8 @@ export default function PayrollBillsPage() {
   });
 
   const payees = data?.payees || [];
+  const allIds = payees.map((p) => p.employeeId);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const active = payees.find((p) => p.employeeId === activePayee);
 
   const createMutation = useMutation({
@@ -203,7 +205,14 @@ export default function PayrollBillsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left bg-muted">
-                  <th className="p-2"></th>
+                  <th className="p-2">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(v) => setSelected(v ? new Set(allIds) : new Set())}
+                      data-testid="checkbox-select-all-payees"
+                      aria-label="Select all payees"
+                    />
+                  </th>
                   <th className="p-2">Payee</th>
                   <th className="p-2">Shifts</th>
                   <th className="p-2">Amount</th>

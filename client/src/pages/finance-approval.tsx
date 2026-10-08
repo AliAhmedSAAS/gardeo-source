@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -42,6 +42,53 @@ interface EnrichedShift {
   employeeName?: string;
   siteName?: string;
   supplierName?: string;
+  payRate?: number | null;
+  chargeRate?: number | null;
+  hours?: number | null;
+  holidayHours?: number | null;
+  deductionHours?: number | null;
+}
+
+function formatShiftDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const s = String(value);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatShiftTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(11, 16) || s;
+  return s.slice(0, 5);
+}
+
+function fmtNum(value: number | null | undefined, digits = 2): string {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  return Number(value).toFixed(digits);
+}
+
+/** Fallback hours from duty window when API doesn't send hours yet. */
+function calcHoursFromTimes(
+  startTime?: string | null,
+  endTime?: string | null,
+): number | null {
+  const start = formatShiftTime(startTime);
+  const end = formatShiftTime(endTime);
+  if (!start || start === "—" || !end || end === "—") return null;
+  const [sh, sm] = start.split(":").map((x) => parseInt(x, 10) || 0);
+  const [eh, em] = end.split(":").map((x) => parseInt(x, 10) || 0);
+  let hours = eh + em / 60 - (sh + sm / 60);
+  if (hours < 0) hours += 24;
+  return Math.round(Math.max(0, hours) * 100) / 100;
+}
+
+function shiftDisplayHours(shift: EnrichedShift): number | null {
+  if (shift.hours != null && !Number.isNaN(Number(shift.hours))) return Number(shift.hours);
+  return calcHoursFromTimes(shift.startTime, shift.endTime);
 }
 
 interface PaginatedResponse {
@@ -51,6 +98,9 @@ interface PaginatedResponse {
   limit: number;
   stats: { total: number; pending: number; approved: number; rejected: number; late_arrivals: number };
   sites: { id: number; name: string }[];
+  clients: { id: number; name: string }[];
+  officers: { id: number; name: string }[];
+  suppliers: { id: number; name: string }[];
 }
 
 const FINANCE_STATUS_CONFIG: Record<string, { label: string; className: string; icon: typeof Clock }> = {
@@ -76,12 +126,18 @@ export default function FinanceApprovalPage() {
   const { toast } = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [filterFinanceStatus, setFilterFinanceStatus] = useState<string>("pending");
+  const [draftDateFrom, setDraftDateFrom] = useState("");
+  const [draftDateTo, setDraftDateTo] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterSite, setFilterSite] = useState("all");
+  const [filterClient, setFilterClient] = useState("all");
+  const [filterOfficer, setFilterOfficer] = useState("all");
+  const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterShiftStatus, setFilterShiftStatus] = useState("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
@@ -89,18 +145,28 @@ export default function FinanceApprovalPage() {
   const [rejectSingleId, setRejectSingleId] = useState<number | null>(null);
   const limit = 50;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
   const resetPage = useCallback(() => {
     setPage(1);
     setSelectedIds(new Set());
   }, []);
+
+  const applyDateFrom = () => {
+    if (draftDateFrom === filterDateFrom) return;
+    setFilterDateFrom(draftDateFrom);
+    resetPage();
+  };
+
+  const applyDateTo = () => {
+    if (draftDateTo === filterDateTo) return;
+    setFilterDateTo(draftDateTo);
+    resetPage();
+  };
+
+  const applySearch = () => {
+    if (searchTerm === appliedSearch) return;
+    setAppliedSearch(searchTerm);
+    resetPage();
+  };
 
   const queryParams = new URLSearchParams({
     page: String(page),
@@ -108,13 +174,28 @@ export default function FinanceApprovalPage() {
     financeStatus: filterFinanceStatus,
     shiftStatus: filterShiftStatus,
     siteId: filterSite !== "all" ? filterSite : "",
+    clientId: filterClient !== "all" ? filterClient : "",
+    officerId: filterOfficer !== "all" ? filterOfficer : "",
+    supplierId: filterSupplier !== "all" ? filterSupplier : "",
     dateFrom: filterDateFrom,
     dateTo: filterDateTo,
-    search: debouncedSearch,
+    search: appliedSearch,
   }).toString();
 
   const { data: response, isLoading } = useQuery<PaginatedResponse>({
-    queryKey: ["/api/finance-approval/shifts", page, filterFinanceStatus, filterShiftStatus, filterSite, filterDateFrom, filterDateTo, debouncedSearch],
+    queryKey: [
+      "/api/finance-approval/shifts",
+      page,
+      filterFinanceStatus,
+      filterShiftStatus,
+      filterSite,
+      filterClient,
+      filterOfficer,
+      filterSupplier,
+      filterDateFrom,
+      filterDateTo,
+      appliedSearch,
+    ],
     queryFn: async () => {
       const res = await fetch(`/api/finance-approval/shifts?${queryParams}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load shifts");
@@ -126,7 +207,18 @@ export default function FinanceApprovalPage() {
   const total = response?.total || 0;
   const stats = response?.stats || { total: 0, pending: 0, approved: 0, rejected: 0, late_arrivals: 0 };
   const sites = response?.sites || [];
+  const clients = response?.clients || [];
+  const officers = response?.officers || [];
+  const suppliers = response?.suppliers || [];
   const totalPages = Math.ceil(total / limit);
+  const hasAdvancedFilters =
+    filterSite !== "all" || filterClient !== "all" || filterOfficer !== "all" || filterSupplier !== "all";
+  const hasActiveFilters =
+    !!filterDateFrom ||
+    !!filterDateTo ||
+    filterShiftStatus !== "all" ||
+    !!appliedSearch ||
+    hasAdvancedFilters;
 
   const bulkApproveMutation = useMutation({
     mutationFn: async (ids: number[]) => {
@@ -303,14 +395,48 @@ export default function FinanceApprovalPage() {
               <Filter className="w-4 h-4 text-muted-foreground" />
               <CardTitle className="text-base">Filters</CardTitle>
             </div>
-            {(filterDateFrom || filterDateTo || filterSite !== "all" || filterShiftStatus !== "all" || searchTerm) && (
-              <Button variant="ghost" size="sm" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); setFilterSite("all"); setFilterShiftStatus("all"); setSearchTerm(""); resetPage(); }} data-testid="button-clear-filters">
-                Clear Filters
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdvancedFilters((v) => !v)}
+                data-testid="button-advanced-filters"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 mr-1 transition-transform ${showAdvancedFilters || hasAdvancedFilters ? "rotate-180" : ""}`} />
+                Advanced
+                {hasAdvancedFilters && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                    On
+                  </Badge>
+                )}
               </Button>
-            )}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDraftDateFrom("");
+                    setDraftDateTo("");
+                    setFilterDateFrom("");
+                    setFilterDateTo("");
+                    setFilterSite("all");
+                    setFilterClient("all");
+                    setFilterOfficer("all");
+                    setFilterSupplier("all");
+                    setFilterShiftStatus("all");
+                    setSearchTerm("");
+                    setAppliedSearch("");
+                    resetPage();
+                  }}
+                  data-testid="button-clear-filters"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <Select value={filterFinanceStatus} onValueChange={(val) => { setFilterFinanceStatus(val); resetPage(); }}>
               <SelectTrigger className="w-40" data-testid="select-finance-status">
@@ -339,37 +465,102 @@ export default function FinanceApprovalPage() {
             </Select>
             <div className="flex items-center gap-1">
               <Label className="text-xs text-muted-foreground whitespace-nowrap">From:</Label>
-              <Input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); resetPage(); }} className="w-36" data-testid="input-date-from" />
+              <Input
+                type="date"
+                value={draftDateFrom}
+                onChange={(e) => setDraftDateFrom(e.target.value)}
+                onBlur={applyDateFrom}
+                onKeyDown={(e) => e.key === "Enter" && (e.currentTarget.blur(), applyDateFrom())}
+                className="w-36"
+                data-testid="input-date-from"
+              />
             </div>
             <div className="flex items-center gap-1">
               <Label className="text-xs text-muted-foreground whitespace-nowrap">To:</Label>
-              <Input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); resetPage(); }} className="w-36" data-testid="input-date-to" />
+              <Input
+                type="date"
+                value={draftDateTo}
+                onChange={(e) => setDraftDateTo(e.target.value)}
+                onBlur={applyDateTo}
+                onKeyDown={(e) => e.key === "Enter" && (e.currentTarget.blur(), applyDateTo())}
+                className="w-36"
+                data-testid="input-date-to"
+              />
             </div>
-            <SearchableSelect
-              value={filterSite}
-              onValueChange={(val) => { setFilterSite(val); resetPage(); }}
-              options={sites.map((site) => ({
-                value: String(site.id),
-                label: site.name,
-              }))}
-              noneValue="all"
-              noneLabel="All Sites"
-              placeholder="All Sites"
-              searchPlaceholder="Search sites…"
-              triggerClassName="w-44"
-              data-testid="select-site-filter"
-            />
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search shifts, officers, sites..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onBlur={applySearch}
+                onKeyDown={(e) => e.key === "Enter" && (e.currentTarget.blur(), applySearch())}
                 className="pl-9"
                 data-testid="input-search"
               />
             </div>
           </div>
+
+          {(showAdvancedFilters || hasAdvancedFilters) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Client</Label>
+                <SearchableSelect
+                  value={filterClient}
+                  onValueChange={(val) => { setFilterClient(val); resetPage(); }}
+                  options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
+                  noneValue="all"
+                  noneLabel="All Clients"
+                  placeholder="All Clients"
+                  searchPlaceholder="Search clients…"
+                  triggerClassName="w-full"
+                  data-testid="select-client-filter"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Officer</Label>
+                <SearchableSelect
+                  value={filterOfficer}
+                  onValueChange={(val) => { setFilterOfficer(val); resetPage(); }}
+                  options={officers.map((o) => ({ value: String(o.id), label: o.name }))}
+                  noneValue="all"
+                  noneLabel="All Officers"
+                  placeholder="All Officers"
+                  searchPlaceholder="Search officers…"
+                  triggerClassName="w-full"
+                  data-testid="select-officer-filter"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Supplier</Label>
+                <SearchableSelect
+                  value={filterSupplier}
+                  onValueChange={(val) => { setFilterSupplier(val); resetPage(); }}
+                  options={suppliers.map((s) => ({ value: String(s.id), label: s.name }))}
+                  noneValue="all"
+                  noneLabel="All Suppliers"
+                  placeholder="All Suppliers"
+                  searchPlaceholder="Search suppliers…"
+                  triggerClassName="w-full"
+                  data-testid="select-supplier-filter"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Location</Label>
+                <SearchableSelect
+                  value={filterSite}
+                  onValueChange={(val) => { setFilterSite(val); resetPage(); }}
+                  options={sites.map((site) => ({ value: String(site.id), label: site.name }))}
+                  noneValue="all"
+                  noneLabel="All Locations"
+                  placeholder="All Locations"
+                  searchPlaceholder="Search locations…"
+                  triggerClassName="w-full"
+                  data-testid="select-site-filter"
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -417,6 +608,11 @@ export default function FinanceApprovalPage() {
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Date & Time</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Officer</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Site</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Hours</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Holiday hrs</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Deduction</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Shift Status</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Arrival</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Finance</th>
@@ -446,9 +642,11 @@ export default function FinanceApprovalPage() {
                         <td className="p-3">
                           <div className="flex items-center gap-1 text-xs">
                             <Calendar className="w-3 h-3 text-muted-foreground" />
-                            {shift.date}
+                            {formatShiftDate(shift.date)}
                           </div>
-                          <div className="text-xs text-muted-foreground">{shift.startTime} – {shift.endTime}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatShiftTime(shift.startTime)} – {formatShiftTime(shift.endTime)}
+                          </div>
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1 text-xs">
@@ -461,6 +659,25 @@ export default function FinanceApprovalPage() {
                             <MapPin className="w-3 h-3 text-muted-foreground" />
                             <span data-testid={`text-site-${shift.id}`}>{shift.siteName || "—"}</span>
                           </div>
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-hours-${shift.id}`}>
+                          {fmtNum(shiftDisplayHours(shift))}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-holiday-hours-${shift.id}`}>
+                          {fmtNum(shift.holidayHours ?? 0)}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-deduction-${shift.id}`}>
+                          {fmtNum(shift.deductionHours ?? 0)}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-pay-rate-${shift.id}`}>
+                          {shift.payRate == null || Number.isNaN(Number(shift.payRate))
+                            ? "—"
+                            : `£${fmtNum(shift.payRate)}`}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-charge-rate-${shift.id}`}>
+                          {shift.chargeRate == null || Number.isNaN(Number(shift.chargeRate))
+                            ? "—"
+                            : `£${fmtNum(shift.chargeRate)}`}
                         </td>
                         <td className="p-3">
                           <Badge variant="secondary" className={`text-[10px] ${shiftConf.className}`} data-testid={`badge-shift-status-${shift.id}`}>

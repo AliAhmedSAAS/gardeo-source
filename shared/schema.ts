@@ -829,6 +829,12 @@ export const shifts = pgTable("shifts", {
   lateMinutes: integer("late_minutes").default(0),
   payRate: numeric("pay_rate", { precision: 10, scale: 2 }),
   chargeRate: numeric("charge_rate", { precision: 10, scale: 2 }),
+  /** PANL: expense adjustment on the shift (±) */
+  expense: numeric("expense", { precision: 12, scale: 2 }).default("0"),
+  holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  deductionHours: numeric("deduction_hours", { precision: 10, scale: 2 }).default("0"),
+  /** When set, used instead of calculated duty hours for P&L */
+  hoursOverride: numeric("hours_override", { precision: 10, scale: 2 }),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
