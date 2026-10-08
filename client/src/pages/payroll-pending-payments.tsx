@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { isFinanceRole, canApplyRules, selfShiftPayDisplay } from "@shared/payrollControl";
+import { canApplyRules, selfShiftPayDisplay } from "@shared/payrollControl";
 import { Loader2, RefreshCw, Download, Eye, Trash2, Mail } from "lucide-react";
 
 type QueueBill = {
@@ -50,7 +50,7 @@ function gbp(n: number) {
 
 export default function PayrollPendingPaymentsPage() {
   const { user } = useAuth();
-  const finance = isFinanceRole(user?.role);
+  /** Same gate as Create Bill / Remittance / server financeOnly (finance + tenant admins). */
   const canManageBills = canApplyRules(user?.role);
   const { toast } = useToast();
   const [paid, setPaid] = useState(false);
@@ -312,34 +312,37 @@ export default function PayrollPendingPaymentsPage() {
             <Input className="w-36" placeholder="Bulk bank" value={bulkBank} onChange={(e) => setBulkBank(e.target.value)} />
           </>
         )}
-        {finance && (
+        {canManageBills && (
           <>
             <Input className="w-40" placeholder="Remarks update" value={remarksUpdate} onChange={(e) => setRemarksUpdate(e.target.value)} />
             <Button variant="outline" disabled={selected.size === 0} onClick={() => remarksMutation.mutate()}>Remarks update</Button>
             <Button variant="outline" onClick={() => window.open(`/api/payroll-control/queue.csv?paid=${paid}`, "_blank")}><Download className="w-4 h-4 mr-1" />CSV</Button>
-            <Button disabled={selected.size === 0 || markPaidMutation.isPending} onClick={() => markPaidMutation.mutate(payItems(Array.from(selected)))}>Mark Paid</Button>
+            <Button
+              disabled={selected.size === 0 || markPaidMutation.isPending || paid}
+              onClick={() => markPaidMutation.mutate(payItems(Array.from(selected)))}
+              data-testid="btn-mark-paid"
+            >
+              {markPaidMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Mark Paid
+            </Button>
             <Button variant="outline" disabled={selected.size === 0} onClick={() => setEmailOpen(true)}>Send Email</Button>
             <Button variant="outline" disabled={selected.size === 0} onClick={() => apiRequest("POST", "/api/payroll-control/payslips/bulk", { billIds: Array.from(selected), email: false }).then(() => toast({ title: "Payslips generated" }))}>Payslips</Button>
+            <Button
+              variant="outline"
+              disabled={selected.size === 0 || remittanceMutation.isPending}
+              onClick={() => setConfirmAction({ type: "remittance-bulk", id: 0 })}
+            >
+              <Mail className="w-4 h-4 mr-1" />
+              Send Remittance
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={selected.size === 0 || deleteMutation.isPending}
+              onClick={() => setConfirmAction({ type: "delete-bulk", id: 0 })}
+            >
+              Delete selected
+            </Button>
           </>
-        )}
-        {canManageBills && (
-          <Button
-            variant="outline"
-            disabled={selected.size === 0 || remittanceMutation.isPending}
-            onClick={() => setConfirmAction({ type: "remittance-bulk", id: 0 })}
-          >
-            <Mail className="w-4 h-4 mr-1" />
-            Send Remittance
-          </Button>
-        )}
-        {canManageBills && (
-          <Button
-            variant="destructive"
-            disabled={selected.size === 0 || deleteMutation.isPending}
-            onClick={() => setConfirmAction({ type: "delete-bulk", id: 0 })}
-          >
-            Delete selected
-          </Button>
         )}
         <Button variant="outline" onClick={() => refetch()}><RefreshCw className="w-4 h-4 mr-1" />Refresh</Button>
       </div>
@@ -418,11 +421,15 @@ export default function PayrollPendingPaymentsPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {finance && <Button size="sm" onClick={() => markPaidMutation.mutate(payItems([b.id]))}>Save / pay</Button>}
-                    {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "sms", id: b.id })}>SMS</Button>}
-                    {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "email", id: b.id })}>Email</Button>}
-                    {finance && <Button size="sm" variant="outline" onClick={() => window.open(`/api/payroll-control/bills/${b.id}/payslip`, "_blank")}>Payslip</Button>}
-                    {finance && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "payslip-email", id: b.id })}>Email payslip</Button>}
+                    {canManageBills && !paid && (
+                      <Button size="sm" onClick={() => markPaidMutation.mutate(payItems([b.id]))} data-testid={`btn-save-pay-${b.id}`}>
+                        Save / pay
+                      </Button>
+                    )}
+                    {canManageBills && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "sms", id: b.id })}>SMS</Button>}
+                    {canManageBills && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "email", id: b.id })}>Email</Button>}
+                    {canManageBills && <Button size="sm" variant="outline" onClick={() => window.open(`/api/payroll-control/bills/${b.id}/payslip`, "_blank")}>Payslip</Button>}
+                    {canManageBills && <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: "payslip-email", id: b.id })}>Email payslip</Button>}
                     {canManageBills && (
                       <Button
                         size="icon"
