@@ -25169,6 +25169,126 @@ Respond in JSON format:
 
   const syncRoles = ["super_admin", "tenant_admin", "admin"] as const;
 
+  /** Machine auth for GuardTrack / external PHP systems triggering Gardeo sync. */
+  function requireExternalSyncKey(req: Request, res: Response, next: NextFunction) {
+    const expected = process.env.EXTERNAL_SYNC_API_KEY;
+    if (!expected || !String(expected).trim()) {
+      return res.status(503).json({ message: "EXTERNAL_SYNC_API_KEY is not configured on the server" });
+    }
+    const provided = String(req.headers["x-external-sync-key"] || "").trim();
+    if (!provided || provided !== expected) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const tenantRaw = String(req.headers["x-tenant-id"] || req.query.tenantId || req.body?.tenantId || "").trim();
+    const tenantId = parseInt(tenantRaw, 10);
+    if (!tenantRaw || Number.isNaN(tenantId) || tenantId <= 0) {
+      return res.status(400).json({ message: "X-Tenant-Id header is required" });
+    }
+    (req as any).externalSyncTenantId = tenantId;
+    next();
+  }
+
+  app.get("/api/external/sync/suppliers", requireExternalSyncKey, async (req, res) => {
+    try {
+      const tenantId = (req as any).externalSyncTenantId as number;
+      const suppliers = await storage.getSuppliersByTenant(tenantId);
+      res.json(suppliers.map((s) => ({
+        id: s.id,
+        company_name: s.companyName,
+        external_id: s.externalId,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/external/sync/configurations", requireExternalSyncKey, async (req, res) => {
+    try {
+      const tenantId = (req as any).externalSyncTenantId as number;
+      const configs = await storage.getSyncConfigurations(tenantId);
+      res.json(configs.map((c) => ({
+        id: c.id,
+        name: c.name,
+        connectionType: c.connectionType,
+        isActive: c.isActive,
+        lastSyncAt: c.lastSyncAt,
+        syncEntities: c.syncEntities,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/external/sync/link-supplier", requireExternalSyncKey, async (req, res) => {
+    try {
+      const tenantId = (req as any).externalSyncTenantId as number;
+      const supplierId = parseInt(String(req.body?.supplierId ?? ""), 10);
+      const externalId = String(req.body?.externalId ?? "").trim();
+      if (Number.isNaN(supplierId) || supplierId <= 0) {
+        return res.status(400).json({ message: "supplierId is required" });
+      }
+      if (!externalId) {
+        return res.status(400).json({ message: "externalId is required" });
+      }
+
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier || supplier.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+
+      // Clear this external_id from other suppliers in the same tenant to avoid unique conflicts
+      const all = await storage.getSuppliersByTenant(tenantId);
+      for (const s of all) {
+        if (s.id !== supplierId && s.externalId && String(s.externalId) === externalId) {
+          await storage.updateSupplier(s.id, { externalId: null } as any);
+        }
+      }
+
+      const updated = await storage.updateSupplier(supplierId, { externalId } as any);
+      res.json({
+        id: updated?.id ?? supplierId,
+        company_name: updated?.companyName ?? supplier.companyName,
+        external_id: updated?.externalId ?? externalId,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/external/sync/configurations/:id/run", requireExternalSyncKey, async (req, res) => {
+    try {
+      const tenantId = (req as any).externalSyncTenantId as number;
+      const configId = parseInt(req.params.id, 10);
+      const config = await storage.getSyncConfiguration(configId);
+      if (!config || config.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      const { dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo } = req.body || {};
+      const { runSync } = await import("./sync-service");
+      const log = await runSync(configId, tenantId, undefined, dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo);
+      res.json(log);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/external/sync/configurations/:id/preview", requireExternalSyncKey, async (req, res) => {
+    try {
+      const tenantId = (req as any).externalSyncTenantId as number;
+      const configId = parseInt(req.params.id, 10);
+      const config = await storage.getSyncConfiguration(configId);
+      if (!config || config.tenantId !== tenantId) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      const { dateFrom, dateTo, supplierId, pageFrom, pageTo } = req.body || {};
+      const { runDrySync } = await import("./sync-service");
+      const results = await runDrySync(configId, tenantId, undefined, dateFrom, dateTo, supplierId, pageFrom, pageTo);
+      res.json(results);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/suppliers-for-sync", requireRole(...syncRoles), async (req, res) => {
     try {
       const user = req.user as User;
