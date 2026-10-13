@@ -48,6 +48,131 @@ function stripEntityPrefix(id: string): string {
   return String(id).replace(/^(SUP|CLT|SITE|EMP|SHIFT)-/i, "");
 }
 
+type SupplierRateCardRow = {
+  hourlyRate: string | number | null;
+  siteId: number | null;
+  employeeId: number | null;
+  effectiveFrom: string | Date;
+  effectiveTo: string | Date | null;
+};
+
+/** Match supplier rate_cards the same way invoice/payroll does (site+employee specificity). */
+function findApplicableSupplierRate(
+  rateCards: SupplierRateCardRow[],
+  shiftDate: Date,
+  siteId: number | null,
+  employeeId: number | null,
+): SupplierRateCardRow | null {
+  const candidates = rateCards.filter((rc) => {
+    const from = new Date(rc.effectiveFrom);
+    const to = rc.effectiveTo ? new Date(rc.effectiveTo) : new Date("2099-12-31");
+    if (Number.isNaN(from.getTime()) || shiftDate < from || shiftDate > to) return false;
+    if (rc.siteId && rc.siteId !== siteId) return false;
+    if (rc.employeeId && rc.employeeId !== employeeId) return false;
+    return true;
+  });
+
+  const scored = candidates.map((rc) => {
+    let score = 0;
+    if (rc.employeeId && rc.siteId) score = 4;
+    else if (rc.employeeId) score = 3;
+    else if (rc.siteId) score = 2;
+    else score = 1;
+    return { rc, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.length > 0 ? scored[0].rc : null;
+}
+
+/**
+ * Map GuardTrack `type` → Gardeo tenant_duty_types:
+ * Cleaner/CLEANERS → Cleaners, everything else → Door Supervisor.
+ */
+function mapGuardTrackTypeToDutyName(rawType: string | null | undefined): string {
+  const t = String(rawType || "").trim().toLowerCase();
+  if (t.includes("clean")) return "Cleaners";
+  return "Door Supervisor";
+}
+
+async function resolveDutyTypeId(
+  tenantId: number,
+  cache: Map<string, number | null>,
+  rawType: string | null | undefined,
+): Promise<number | null> {
+  const dutyName = mapGuardTrackTypeToDutyName(rawType);
+  const cacheKey = dutyName.toLowerCase();
+  if (cache.has(cacheKey)) return cache.get(cacheKey) ?? null;
+
+  const { rows } = await pool.query<{ id: number; name: string }>(
+    `SELECT id, name FROM tenant_duty_types
+     WHERE tenant_id = $1
+       AND LOWER(name) = LOWER($2)
+     LIMIT 1`,
+    [tenantId, dutyName],
+  );
+  let id: number | null = rows[0]?.id ?? null;
+
+  // Soft fallback: "Cleaner" vs "Cleaners"
+  if (id == null && dutyName === "Cleaners") {
+    const alt = await pool.query<{ id: number }>(
+      `SELECT id FROM tenant_duty_types
+       WHERE tenant_id = $1 AND LOWER(name) LIKE '%clean%'
+       ORDER BY id ASC LIMIT 1`,
+      [tenantId],
+    );
+    id = alt.rows[0]?.id ?? null;
+  }
+  if (id == null && dutyName === "Door Supervisor") {
+    const alt = await pool.query<{ id: number }>(
+      `SELECT id FROM tenant_duty_types
+       WHERE tenant_id = $1 AND LOWER(name) LIKE '%door%supervisor%'
+       ORDER BY id ASC LIMIT 1`,
+      [tenantId],
+    );
+    id = alt.rows[0]?.id ?? null;
+  }
+
+  cache.set(cacheKey, id);
+  return id;
+}
+
+async function getPayRateFromSupplierRateCard(
+  tenantId: number,
+  cache: Map<number, SupplierRateCardRow[]>,
+  supplierId: number | null,
+  shiftDate: string | null | undefined,
+  siteId: number | null,
+  employeeId: number | null,
+): Promise<string | null> {
+  if (!supplierId || !shiftDate) return null;
+  const d = new Date(shiftDate);
+  if (Number.isNaN(d.getTime())) return null;
+
+  let cards = cache.get(supplierId);
+  if (!cards) {
+    const { rows } = await pool.query<SupplierRateCardRow>(
+      `SELECT hourly_rate AS "hourlyRate",
+              site_id AS "siteId",
+              employee_id AS "employeeId",
+              effective_from AS "effectiveFrom",
+              effective_to AS "effectiveTo"
+       FROM rate_cards
+       WHERE tenant_id = $1 AND supplier_id = $2
+       ORDER BY effective_from DESC`,
+      [tenantId, supplierId],
+    );
+    cards = rows;
+    cache.set(supplierId, cards);
+  }
+
+  const rc = findApplicableSupplierRate(cards, d, siteId, employeeId);
+  if (!rc || rc.hourlyRate == null || rc.hourlyRate === "") return null;
+  const n = Number(rc.hourlyRate);
+  if (!Number.isFinite(n)) return null;
+  return String(rc.hourlyRate);
+}
+
 /** MAIN / in-house branch rows from GFMTrack (shifts-main.php). */
 function isMainInhouseShift(item: any): boolean {
   const name = String(item.supplierName || "").trim().toLowerCase();
@@ -364,23 +489,38 @@ async function syncRestPhpShifts(
   employeeMap: Map<string, number>
 ): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  const rateCardCache = new Map<number, SupplierRateCardRow[]>();
+  const dutyTypeCache = new Map<string, number | null>();
 
   for (const item of shifts) {
     try {
       const extId = stripEntityPrefix(item.id);
-      const existingResult = await pool.query(
-        `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-        [tenantId, extId]
-      );
-      if (existingResult.rows.length > 0) {
-        await pool.query(`UPDATE shifts SET last_synced_at = NOW() WHERE id = $1`, [existingResult.rows[0].id]);
-        result.skipped++;
-        continue;
-      }
-
       const employeeId = item.employeeId ? (employeeMap.get(stripEntityPrefix(item.employeeId)) || null) : null;
       const siteId = item.siteId ? (siteMap.get(stripEntityPrefix(item.siteId)) || null) : null;
       const supplierId = item.supplierId ? (supplierMap.get(stripEntityPrefix(item.supplierId)) || null) : null;
+      const payRate = await getPayRateFromSupplierRateCard(
+        tenantId, rateCardCache, supplierId, item.date, siteId, employeeId,
+      );
+      const dutyTypeId = await resolveDutyTypeId(
+        tenantId, dutyTypeCache, item.type || item.dutyType || item.officerType,
+      );
+
+      const existingResult = await pool.query(
+        `SELECT id, pay_rate FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+        [tenantId, extId]
+      );
+      if (existingResult.rows.length > 0) {
+        await pool.query(
+          `UPDATE shifts SET
+             pay_rate = COALESCE(pay_rate, $1),
+             duty_type_id = COALESCE(duty_type_id, $2),
+             last_synced_at = NOW()
+           WHERE id = $3`,
+          [payRate, dutyTypeId, existingResult.rows[0].id],
+        );
+        result.skipped++;
+        continue;
+      }
 
       if (employeeId && siteId && item.date && item.startTime && item.endTime) {
         const startNorm = (item.startTime || "").substring(0, 5);
@@ -394,8 +534,13 @@ async function syncRestPhpShifts(
         );
         if (compositeCheck.rows.length > 0) {
           await pool.query(
-            `UPDATE shifts SET external_id = COALESCE(external_id, $1), last_synced_at = NOW() WHERE id = $2`,
-            [extId, compositeCheck.rows[0].id]
+            `UPDATE shifts SET
+               external_id = COALESCE(external_id, $1),
+               pay_rate = COALESCE(pay_rate, $2),
+               duty_type_id = COALESCE(duty_type_id, $3),
+               last_synced_at = NOW()
+             WHERE id = $4`,
+            [extId, payRate, dutyTypeId, compositeCheck.rows[0].id]
           );
           result.skipped++;
           continue;
@@ -405,16 +550,18 @@ async function syncRestPhpShifts(
       const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, duty_type_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
         [
-          tenantId, employeeId, siteId, supplierId,
+          tenantId, employeeId, siteId, supplierId, dutyTypeId,
           title,
           item.date,
           item.startTime || "00:00",
           item.endTime || "00:00",
           mapShiftStatus(item.status),
-          item.notes || null, extId,
+          item.notes || null,
+          payRate,
+          extId,
         ]
       );
       result.created++;
@@ -656,23 +803,33 @@ async function syncPhpShifts(
   employeeMap: Map<string, number>
 ): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  const rateCardCache = new Map<number, SupplierRateCardRow[]>();
 
   for (const item of shifts) {
     try {
       const extId = String(item.shift_id);
+      const employeeId = employeeMap.get(String(item.officer_id)) || null;
+      const siteId = siteMap.get(String(item.LocationID)) || null;
+      const supplierId = supplierMap.get(String(item.SupplierID)) || null;
+      const payRate = await getPayRateFromSupplierRateCard(
+        tenantId, rateCardCache, supplierId, item.shift_date, siteId, employeeId,
+      );
+
       const existingResult = await pool.query(
         `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
         [tenantId, extId]
       );
       if (existingResult.rows.length > 0) {
-        await pool.query(`UPDATE shifts SET last_synced_at = NOW() WHERE id = $1`, [existingResult.rows[0].id]);
+        await pool.query(
+          `UPDATE shifts SET
+             pay_rate = COALESCE(pay_rate, $1),
+             last_synced_at = NOW()
+           WHERE id = $2`,
+          [payRate, existingResult.rows[0].id],
+        );
         result.skipped++;
         continue;
       }
-
-      const employeeId = employeeMap.get(String(item.officer_id)) || null;
-      const siteId = siteMap.get(String(item.LocationID)) || null;
-      const supplierId = supplierMap.get(String(item.SupplierID)) || null;
 
       if (employeeId && siteId && item.shift_date && item.time_start && item.time_finish) {
         const startNorm = (item.time_start || "").substring(0, 5);
@@ -686,8 +843,12 @@ async function syncPhpShifts(
         );
         if (compositeCheck.rows.length > 0) {
           await pool.query(
-            `UPDATE shifts SET external_id = COALESCE(external_id, $1), last_synced_at = NOW() WHERE id = $2`,
-            [extId, compositeCheck.rows[0].id]
+            `UPDATE shifts SET
+               external_id = COALESCE(external_id, $1),
+               pay_rate = COALESCE(pay_rate, $2),
+               last_synced_at = NOW()
+             WHERE id = $3`,
+            [extId, payRate, compositeCheck.rows[0].id]
           );
           result.skipped++;
           continue;
@@ -697,14 +858,15 @@ async function syncPhpShifts(
       const title = `${item.location || "Shift"} - ${item.shift_date}`;
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, pay_rate, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9, $10, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
           title,
           item.shift_date,
           item.time_start || "00:00",
           item.time_finish || "00:00",
+          payRate,
           extId,
         ]
       );
@@ -1193,31 +1355,26 @@ async function syncEmployees(tenantId: number, data: any[]): Promise<SyncResult>
 
 async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  const rateCardCache = new Map<number, SupplierRateCardRow[]>();
 
   for (const item of data) {
     try {
       const extId = String(item.id);
 
-      const existingResult = await pool.query(
-        `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-        [tenantId, extId]
-      );
-
-      if (existingResult.rows.length > 0) {
-        result.skipped++;
-        continue;
-      }
-
       let employeeId: string | null = null;
+      let employeePk: number | null = null;
       let siteId: number | null = null;
       let supplierId: number | null = null;
 
       if (item.employeeId) {
         const empResult = await pool.query(
-          `SELECT user_id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+          `SELECT id, user_id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
           [tenantId, String(item.employeeId)]
         );
-        if (empResult.rows.length > 0) employeeId = empResult.rows[0].user_id;
+        if (empResult.rows.length > 0) {
+          employeePk = empResult.rows[0].id;
+          employeeId = empResult.rows[0].user_id;
+        }
       }
 
       if (item.siteId) {
@@ -1236,6 +1393,24 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
         if (supResult.rows.length > 0) supplierId = supResult.rows[0].id;
       }
 
+      const payRate = await getPayRateFromSupplierRateCard(
+        tenantId, rateCardCache, supplierId, item.date, siteId, employeePk,
+      );
+
+      const existingResult = await pool.query(
+        `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+        [tenantId, extId]
+      );
+
+      if (existingResult.rows.length > 0) {
+        await pool.query(
+          `UPDATE shifts SET pay_rate = COALESCE(pay_rate, $1), last_synced_at = NOW() WHERE id = $2`,
+          [payRate, existingResult.rows[0].id],
+        );
+        result.skipped++;
+        continue;
+      }
+
       if (employeeId && siteId && item.date && item.startTime && item.endTime) {
         const startNorm = (item.startTime || "").substring(0, 5);
         const endNorm = (item.endTime || "").substring(0, 5);
@@ -1248,8 +1423,12 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
         );
         if (compositeCheck.rows.length > 0) {
           await pool.query(
-            `UPDATE shifts SET external_id = COALESCE(external_id, $1) WHERE id = $2`,
-            [extId, compositeCheck.rows[0].id]
+            `UPDATE shifts SET
+               external_id = COALESCE(external_id, $1),
+               pay_rate = COALESCE(pay_rate, $2),
+               last_synced_at = NOW()
+             WHERE id = $3`,
+            [extId, payRate, compositeCheck.rows[0].id]
           );
           result.skipped++;
           continue;
@@ -1257,14 +1436,14 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
       }
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
           `Shift ${extId}`,
           item.date, item.startTime, item.endTime,
           mapShiftStatus(item.status),
-          item.notes || null, extId,
+          item.notes || null, payRate, extId,
         ]
       );
       result.created++;
@@ -1802,16 +1981,25 @@ export async function runSync(
                 const supRow = await findByExternalId(tenantId, "suppliers", String(item.supplierId));
                 if (supRow) shiftSupplierId = supRow.id;
               }
+              const restRateCache = new Map<number, SupplierRateCardRow[]>();
+              const payRate = await getPayRateFromSupplierRateCard(
+                tenantId, restRateCache, shiftSupplierId, item.date, siteId, employeeId,
+              );
               const { isDuplicate } = await checkShiftDuplicate(tenantId, extId, employeeId, siteId, item.date, item.startTime, item.endTime);
               if (isDuplicate) {
+                await pool.query(
+                  `UPDATE shifts SET pay_rate = COALESCE(pay_rate, $1), last_synced_at = NOW()
+                   WHERE tenant_id = $2 AND external_id = $3`,
+                  [payRate, tenantId, extId],
+                );
                 entityResult.skipped++;
               } else {
                 try {
                   await pool.query(
-                    `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, external_id, last_synced_at)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+                    `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
                     [tenantId, employeeId, siteId, shiftSupplierId, `Shift ${extId}`, item.date, item.startTime, item.endTime,
-                     mapShiftStatus(item.status), item.notes || null, extId]
+                     mapShiftStatus(item.status), item.notes || null, payRate, extId]
                   );
                   entityResult.created++;
                 } catch (err: any) {
