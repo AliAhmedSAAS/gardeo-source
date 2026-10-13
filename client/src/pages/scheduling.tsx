@@ -45,6 +45,8 @@ type EnrichedShift = {
   dutyTypeId: number | null;
   payRate?: string | null;
   chargeRate?: string | null;
+  holidayHours?: string | number | null;
+  breakMinutes?: number | null;
   siteName: string;
   employeeName: string;
   supplierName: string;
@@ -54,6 +56,23 @@ type EnrichedShift = {
   checkInTime?: string | null;
   bookedOnCallData?: unknown;
 };
+
+function siteBreakMinutes(siteList: Site[], siteId: string): number {
+  const site = siteList.find((s) => String(s.id) === siteId);
+  return Math.max(0, Number(site?.breakDeductionMinutes) || 0);
+}
+
+function breakMinutesPayload(raw: string): number {
+  const n = parseInt(raw, 10);
+  if (!raw.trim() || !Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+function holidayHoursPayload(raw: string): string {
+  const n = Number(raw);
+  if (!raw.trim() || !Number.isFinite(n) || n < 0) return "0";
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
 
 function isShiftBookedOn(shift: Pick<EnrichedShift, "status" | "bookedOnAt" | "checkInTime" | "bookedOnCallData">) {
   return Boolean(
@@ -185,7 +204,7 @@ export default function SchedulingPage() {
   const [editShift, setEditShift] = useState<EnrichedShift | null>(null);
   const [editForm, setEditForm] = useState({
     title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
-    payRate: "", chargeRate: "",
+    payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "",
     payRateOptionId: "", chargeRateOptionId: "",
   });
   const [editRatesManual, setEditRatesManual] = useState(false);
@@ -207,7 +226,7 @@ export default function SchedulingPage() {
   const [shiftForm, setShiftForm] = useState({
     title: "", date: "", startTime: "", endTime: "",
     siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
-    payRate: "", chargeRate: "",
+    payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "",
     payRateOptionId: "", chargeRateOptionId: "",
   });
   const [ratesManual, setRatesManual] = useState(false);
@@ -482,6 +501,8 @@ export default function SchedulingPage() {
         notes: data.notes || null,
         payRate: data.payRate || null,
         chargeRate: data.chargeRate || null,
+        holidayHours: holidayHoursPayload(data.holidayHours),
+        breakMinutes: breakMinutesPayload(data.breakMinutes),
       };
       const res = await apiRequest("POST", "/api/shifts", payload);
       return res.json();
@@ -580,7 +601,7 @@ export default function SchedulingPage() {
 
   const closeShiftDialog = useCallback(() => {
     setShiftDialogOpen(false);
-    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "", payRate: "", chargeRate: "", payRateOptionId: "", chargeRateOptionId: "" });
+    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "", payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "", payRateOptionId: "", chargeRateOptionId: "" });
     setRatesManual(false);
     setRepeatOption("none");
     setSelectedDay("");
@@ -610,6 +631,8 @@ export default function SchedulingPage() {
         notes: shiftForm.notes || null,
         payRate: shiftForm.payRate || null,
         chargeRate: shiftForm.chargeRate || null,
+        holidayHours: holidayHoursPayload(shiftForm.holidayHours),
+        breakMinutes: breakMinutesPayload(shiftForm.breakMinutes),
       }));
       bulkCreateMutation.mutate({ shifts: shiftPayloads });
     }
@@ -684,6 +707,8 @@ export default function SchedulingPage() {
       notes: shift.notes || "",
       payRate: shift.payRate != null ? String(shift.payRate) : "",
       chargeRate: shift.chargeRate != null ? String(shift.chargeRate) : "",
+      holidayHours: shift.holidayHours != null && Number(shift.holidayHours) !== 0 ? String(shift.holidayHours) : "",
+      breakMinutes: shift.breakMinutes ? String(shift.breakMinutes) : "",
       payRateOptionId: "",
       chargeRateOptionId: "",
     });
@@ -705,6 +730,8 @@ export default function SchedulingPage() {
         notes: editForm.notes || null,
         payRate: editForm.payRate || null,
         chargeRate: editForm.chargeRate || null,
+        holidayHours: holidayHoursPayload(editForm.holidayHours),
+        breakMinutes: breakMinutesPayload(editForm.breakMinutes),
       },
     });
   }, [editShift, editForm, updateShiftMutation]);
@@ -1228,6 +1255,12 @@ export default function SchedulingPage() {
                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                           <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(shift.date.split("T")[0] + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                           <span>{shift.startTime} - {shift.endTime}</span>
+                          {(shift.breakMinutes || 0) > 0 && (
+                            <span data-testid={`text-shift-break-${shift.id}`}>Break {shift.breakMinutes}m</span>
+                          )}
+                          {Number(shift.holidayHours) > 0 && (
+                            <span data-testid={`text-shift-holiday-${shift.id}`}>Holiday {Number(shift.holidayHours)}h</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1532,7 +1565,11 @@ export default function SchedulingPage() {
               <Label>Site <span className="text-red-500">*</span></Label>
               <SearchableSelect
                 value={shiftForm.siteId}
-                onValueChange={(val) => { setRatesManual(false); setShiftForm((f) => ({ ...f, siteId: val })); }}
+                onValueChange={(val) => {
+                  setRatesManual(false);
+                  const mins = siteBreakMinutes(sites, val);
+                  setShiftForm((f) => ({ ...f, siteId: val, breakMinutes: mins > 0 ? String(mins) : "" }));
+                }}
                 options={sites.map((site) => ({ value: String(site.id), label: site.name }))}
                 placeholder="Select a site"
                 searchPlaceholder="Search sites…"
@@ -1745,6 +1782,34 @@ export default function SchedulingPage() {
               </div>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="shift-holiday-hours">Holiday hours</Label>
+              <Input
+                id="shift-holiday-hours"
+                data-testid="input-shift-holiday-hours"
+                type="number"
+                min="0"
+                step="0.25"
+                value={shiftForm.holidayHours}
+                onChange={(e) => setShiftForm((f) => ({ ...f, holidayHours: e.target.value }))}
+                placeholder="0"
+              />
+              <p className="text-[11px] text-muted-foreground">Extra paid hours on top of the shift length. Leave blank for none.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shift-break-minutes">Break deduction (minutes)</Label>
+              <Input
+                id="shift-break-minutes"
+                data-testid="input-shift-break-minutes"
+                type="number"
+                min="0"
+                step="1"
+                value={shiftForm.breakMinutes}
+                onChange={(e) => setShiftForm((f) => ({ ...f, breakMinutes: e.target.value }))}
+                placeholder="0"
+              />
+              <p className="text-[11px] text-muted-foreground">Unpaid break from this site. It is taken off the paid hours.</p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="shift-notes">Notes</Label>
               <Textarea
                 id="shift-notes"
@@ -1802,6 +1867,14 @@ export default function SchedulingPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Time</p>
                     <p className="font-medium" data-testid="text-detail-time">{detailShift.startTime} - {detailShift.endTime}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Holiday hours</p>
+                    <p className="font-medium" data-testid="text-detail-holiday-hours">{Number(detailShift.holidayHours) > 0 ? Number(detailShift.holidayHours) : "0"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Break deduction</p>
+                    <p className="font-medium" data-testid="text-detail-break">{(detailShift.breakMinutes || 0) > 0 ? `${detailShift.breakMinutes} min` : "None"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Site</p>
@@ -1873,7 +1946,10 @@ export default function SchedulingPage() {
               <Label>Site <span className="text-red-500">*</span></Label>
               <SearchableSelect
                 value={editForm.siteId}
-                onValueChange={(val) => setEditForm(f => ({ ...f, siteId: val }))}
+                onValueChange={(val) => {
+                  const mins = siteBreakMinutes(sites, val);
+                  setEditForm((f) => ({ ...f, siteId: val, breakMinutes: mins > 0 ? String(mins) : "" }));
+                }}
                 options={sites.map((site) => ({ value: String(site.id), label: site.name }))}
                 placeholder="Select a site"
                 searchPlaceholder="Search sites…"
@@ -1927,6 +2003,33 @@ export default function SchedulingPage() {
             <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea data-testid="input-edit-notes" value={editForm.notes} onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-holiday-hours">Holiday hours</Label>
+              <Input
+                id="edit-holiday-hours"
+                data-testid="input-edit-holiday-hours"
+                type="number"
+                min="0"
+                step="0.25"
+                value={editForm.holidayHours}
+                onChange={(e) => setEditForm((f) => ({ ...f, holidayHours: e.target.value }))}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-break-minutes">Break deduction (minutes)</Label>
+              <Input
+                id="edit-break-minutes"
+                data-testid="input-edit-break-minutes"
+                type="number"
+                min="0"
+                step="1"
+                value={editForm.breakMinutes}
+                onChange={(e) => setEditForm((f) => ({ ...f, breakMinutes: e.target.value }))}
+                placeholder="0"
+              />
+              <p className="text-[11px] text-muted-foreground">Comes from the site. Changing the site updates this.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

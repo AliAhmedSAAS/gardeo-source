@@ -701,6 +701,8 @@ export const sites = pgTable("sites", {
   notes: text("notes"),
   shiftPatterns: jsonb("shift_patterns"),
   geofenceRadiusMetres: integer("geofence_radius_metres"),
+  /** Unpaid break taken off every shift at this site, in minutes. */
+  breakDeductionMinutes: integer("break_deduction_minutes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_sites_tenant_id").on(table.tenantId),
@@ -832,7 +834,11 @@ export const shifts = pgTable("shifts", {
   /** PANL: expense adjustment on the shift (±) */
   expense: numeric("expense", { precision: 12, scale: 2 }).default("0"),
   holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  /** Chargeable late hours after book-on grace (positive; subtracted from paid wages) */
+  lateHours: numeric("late_hours", { precision: 10, scale: 2 }).default("0"),
   deductionHours: numeric("deduction_hours", { precision: 10, scale: 2 }).default("0"),
+  /** Payroll self-employed gap (£): hours × (PAYE 12.71 − book rate), reusable across screens */
+  deductionAmount: numeric("deduction_amount", { precision: 12, scale: 2 }).default("0"),
   /** When set, used instead of calculated duty hours for P&L */
   hoursOverride: numeric("hours_override", { precision: 10, scale: 2 }),
   createdBy: varchar("created_by").references(() => users.id),
@@ -1354,6 +1360,7 @@ export const payrollAppliedLines = pgTable("payroll_applied_lines", {
   shiftId: integer("shift_id").references(() => shifts.id).notNull(),
   hours: numeric("hours", { precision: 10, scale: 2 }).notNull(),
   holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  lateHours: numeric("late_hours", { precision: 10, scale: 2 }).default("0"),
   rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
   expense: numeric("expense", { precision: 12, scale: 2 }).default("0"),
   wages: numeric("wages", { precision: 12, scale: 2 }).notNull(),
@@ -1410,6 +1417,7 @@ export const payrollBillLines = pgTable("payroll_bill_lines", {
   shiftId: integer("shift_id").references(() => shifts.id).notNull(),
   hours: numeric("hours", { precision: 10, scale: 2 }).notNull(),
   holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
+  lateHours: numeric("late_hours", { precision: 10, scale: 2 }).default("0"),
   rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
   wages: numeric("wages", { precision: 12, scale: 2 }).notNull(),
 }, (table) => [

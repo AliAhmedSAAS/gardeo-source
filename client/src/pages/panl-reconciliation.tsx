@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Download, FileText, PoundSterling, Search, RefreshCw } from "lucide-react";
+import { Loader2, Download, FileText, PoundSterling, Search, RefreshCw, Filter, ChevronDown } from "lucide-react";
 
 type GroupBy = "account" | "customer" | "location" | "officer";
 
@@ -25,6 +27,11 @@ type ShiftRow = {
   locationName: string;
   accountName: string;
   hours: number;
+  breakMinutes?: number;
+  holidayHours?: number;
+  lateHours?: number;
+  lateMinutes?: number;
+  deductionHours?: number;
   payRate: number;
   gWages: number;
   expense: number;
@@ -34,6 +41,55 @@ type ShiftRow = {
   pnl: number;
   isLoss: boolean;
 };
+
+function PanlNumInput({
+  value,
+  onSave,
+  disabled,
+  step = "0.01",
+  min = "0",
+  className,
+}: {
+  value: number | null | undefined;
+  onSave: (next: number) => void;
+  disabled?: boolean;
+  step?: string;
+  min?: string;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+  useEffect(() => {
+    setDraft(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+  }, [value]);
+
+  const commit = () => {
+    if (disabled) return;
+    const trimmed = draft.trim();
+    const n = trimmed === "" ? 0 : Number(trimmed);
+    if (!Number.isFinite(n)) {
+      setDraft(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+      return;
+    }
+    if (Number(value) === n) return;
+    onSave(n);
+  };
+
+  return (
+    <Input
+      type="number"
+      step={step}
+      min={min}
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      className={`h-7 w-[4.25rem] px-1 text-right text-xs tabular-nums ${className || ""}`}
+    />
+  );
+}
 
 type GridRow =
   | { kind: "shift"; rowNo: number; shift: ShiftRow }
@@ -87,8 +143,10 @@ export default function PanlReconciliationPage() {
   const [customerId, setCustomerId] = useState("all");
   const [officerId, setOfficerId] = useState("all");
   const [locationId, setLocationId] = useState("all");
+  const [supplierId, setSupplierId] = useState("all");
   const [showPaid, setShowPaid] = useState(false);
   const [showZeroRates, setShowZeroRates] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [viewToken, setViewToken] = useState(0);
   const [hasViewed, setHasViewed] = useState(false);
 
@@ -98,6 +156,10 @@ export default function PanlReconciliationPage() {
   >(new Map());
 
   const [bulkHours, setBulkHours] = useState("");
+  const [bulkBreak, setBulkBreak] = useState("");
+  const [bulkHoliday, setBulkHoliday] = useState("");
+  const [bulkLateMin, setBulkLateMin] = useState("");
+  const [bulkDeduction, setBulkDeduction] = useState("");
   const [bulkPay, setBulkPay] = useState("");
   const [bulkExpense, setBulkExpense] = useState("");
   const [bulkSell, setBulkSell] = useState("");
@@ -125,10 +187,11 @@ export default function PanlReconciliationPage() {
     if (customerId !== "all") p.set("customerId", customerId);
     if (officerId !== "all") p.set("officerId", officerId);
     if (locationId !== "all") p.set("locationId", locationId);
+    if (supplierId !== "all") p.set("supplierId", supplierId);
     p.set("showPaid", showPaid ? "true" : "false");
     p.set("showZeroRates", showZeroRates ? "true" : "false");
     return p;
-  }, [appliedFrom, appliedTo, groupBy, account, branch, customerId, officerId, locationId, showPaid, showZeroRates]);
+  }, [appliedFrom, appliedTo, groupBy, account, branch, customerId, officerId, locationId, supplierId, showPaid, showZeroRates]);
 
   const { data: options } = useQuery<{
     accounts: string[];
@@ -136,6 +199,7 @@ export default function PanlReconciliationPage() {
     customers: Array<{ id: number; name: string }>;
     officers: Array<{ id: number; name: string }>;
     locations: Array<{ id: number; name: string; customerId: number | null }>;
+    suppliers: Array<{ id: number; name: string }>;
     dutyTypes: Array<{ id: number; name: string }>;
   }>({
     queryKey: ["/api/panl/filter-options", appliedFrom, appliedTo],
@@ -171,6 +235,23 @@ export default function PanlReconciliationPage() {
     setSelectedIds(new Set());
     setViewToken((t) => t + 1);
     setHasViewed(true);
+  };
+
+  const hasAdvancedFilters =
+    account !== "all" ||
+    branch !== "all" ||
+    customerId !== "all" ||
+    officerId !== "all" ||
+    locationId !== "all" ||
+    supplierId !== "all";
+
+  const clearAdvancedFilters = () => {
+    setAccount("all");
+    setBranch("all");
+    setCustomerId("all");
+    setOfficerId("all");
+    setLocationId("all");
+    setSupplierId("all");
   };
 
   const rows = data?.rows || [];
@@ -228,6 +309,10 @@ export default function PanlReconciliationPage() {
     onSuccess: (result) => {
       toast({ title: "Updated", description: `${result.updated} shift(s) updated.` });
       setBulkHours("");
+      setBulkBreak("");
+      setBulkHoliday("");
+      setBulkLateMin("");
+      setBulkDeduction("");
       setBulkPay("");
       setBulkExpense("");
       setBulkSell("");
@@ -237,6 +322,21 @@ export default function PanlReconciliationPage() {
     onError: (err: any) => toast({ title: "Bulk edit failed", description: err.message, variant: "destructive" }),
   });
 
+  const cellMutation = useMutation({
+    mutationFn: async (payload: { shiftId: number; field: string; value: number }) => {
+      const res = await apiRequest("POST", "/api/panl/bulk-edit", {
+        shiftIds: [payload.shiftId],
+        field: payload.field,
+        value: payload.value,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/panl"] });
+    },
+    onError: (err: any) => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
+  });
+
   const applyBulk = (field: string, value: string) => {
     if (!value.trim()) return;
     if (selectedIds.size === 0) {
@@ -244,6 +344,10 @@ export default function PanlReconciliationPage() {
       return;
     }
     bulkMutation.mutate({ field, value });
+  };
+
+  const saveCell = (shiftId: number, field: string, value: number) => {
+    cellMutation.mutate({ shiftId, field, value });
   };
 
   const chargeCustomerId = useMemo(() => {
@@ -351,7 +455,7 @@ export default function PanlReconciliationPage() {
               Profit &amp; Loss Reconciliation
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Confirmed shifts only. Load with View — filters reload the grid.
+              Confirmed shifts only. Edit Break / Holiday / Arrival / Deduction / rates inline, or bulk via header inputs (select rows first).
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -378,22 +482,67 @@ export default function PanlReconciliationPage() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Controls</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base">Filters</CardTitle>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters((v) => !v)}
+                  data-testid="button-panl-advanced-filters"
+                >
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 mr-1 transition-transform ${showAdvancedFilters || hasAdvancedFilters ? "rotate-180" : ""}`}
+                  />
+                  Advanced
+                  {hasAdvancedFilters && (
+                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                      On
+                    </Badge>
+                  )}
+                </Button>
+                {hasAdvancedFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAdvancedFilters}
+                    data-testid="button-panl-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
+          <CardContent className="space-y-3">
+            <div className="flex items-end gap-3 flex-wrap">
               <div>
-                <Label>Due from</Label>
-                <Input type="date" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} />
+                <Label className="text-xs text-muted-foreground mb-1 block">Due from</Label>
+                <Input
+                  type="date"
+                  value={dueFrom}
+                  onChange={(e) => setDueFrom(e.target.value)}
+                  className="w-40"
+                  data-testid="input-panl-due-from"
+                />
               </div>
               <div>
-                <Label>Due to</Label>
-                <Input type="date" value={dueTo} onChange={(e) => setDueTo(e.target.value)} />
+                <Label className="text-xs text-muted-foreground mb-1 block">Due to</Label>
+                <Input
+                  type="date"
+                  value={dueTo}
+                  onChange={(e) => setDueTo(e.target.value)}
+                  className="w-40"
+                  data-testid="input-panl-due-to"
+                />
               </div>
               <div>
-                <Label>Group by</Label>
+                <Label className="text-xs text-muted-foreground mb-1 block">Group by</Label>
                 <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-40" data-testid="select-panl-group-by">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -404,101 +553,15 @@ export default function PanlReconciliationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Select account</Label>
-                <Select value={account} onValueChange={setAccount}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All accounts</SelectItem>
-                    {(options?.accounts || []).map((a) => (
-                      <SelectItem key={a} value={a}>
-                        {a}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2 pb-2">
+              <div className="flex items-center gap-2 h-9 pb-0.5">
                 <Switch checked={showPaid} onCheckedChange={setShowPaid} id="show-paid" />
-                <Label htmlFor="show-paid">Show Paid</Label>
+                <Label htmlFor="show-paid" className="text-sm whitespace-nowrap">Show Paid</Label>
               </div>
-              <div className="flex items-center gap-2 pb-2">
+              <div className="flex items-center gap-2 h-9 pb-0.5">
                 <Switch checked={showZeroRates} onCheckedChange={setShowZeroRates} id="show-zero" />
-                <Label htmlFor="show-zero">Show Zero Rates</Label>
+                <Label htmlFor="show-zero" className="text-sm whitespace-nowrap">Show Zero Rates</Label>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-              <div>
-                <Label>Branch</Label>
-                <Select value={branch} onValueChange={setBranch}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {(options?.branches || []).map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Customer</Label>
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {(options?.customers || []).map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Officer</Label>
-                <Select value={officerId} onValueChange={setOfficerId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {(options?.officers || []).map((o) => (
-                      <SelectItem key={o.id} value={String(o.id)}>
-                        {o.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Location</Label>
-                <Select value={locationId} onValueChange={setLocationId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {(options?.locations || []).map((l) => (
-                      <SelectItem key={l.id} value={String(l.id)}>
-                        {l.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <Button onClick={reload} disabled={isFetching}>
+              <Button onClick={reload} disabled={isFetching} data-testid="button-panl-view">
                 {isFetching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
                 View
               </Button>
@@ -507,10 +570,100 @@ export default function PanlReconciliationPage() {
                   <RefreshCw className="w-4 h-4 mr-1" /> Refresh
                 </Button>
               )}
-              <span className="text-xs text-muted-foreground">
-                Bulk edit: tick rows, type in a header box, press Enter
-              </span>
             </div>
+
+            {(showAdvancedFilters || hasAdvancedFilters) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-2 border-t">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Account</Label>
+                  <SearchableSelect
+                    value={account}
+                    onValueChange={setAccount}
+                    options={(options?.accounts || []).map((a) => ({ value: a, label: a }))}
+                    noneValue="all"
+                    noneLabel="All accounts"
+                    placeholder="All accounts"
+                    searchPlaceholder="Search accounts…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-account"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Branch</Label>
+                  <SearchableSelect
+                    value={branch}
+                    onValueChange={setBranch}
+                    options={(options?.branches || []).map((b) => ({ value: b, label: b }))}
+                    noneValue="all"
+                    noneLabel="All branches"
+                    placeholder="All branches"
+                    searchPlaceholder="Search branches…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-branch"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Customer</Label>
+                  <SearchableSelect
+                    value={customerId}
+                    onValueChange={setCustomerId}
+                    options={(options?.customers || []).map((c) => ({ value: String(c.id), label: c.name }))}
+                    noneValue="all"
+                    noneLabel="All customers"
+                    placeholder="All customers"
+                    searchPlaceholder="Search customers…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-customer"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Officer</Label>
+                  <SearchableSelect
+                    value={officerId}
+                    onValueChange={setOfficerId}
+                    options={(options?.officers || []).map((o) => ({ value: String(o.id), label: o.name }))}
+                    noneValue="all"
+                    noneLabel="All officers"
+                    placeholder="All officers"
+                    searchPlaceholder="Search officers…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-officer"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Location</Label>
+                  <SearchableSelect
+                    value={locationId}
+                    onValueChange={setLocationId}
+                    options={(options?.locations || []).map((l) => ({ value: String(l.id), label: l.name }))}
+                    noneValue="all"
+                    noneLabel="All locations"
+                    placeholder="All locations"
+                    searchPlaceholder="Search locations…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-location"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Supplier</Label>
+                  <SearchableSelect
+                    value={supplierId}
+                    onValueChange={setSupplierId}
+                    options={(options?.suppliers || []).map((s) => ({ value: String(s.id), label: s.name }))}
+                    noneValue="all"
+                    noneLabel="All suppliers"
+                    placeholder="All suppliers"
+                    searchPlaceholder="Search suppliers…"
+                    triggerClassName="w-full"
+                    data-testid="select-panl-supplier"
+                  />
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Bulk edit: tick rows, type in a column header box, press Enter. Or edit cells inline.
+            </p>
           </CardContent>
         </Card>
 
@@ -524,7 +677,7 @@ export default function PanlReconciliationPage() {
           <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
               <div className="overflow-auto flex-1 min-h-0">
-                <table className="w-full text-sm border-collapse min-w-[1100px]">
+                <table className="w-full text-sm border-collapse min-w-[1500px]">
                   <thead className="sticky top-0 z-10 bg-background border-b shadow-sm">
                     <tr className="text-left">
                       <th className="p-2 w-10">
@@ -542,6 +695,47 @@ export default function PanlReconciliationPage() {
                           value={bulkHours}
                           onChange={(e) => setBulkHours(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && applyBulk("hours", bulkHours)}
+                          placeholder="…"
+                        />
+                      </th>
+                      <th className="p-2 text-right">
+                        <div>Break</div>
+                        <Input
+                          className="h-7 mt-1 text-right"
+                          value={bulkBreak}
+                          onChange={(e) => setBulkBreak(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("breakMinutes", bulkBreak)}
+                          placeholder="m"
+                        />
+                      </th>
+                      <th className="p-2 text-right">
+                        <div>Holiday</div>
+                        <Input
+                          className="h-7 mt-1 text-right"
+                          value={bulkHoliday}
+                          onChange={(e) => setBulkHoliday(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("holidayHours", bulkHoliday)}
+                          placeholder="…"
+                        />
+                      </th>
+                      <th className="p-2 text-right">
+                        <div>Arrival</div>
+                        <Input
+                          className="h-7 mt-1 text-right"
+                          value={bulkLateMin}
+                          onChange={(e) => setBulkLateMin(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("lateMinutes", bulkLateMin)}
+                          placeholder="min"
+                        />
+                      </th>
+                      <th className="p-2 text-right">Late hrs</th>
+                      <th className="p-2 text-right">
+                        <div>Deduction</div>
+                        <Input
+                          className="h-7 mt-1 text-right"
+                          value={bulkDeduction}
+                          onChange={(e) => setBulkDeduction(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("deductionHours", bulkDeduction)}
                           placeholder="…"
                         />
                       </th>
@@ -584,14 +778,14 @@ export default function PanlReconciliationPage() {
                   <tbody>
                     {isFetching && rows.length === 0 ? (
                       <tr>
-                        <td colSpan={14} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                           Loading…
                         </td>
                       </tr>
                     ) : rows.length === 0 ? (
                       <tr>
-                        <td colSpan={14} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
                           No confirmed shifts match these filters.
                         </td>
                       </tr>
@@ -623,6 +817,7 @@ export default function PanlReconciliationPage() {
                                 Subtotal — {row.label}
                               </td>
                               <td className="p-2 text-right">{fmt(row.hours)}</td>
+                              <td className="p-2" colSpan={5} />
                               <td className="p-2" />
                               <td className="p-2 text-right">{gbp(row.gWages)}</td>
                               <td className="p-2 text-right">{gbp(row.expense)}</td>
@@ -636,6 +831,7 @@ export default function PanlReconciliationPage() {
                           );
                         }
                         const s = row.shift;
+                        const busy = cellMutation.isPending || bulkMutation.isPending;
                         return (
                           <tr
                             key={s.id}
@@ -652,12 +848,77 @@ export default function PanlReconciliationPage() {
                             <td className="p-2">{s.customerName}</td>
                             <td className="p-2">{s.officerName}</td>
                             <td className="p-2">{s.locationName}</td>
-                            <td className="p-2 text-right">{fmt(s.hours)}</td>
-                            <td className="p-2 text-right">{fmt(s.payRate)}</td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.hours}
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "hours", n)}
+                              />
+                            </td>
+                            <td className="p-2 text-right">
+                              <div className="flex items-center justify-end gap-0.5">
+                                <PanlNumInput
+                                  value={s.breakMinutes ?? 0}
+                                  step="1"
+                                  disabled={busy}
+                                  onSave={(n) => saveCell(s.id, "breakMinutes", n)}
+                                />
+                                <span className="text-[10px] text-muted-foreground">m</span>
+                              </div>
+                            </td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.holidayHours ?? 0}
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "holidayHours", n)}
+                              />
+                            </td>
+                            <td className="p-2 text-right">
+                              <div className="flex items-center justify-end gap-0.5">
+                                <PanlNumInput
+                                  value={s.lateMinutes ?? 0}
+                                  step="1"
+                                  disabled={busy}
+                                  onSave={(n) => saveCell(s.id, "lateMinutes", n)}
+                                />
+                                <span className="text-[10px] text-muted-foreground">min</span>
+                              </div>
+                            </td>
+                            <td className={`p-2 text-right tabular-nums ${(s.lateHours ?? 0) > 0 ? "text-amber-600" : ""}`}>
+                              {fmt(s.lateHours ?? 0)}
+                            </td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.deductionHours ?? 0}
+                                min="-999"
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "deductionHours", n)}
+                              />
+                            </td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.payRate}
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "payRate", n)}
+                              />
+                            </td>
                             <td className="p-2 text-right">{gbp(s.gWages)}</td>
-                            <td className="p-2 text-right">{gbp(s.expense)}</td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.expense}
+                                min="-99999"
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "expense", n)}
+                              />
+                            </td>
                             <td className="p-2 text-right">{gbp(s.nWages)}</td>
-                            <td className="p-2 text-right">{fmt(s.sellRate)}</td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.sellRate}
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "sellRate", n)}
+                              />
+                            </td>
                             <td className="p-2 text-right">{gbp(s.selling)}</td>
                             <td className={`p-2 text-right font-medium ${s.isLoss ? "text-red-600" : ""}`}>
                               {gbp(s.pnl)}
@@ -673,6 +934,7 @@ export default function PanlReconciliationPage() {
                         Grand total ({totals.count} shifts)
                       </td>
                       <td className="p-2 text-right">{fmt(totals.hours)}</td>
+                      <td className="p-2" colSpan={5} />
                       <td className="p-2" />
                       <td className="p-2 text-right">{gbp(totals.gWages)}</td>
                       <td className="p-2 text-right">{gbp(totals.expense)}</td>

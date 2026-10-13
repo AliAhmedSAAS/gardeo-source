@@ -1422,6 +1422,7 @@ export default function SelfBillingPage() {
                           <th className="p-3 text-left font-medium">Start</th>
                           <th className="p-3 text-left font-medium">End</th>
                           <th className="p-3 text-right font-medium">Hours</th>
+                          <th className="p-3 text-right font-medium">Break</th>
                           <th className="p-3 text-right font-medium">Rate</th>
                           <th className="p-3 text-right font-medium">Amount</th>
                         </tr>
@@ -1446,6 +1447,9 @@ export default function SelfBillingPage() {
                             <td className="p-3 whitespace-nowrap">{shift.startTime}</td>
                             <td className="p-3 whitespace-nowrap">{shift.endTime}</td>
                             <td className="p-3 text-right whitespace-nowrap">{shift.hours.toFixed(2)}</td>
+                            <td className="p-3 text-right whitespace-nowrap text-muted-foreground">
+                              {(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}
+                            </td>
                             <td className="p-3 text-right whitespace-nowrap">{formatCurrency(shift.rate)}</td>
                             <td className="p-3 text-right whitespace-nowrap font-medium">{formatCurrency(shift.amount)}</td>
                           </tr>
@@ -1459,18 +1463,19 @@ export default function SelfBillingPage() {
                             </td>
                             <td className="p-3 text-right font-semibold" data-testid="text-summary-hours">{selectedSummary.totalHours.toFixed(2)}</td>
                             <td className="p-3 text-right"></td>
+                            <td className="p-3 text-right"></td>
                             <td className="p-3 text-right font-semibold" data-testid="text-summary-subtotal">{formatCurrency(selectedSummary.subtotal)}</td>
                           </tr>
                           {previewData.summary.vatRate > 0 && (
                             <tr className="bg-muted/30">
-                              <td colSpan={11} className="p-3 text-right text-sm text-muted-foreground">
+                              <td colSpan={9} className="p-3 text-right text-sm text-muted-foreground">
                                 VAT ({previewData.summary.vatRate}%)
                               </td>
                               <td className="p-3 text-right font-medium" data-testid="text-summary-vat">{formatCurrency(selectedSummary.vatAmount)}</td>
                             </tr>
                           )}
                           <tr className="bg-muted/50 border-t">
-                            <td colSpan={11} className="p-3 text-right font-semibold">Total</td>
+                            <td colSpan={9} className="p-3 text-right font-semibold">Total</td>
                             <td className="p-3 text-right font-bold text-base" data-testid="text-summary-total">{formatCurrency(selectedSummary.totalAmount)}</td>
                           </tr>
                         </tfoot>

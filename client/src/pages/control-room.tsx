@@ -2020,8 +2020,9 @@ export default function ControlRoomPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Break (minutes)</Label>
-                <Input type="number" value={editForm.breakMinutes} onChange={(e) => setEditForm((p) => ({ ...p, breakMinutes: e.target.value }))} data-testid="input-edit-break" />
+                <Label>Break deduction (minutes)</Label>
+                <Input type="number" min={0} value={editForm.breakMinutes} onChange={(e) => setEditForm((p) => ({ ...p, breakMinutes: e.target.value }))} data-testid="input-edit-break" />
+                <p className="text-[11px] text-muted-foreground">Unpaid minutes taken off this shift. New shifts start from the site’s break deduction.</p>
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>

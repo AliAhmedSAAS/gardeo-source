@@ -243,7 +243,7 @@ export default function PayrollPendingPaymentsPage() {
     <div className="p-6 space-y-4" data-testid="payroll-pending-page">
       <div>
         <h1 className="text-2xl font-bold">Pending Payment</h1>
-        <p className="text-sm text-muted-foreground">Unpaid queue, Mark Paid, remittance, SMS/email, CSV, and payslips.</p>
+        <p className="text-sm text-muted-foreground">Unpaid queue, Mark Paid, remittance, SMS/email, CSV, GFM new starters CSV, and payslips.</p>
       </div>
 
       <div className="flex flex-wrap gap-2 items-end">
@@ -317,6 +317,43 @@ export default function PayrollPendingPaymentsPage() {
             <Input className="w-40" placeholder="Remarks update" value={remarksUpdate} onChange={(e) => setRemarksUpdate(e.target.value)} />
             <Button variant="outline" disabled={selected.size === 0} onClick={() => remarksMutation.mutate()}>Remarks update</Button>
             <Button variant="outline" onClick={() => window.open(`/api/payroll-control/queue.csv?paid=${paid}`, "_blank")}><Download className="w-4 h-4 mr-1" />CSV</Button>
+            <Button
+              variant="outline"
+              title={selected.size > 0 ? "Export selected rows as GFM PAYE new starters CSV" : "Export unpaid queue as GFM PAYE new starters CSV"}
+              onClick={async () => {
+                try {
+                  const params = new URLSearchParams({ paid: String(paid) });
+                  if (selected.size > 0) params.set("billIds", Array.from(selected).join(","));
+                  const res = await fetch(`/api/payroll-control/queue/new-starters.csv?${params}`, {
+                    credentials: "include",
+                  });
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.message || "Download failed");
+                  }
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `GFM-Paye-new-starters-${new Date().toISOString().slice(0, 10)}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+                  toast({
+                    title: "New starters CSV downloaded",
+                    description: selected.size > 0
+                      ? `${selected.size} selected bill(s)`
+                      : "All officers on the current queue",
+                  });
+                } catch (err: any) {
+                  toast({ title: "New starters CSV failed", description: err.message, variant: "destructive" });
+                }
+              }}
+              data-testid="btn-new-starters-csv"
+            >
+              <Download className="w-4 h-4 mr-1" />New starters CSV
+            </Button>
             <Button
               disabled={selected.size === 0 || markPaidMutation.isPending || paid}
               onClick={() => markPaidMutation.mutate(payItems(Array.from(selected)))}
@@ -506,7 +543,9 @@ export default function PayrollPendingPaymentsPage() {
                 <th className="p-1">In</th>
                 <th className="p-1">Out</th>
                 <th className="p-1">Hours</th>
+                <th className="p-1">Break</th>
                 <th className="p-1">Holiday</th>
+                <th className="p-1">Late</th>
                 <th className="p-1">Rate</th>
                 <th className="p-1">Wages</th>
                 <th className="p-1">Deduction</th>
@@ -529,7 +568,9 @@ export default function PayrollPendingPaymentsPage() {
                     <td className="p-1">{l.start_time}</td>
                     <td className="p-1">{l.end_time}</td>
                     <td className="p-1">{l.hours}</td>
+                    <td className="p-1">{(l.break_minutes || 0) > 0 ? `${l.break_minutes}m` : "—"}</td>
                     <td className="p-1">{l.holiday_hours}</td>
+                    <td className={`p-1 ${Number(l.late_hours) > 0 ? "text-amber-600" : ""}`}>{l.late_hours ?? 0}</td>
                     <td className="p-1">{gbp(pay.rate)}</td>
                     <td className="p-1">{gbp(pay.wages)}</td>
                     <td className={`p-1 ${pay.deduction > 0 ? "text-red-600" : ""}`}>

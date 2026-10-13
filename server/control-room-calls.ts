@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { sendViaTenantEmailSettings } from "./tenant-email-settings";
 import { parseGpsCoords, resolveShiftGeofence, type GeofenceResult } from "./geofence";
+import { calculateLateDeduction, shiftDateTime } from "@shared/lateDeduction";
 
 const PRECHECK_VISIBLE_MINUTES_BEFORE = 90;
 const BOOK_ON_VISIBLE_MINUTES_BEFORE = 15;
@@ -439,13 +440,11 @@ export async function takeBookOn(params: {
   const timeStr = params.bookOnTime!.trim();
   const bookOnAt = parseTimeOnDate(dateStr, timeStr.length <= 5 ? timeStr : timeStr.slice(11, 16));
 
-  let lateMinutes = 0;
-  if (shift.startTime) {
-    const scheduledStart = parseTimeOnDate(dateStr, shift.startTime);
-    if (bookOnAt > scheduledStart) {
-      lateMinutes = Math.ceil((bookOnAt.getTime() - scheduledStart.getTime()) / 60000);
-    }
-  }
+  const late = calculateLateDeduction(
+    shiftDateTime(dateStr, shift.startTime) || (shift.startTime ? parseTimeOnDate(dateStr, shift.startTime) : null),
+    bookOnAt,
+  );
+  const lateMinutes = late.lateMinutes;
 
   const employee = shift.employeeId ? await storage.getEmployee(shift.employeeId) : null;
   const empUser = employee?.userId ? await storage.getUser(employee.userId) : null;
@@ -491,6 +490,7 @@ export async function takeBookOn(params: {
     bookedOnBy: params.userId,
     checkInTime: bookOnAt,
     lateMinutes,
+    lateHours: late.lateHours,
     bookOnCallData,
   } as any);
 

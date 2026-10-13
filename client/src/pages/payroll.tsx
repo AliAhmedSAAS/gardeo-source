@@ -490,6 +490,7 @@ export default function PayrollPage() {
                       <th className="p-3 font-medium text-muted-foreground">Shift Date</th>
                       <th className="p-3 font-medium text-muted-foreground">Site</th>
                       <th className="p-3 font-medium text-muted-foreground text-right">Hours</th>
+                      <th className="p-3 font-medium text-muted-foreground text-right">Break</th>
                       <th className="p-3 font-medium text-muted-foreground text-right">Rate</th>
                       <th className="p-3 font-medium text-muted-foreground text-right">Gross</th>
                       <th className="p-3 font-medium text-muted-foreground">Status</th>
@@ -510,6 +511,9 @@ export default function PayrollPage() {
                         <td className="p-3 text-muted-foreground">{formatDate(s.date)}</td>
                         <td className="p-3 text-muted-foreground">{s.siteName}</td>
                         <td className="p-3 text-right">{s.hoursWorked.toFixed(1)}h</td>
+                        <td className="p-3 text-right text-muted-foreground">
+                          {(s.breakMinutes || 0) > 0 ? `${s.breakMinutes}m` : "—"}
+                        </td>
                         <td className="p-3 text-right text-muted-foreground">{formatCurrency(s.hourlyRate)}</td>
                         <td className="p-3 text-right font-medium" data-testid={`text-gross-${s.id}`}>{formatCurrency(s.grossAmount)}</td>
                         <td className="p-3">

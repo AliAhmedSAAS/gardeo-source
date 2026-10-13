@@ -347,3 +347,43 @@ export function buildPayrollDatasheetCsv(rows: Record<PayrollDatasheetHeader, st
   ];
   return `\uFEFF${lines.join("\r\n")}`;
 }
+
+/**
+ * Short GFM PAYE / Sage "new starters" column set
+ * (matches "GFM Paye new starters-….csv" exports).
+ */
+export const PAYROLL_NEW_STARTERS_HEADERS = [
+  "Employee Reference",
+  "Title",
+  "Initial",
+  "Forename",
+  "Surname",
+  "Address 1",
+  "Address 2",
+  "Address 3",
+  "Address 4",
+  "Address 5",
+  "Post Code",
+  "Telephone Number",
+  "Mobile Number",
+  "E-mail Address",
+  "Gender",
+  "Marital Status",
+  "Previous Surname",
+  "Date of Birth",
+  "NI Number",
+] as const;
+
+export type PayrollNewStartersHeader = (typeof PAYROLL_NEW_STARTERS_HEADERS)[number];
+
+export function buildPayrollNewStartersCsv(
+  rows: Record<PayrollDatasheetHeader, string>[],
+): string {
+  const lines = [
+    PAYROLL_NEW_STARTERS_HEADERS.map(escapePayrollDatasheetCsv).join(","),
+    ...rows.map((r) =>
+      PAYROLL_NEW_STARTERS_HEADERS.map((h) => escapePayrollDatasheetCsv(r[h] ?? "")).join(","),
+    ),
+  ];
+  return `\uFEFF${lines.join("\r\n")}`;
+}

@@ -25,6 +25,7 @@ import {
 import {
   buildPayrollDatasheetCsv,
   buildPayrollDatasheetRow,
+  buildPayrollNewStartersCsv,
 } from "@shared/payrollDatasheet";
 import {
   applyRulesForOfficer,
@@ -554,7 +555,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         }
         const { rows } = await pool.query(
           `SELECT s.id, to_char(s.date, 'YYYY-MM-DD') AS date, s.start_time, s.end_time, s.title, s.status, s.break_minutes,
-                  st.name AS site_name, l.hours, l.rate, l.wages, l.expense, l.bucket, l.billed
+                  st.name AS site_name, l.hours, l.holiday_hours, l.late_hours, l.rate, l.wages, l.expense, l.bucket, l.billed
            FROM payroll_applied_lines l
            JOIN shifts s ON s.id = l.shift_id
            LEFT JOIN sites st ON st.id = s.site_id
@@ -569,7 +570,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       // Details: all verified/completed shifts in the month (SQL date math, no locale strings).
       const { rows } = await pool.query(
         `SELECT s.id, to_char(s.date, 'YYYY-MM-DD') AS date, s.start_time, s.end_time, s.title, s.status, s.break_minutes,
-                st.name AS site_name, l.hours, l.rate, l.wages, l.expense, l.bucket, l.billed
+                st.name AS site_name, l.hours, l.holiday_hours, l.late_hours, l.rate, l.wages, l.expense, l.bucket, l.billed
          FROM shifts s
          LEFT JOIN sites st ON st.id = s.site_id
          LEFT JOIN payroll_applied_lines l ON l.shift_id = s.id AND l.month_row_id = $1
@@ -942,6 +943,87 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="payroll-queue.csv"`);
       res.send(lines.join("\n"));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  /** GFM PAYE new-starters CSV (short Sage columns) for officers on the payment queue. */
+  app.get("/api/payroll-control/queue/new-starters.csv", requireRole(...MONEY_ROLES), async (req, res) => {
+    try {
+      const ctx = await requireCustomPayroll(req, res);
+      if (!ctx) return;
+      if (!financeOnly(ctx.user, res)) return;
+
+      const paid = String(req.query.paid || "false") === "true";
+      const idsRaw = String(req.query.billIds || "").trim();
+      const billIds = idsRaw
+        ? idsRaw.split(",").map((x) => Number(x.trim())).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+
+      const params: any[] = [ctx.tenantId, paid ? "PAID" : "UNPAID"];
+      let billFilter = "";
+      if (billIds.length > 0) {
+        params.push(billIds);
+        billFilter = `AND b.id = ANY($${params.length}::int[])`;
+      }
+
+      const { rows } = await pool.query(
+        `SELECT DISTINCT ON (e.id)
+                e.id AS employee_id, e.employee_number, e.external_id,
+                e.date_of_birth, e.national_insurance, e.marital_status, e.gender,
+                e.address_line_1, e.address_line_2, e.city, e.county, e.postcode,
+                e.start_date, e.phone AS emp_phone, e.second_phone,
+                u.first_name, u.last_name, u.email, u.phone AS user_phone
+         FROM payroll_bills b
+         JOIN employees e ON e.id = b.employee_id
+         LEFT JOIN users u ON u.id = e.user_id
+         WHERE b.tenant_id = $1
+           AND b.status = $2
+           AND COALESCE(e.is_merged, false) = false
+           ${billFilter}
+         ORDER BY e.id, b.bill_date DESC, b.id DESC`,
+        params,
+      );
+
+      const sheetRows = rows.map((r: any) => {
+        const row = buildPayrollDatasheetRow({
+          employeeId: Number(r.employee_id),
+          employeeNumber: r.employee_number,
+          externalId: r.external_id,
+          firstName: r.first_name,
+          lastName: r.last_name,
+          addressLine1: r.address_line_1,
+          addressLine2: r.address_line_2,
+          city: r.city,
+          county: r.county,
+          postcode: r.postcode,
+          phone: r.emp_phone || r.user_phone,
+          mobile: r.second_phone || r.emp_phone || r.user_phone,
+          email: r.email,
+          gender: r.gender,
+          maritalStatus: r.marital_status,
+          dateOfBirth: r.date_of_birth,
+          nationalInsurance: r.national_insurance,
+          startDate: r.start_date,
+        });
+        // GFM new-starters template: county/city in Address 2; 3–5 blank
+        row["Address 2"] = String(r.county || r.city || "").trim();
+        row["Address 3"] = "";
+        row["Address 4"] = "";
+        row["Address 5"] = "";
+        row["Previous Surname"] = "";
+        return row;
+      });
+
+      const csv = buildPayrollNewStartersCsv(sheetRows);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="GFM-Paye-new-starters-${stamp}.csv"`,
+      );
+      res.send(csv);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

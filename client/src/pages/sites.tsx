@@ -46,6 +46,7 @@ type SiteRow = {
   siteCode: string | null;
   shiftPatterns: ShiftPattern[] | null;
   geofenceRadiusMetres: number | null;
+  breakDeductionMinutes: number | null;
 };
 
 type ClientOption = { id: number; company_name: string };
@@ -61,7 +62,7 @@ const emptyForm = {
   latitude: "", longitude: "", clientId: "",
   clientName: "", clientContact: "", clientEmail: "", clientPhone: "",
   managerName: "", managerEmail: "", bookOnEmail: "",
-  contractRef: "", notes: "", geofenceRadiusMetres: "",
+  contractRef: "", notes: "", geofenceRadiusMetres: "", breakDeductionMinutes: "0",
 };
 
 export default function SitesPage() {
@@ -118,6 +119,7 @@ export default function SitesPage() {
         managerName: data.managerName?.trim() || null,
         managerEmail: data.managerEmail?.trim() || null,
         bookOnEmail: data.bookOnEmail?.trim() || null,
+        breakDeductionMinutes: Math.max(0, parseInt(data.breakDeductionMinutes, 10) || 0),
       };
       const res = await apiRequest("POST", "/api/sites", payload);
       return res.json();
@@ -139,6 +141,7 @@ export default function SitesPage() {
         managerName: data.managerName?.trim() || null,
         managerEmail: data.managerEmail?.trim() || null,
         bookOnEmail: data.bookOnEmail?.trim() || null,
+        breakDeductionMinutes: Math.max(0, parseInt(data.breakDeductionMinutes, 10) || 0),
       };
       const res = await apiRequest("PATCH", `/api/sites/${id}`, payload);
       return res.json();
@@ -220,6 +223,7 @@ export default function SitesPage() {
       bookOnEmail: s.bookOnEmail || "",
       contractRef: s.contractRef || "", notes: s.notes || "",
       geofenceRadiusMetres: s.geofenceRadiusMetres != null ? String(s.geofenceRadiusMetres) : "",
+      breakDeductionMinutes: s.breakDeductionMinutes != null ? String(s.breakDeductionMinutes) : "0",
     });
     setShiftPatterns(s.shiftPatterns || []);
     setEditId(s.id);
@@ -313,6 +317,12 @@ export default function SitesPage() {
         <Label className="text-xs">Geofence Radius Override (metres)</Label>
         <Input type="number" min={50} max={5000} value={form.geofenceRadiusMetres} onChange={e => setForm(f => ({ ...f, geofenceRadiusMetres: e.target.value }))} placeholder="Leave blank to use tenant default" data-testid="input-site-geofence-radius" />
         <p className="text-[11px] text-muted-foreground">Optional. When set (50–5000m), this radius takes precedence over the tenant-wide default for check-in/out at this site.</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Break deduction (minutes)</Label>
+        <Input type="number" min={0} step={1} value={form.breakDeductionMinutes} onChange={e => setForm(f => ({ ...f, breakDeductionMinutes: e.target.value }))} placeholder="0" data-testid="input-site-break-deduction" />
+        <p className="text-[11px] text-muted-foreground">Unpaid break applied to shifts at this site. It is taken off paid hours in scheduling, payroll, and finance.</p>
       </div>
 
       <div className="space-y-1.5">

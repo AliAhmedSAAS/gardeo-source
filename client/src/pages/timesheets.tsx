@@ -235,6 +235,7 @@ export default function TimesheetsPage() {
                     <TableHead className="w-[100px] text-center">Book-On</TableHead>
                     <TableHead className="w-[100px] text-center">Book-Off</TableHead>
                     <TableHead className="w-[70px] text-right">Hours</TableHead>
+                    <TableHead className="w-[70px] text-right">Break</TableHead>
                     <TableHead className="w-[90px] text-center">Late</TableHead>
                     <TableHead className="min-w-[160px]">Coordinates</TableHead>
                   </TableRow>
@@ -242,7 +243,7 @@ export default function TimesheetsPage() {
                 <TableBody>
                   {data?.timesheets.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         No timesheet records found for the selected period
                       </TableCell>
                     </TableRow>
@@ -275,6 +276,9 @@ export default function TimesheetsPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs font-medium" data-testid={`text-hours-${row.id}`}>
                         {row.hoursWorked !== null ? row.hoursWorked.toFixed(2) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs" data-testid={`text-break-${row.id}`}>
+                        {(row.breakMinutes || 0) > 0 ? `${row.breakMinutes}m` : "—"}
                       </TableCell>
                       <TableCell className="text-center" data-testid={`text-late-${row.id}`}>
                         <LateBadge minutes={row.lateMinutes} />

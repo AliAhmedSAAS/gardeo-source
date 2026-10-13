@@ -500,6 +500,7 @@ app.use((req, res, next) => {
 
   try {
     await pool.query(`ALTER TABLE sites ADD COLUMN IF NOT EXISTS county text`);
+    await pool.query(`ALTER TABLE sites ADD COLUMN IF NOT EXISTS break_deduction_minutes integer DEFAULT 0`);
     log("Ensured sites.county exists");
   } catch (e) {
     log("Could not add sites.county: " + (e as Error).message);
@@ -580,12 +581,31 @@ app.use((req, res, next) => {
       ALTER TABLE shifts
         ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS deduction_amount numeric(12, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS hours_override numeric(10, 2)
     `);
     log("Ensured shifts PANL columns exist");
   } catch (e) {
     log("Could not ensure shifts PANL columns: " + (e as Error).message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE payroll_applied_lines ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE payroll_bill_lines ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0`);
+    // One-time: move late previously stored as negative deduction_hours
+    await pool.query(`
+      UPDATE shifts
+      SET late_hours = ABS(deduction_hours),
+          deduction_hours = 0
+      WHERE COALESCE(late_minutes, 0) > 0
+        AND COALESCE(deduction_hours, 0) < 0
+        AND COALESCE(late_hours, 0) = 0
+    `);
+    log("Ensured late_hours columns exist");
+  } catch (e) {
+    log("Could not ensure late_hours columns: " + (e as Error).message);
   }
 
   try {
@@ -752,6 +772,7 @@ app.use((req, res, next) => {
         shift_id integer NOT NULL REFERENCES shifts(id),
         hours numeric(10,2) NOT NULL,
         holiday_hours numeric(10,2) DEFAULT 0,
+        late_hours numeric(10,2) DEFAULT 0,
         rate numeric(10,2) NOT NULL,
         expense numeric(12,2) DEFAULT 0,
         wages numeric(12,2) NOT NULL,
@@ -799,6 +820,7 @@ app.use((req, res, next) => {
         shift_id integer NOT NULL REFERENCES shifts(id),
         hours numeric(10,2) NOT NULL,
         holiday_hours numeric(10,2) DEFAULT 0,
+        late_hours numeric(10,2) DEFAULT 0,
         rate numeric(10,2) NOT NULL,
         wages numeric(12,2) NOT NULL
       );

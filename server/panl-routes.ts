@@ -82,6 +82,7 @@ type PanlFilters = {
   customerId?: number;
   officerId?: number;
   locationId?: number;
+  supplierId?: number;
   showPaid: boolean;
   showZeroRates: boolean;
 };
@@ -102,6 +103,7 @@ function parseFilters(query: any): PanlFilters {
     customerId: query.customerId ? parseInt(String(query.customerId), 10) : undefined,
     officerId: query.officerId ? parseInt(String(query.officerId), 10) : undefined,
     locationId: query.locationId ? parseInt(String(query.locationId), 10) : undefined,
+    supplierId: query.supplierId ? parseInt(String(query.supplierId), 10) : undefined,
     showPaid: String(query.showPaid || "").toLowerCase() === "true" || query.showPaid === "1",
     showZeroRates:
       String(query.showZeroRates || "").toLowerCase() === "true" || query.showZeroRates === "1",
@@ -149,6 +151,11 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
     params.push(filters.locationId);
     p++;
   }
+  if (filters.supplierId && Number.isFinite(filters.supplierId)) {
+    conditions.push(`s.supplier_id = $${p}`);
+    params.push(filters.supplierId);
+    p++;
+  }
 
   const { rows } = await pool.query(
     `SELECT
@@ -157,10 +164,12 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
         s.start_time,
         s.end_time,
         s.break_minutes,
+        s.late_minutes,
         s.pay_rate,
         s.charge_rate,
         s.expense,
         s.holiday_hours,
+        s.late_hours,
         s.deduction_hours,
         s.hours_override,
         s.payroll_status,
@@ -192,13 +201,18 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
     const calcHours = shiftHours(r.start_time, r.end_time, r.break_minutes);
     const hours = r.hours_override != null && r.hours_override !== "" ? num(r.hours_override) : calcHours;
     const holidayHours = num(r.holiday_hours);
+    const lateHours = num(r.late_hours);
     const deductionHours = num(r.deduction_hours);
+    const breakMinutes = Math.max(0, Math.round(num(r.break_minutes)));
+    const lateMinutes = Math.max(0, Math.round(num(r.late_minutes)));
     const payRate = num(r.pay_rate);
     const sellRate = num(r.charge_rate);
     const expense = num(r.expense);
-    const gWages = money(hours * payRate);
+    const wageHours = money(Math.max(0, hours + holidayHours - lateHours + deductionHours));
+    const sellHours = money(Math.max(0, hours + holidayHours));
+    const gWages = money(wageHours * payRate);
     const nWages = money(gWages + expense);
-    const selling = money(hours * sellRate);
+    const selling = money(sellHours * sellRate);
     const pnl = money(selling - gWages - expense);
     const start = normalizeTime(r.start_time);
     const end = normalizeTime(r.end_time);
@@ -221,8 +235,13 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
       dutyTypeName: r.duty_type_name || "",
       hours,
       calcHours,
+      breakMinutes,
       holidayHours,
+      lateHours,
+      lateMinutes,
       deductionHours,
+      wageHours,
+      sellHours,
       payRate,
       gWages,
       expense,
@@ -345,7 +364,7 @@ export function registerPanlRoutes(
       const from = String(req.query.from || defaults.from).slice(0, 10);
       const to = String(req.query.to || defaults.to).slice(0, 10);
 
-      const [accounts, branches, customers, officers, locations, dutyTypes] = await Promise.all([
+      const [accounts, branches, customers, officers, locations, suppliers, dutyTypes] = await Promise.all([
         pool.query(
           `SELECT DISTINCT ${accountExpr()} AS name
            FROM shifts s
@@ -398,6 +417,16 @@ export function registerPanlRoutes(
           [tenantId, from, to],
         ),
         pool.query(
+          `SELECT DISTINCT su.id, su.company_name AS name
+           FROM shifts s
+           JOIN suppliers su ON su.id = s.supplier_id
+           WHERE s.tenant_id = $1 AND s.status IN ('verified', 'completed')
+             AND s.date >= $2 AND s.date <= $3
+             AND s.supplier_id IS NOT NULL
+           ORDER BY 2`,
+          [tenantId, from, to],
+        ),
+        pool.query(
           `SELECT id, name FROM tenant_duty_types
            WHERE tenant_id = $1
            ORDER BY sort_order ASC, name ASC`,
@@ -415,6 +444,7 @@ export function registerPanlRoutes(
           name: r.name,
           customerId: r.customerId != null ? Number(r.customerId) : null,
         })),
+        suppliers: suppliers.rows.map((r) => ({ id: Number(r.id), name: r.name })),
         dutyTypes: dutyTypes.rows.map((r) => ({ id: Number(r.id), name: r.name })),
         defaults: { from, to },
       });
@@ -451,7 +481,7 @@ export function registerPanlRoutes(
         return res.status(400).json({ message: "Select at least one shift" });
       }
 
-      const field = String(req.body?.field || "").toLowerCase();
+      const field = String(req.body?.field || "").toLowerCase().replace(/\s+/g, "");
       const rawValue = req.body?.value;
       if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
         return res.status(400).json({ message: "Value is required" });
@@ -461,31 +491,65 @@ export function registerPanlRoutes(
       const colMap: Record<string, string> = {
         hours: "hours_override",
         payrate: "pay_rate",
-        "pay_rate": "pay_rate",
-        "pay rate": "pay_rate",
+        pay_rate: "pay_rate",
         expense: "expense",
         sellrate: "charge_rate",
-        "sell_rate": "charge_rate",
-        "sell rate": "charge_rate",
+        sell_rate: "charge_rate",
         chargerate: "charge_rate",
-        "charge_rate": "charge_rate",
-        "charge rate": "charge_rate",
+        charge_rate: "charge_rate",
+        break: "break_minutes",
+        breakminutes: "break_minutes",
+        break_minutes: "break_minutes",
+        holiday: "holiday_hours",
+        holidayhours: "holiday_hours",
+        holiday_hours: "holiday_hours",
+        latehours: "late_hours",
+        late_hours: "late_hours",
+        lateminutes: "late_minutes",
+        late_minutes: "late_minutes",
+        arrival: "late_minutes",
+        deduction: "deduction_hours",
+        deductionhours: "deduction_hours",
+        deduction_hours: "deduction_hours",
       };
       const column = colMap[field];
       if (!column) {
-        return res.status(400).json({ message: "Unsupported field — use hours, payRate, expense, or sellRate" });
+        return res.status(400).json({
+          message: "Unsupported field — use hours, payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours",
+        });
       }
 
-      const { rowCount } = await pool.query(
+      let rowCount = 0;
+      if (column === "late_minutes") {
+        const lateMinutes = Math.max(0, Math.round(value));
+        const lateHours = money(lateMinutes / 60);
+        const result = await pool.query(
+          `UPDATE shifts
+           SET late_minutes = $1, late_hours = $2, updated_at = NOW()
+           WHERE tenant_id = $3
+             AND id = ANY($4::int[])
+             AND status IN ('verified', 'completed')`,
+          [lateMinutes, lateHours, tenantId, ids],
+        );
+        rowCount = result.rowCount || 0;
+        res.json({ success: true, updated: rowCount, field: column, value: lateMinutes, lateHours });
+        return;
+      }
+
+      const storeValue =
+        column === "break_minutes" ? Math.max(0, Math.round(value)) : value;
+
+      const result = await pool.query(
         `UPDATE shifts
          SET ${column} = $1, updated_at = NOW()
          WHERE tenant_id = $2
            AND id = ANY($3::int[])
            AND status IN ('verified', 'completed')`,
-        [value, tenantId, ids],
+        [storeValue, tenantId, ids],
       );
+      rowCount = result.rowCount || 0;
 
-      res.json({ success: true, updated: rowCount || 0, field: column, value });
+      res.json({ success: true, updated: rowCount, field: column, value: storeValue });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -653,6 +717,7 @@ export function registerPanlRoutes(
         "Time-in",
         "Time-out",
         "Actual hrs",
+        "Late hrs",
         "Deduction hrs",
         "Charge rate",
         "Pay rate",
@@ -666,7 +731,7 @@ export function registerPanlRoutes(
       const lines = [header.join(",")];
       for (const r of shifts) {
         const day = new Date(`${r.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" });
-        const wageHours = r.hours + r.holidayHours + r.deductionHours;
+        const wageHours = r.hours + r.holidayHours - (r.lateHours || 0) + r.deductionHours;
         const sellHours = r.hours + r.holidayHours;
         const wages = money(wageHours * r.payRate);
         const selling = money(sellHours * r.sellRate);
@@ -688,6 +753,7 @@ export function registerPanlRoutes(
             r.startTime,
             r.endTime,
             r.calcHours,
+            r.lateHours || 0,
             r.deductionHours,
             r.sellRate,
             r.payRate,

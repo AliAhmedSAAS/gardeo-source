@@ -973,7 +973,24 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(shifts).where(and(eq(shifts.tenantId, tenantId), eq(shifts.date, date)));
   }
 
+  /** Copy the site's unpaid break onto shifts that did not set their own. */
+  private async applySiteBreakDefaults(rows: InsertShift[]): Promise<void> {
+    const pending = rows.filter((row) => row.breakMinutes == null && row.siteId && row.tenantId);
+    if (pending.length === 0) return;
+    const tenantId = pending[0].tenantId!;
+    const siteIds = Array.from(new Set(pending.map((row) => row.siteId!)));
+    const found = await db.select({
+      id: sites.id,
+      mins: sites.breakDeductionMinutes,
+    }).from(sites).where(and(eq(sites.tenantId, tenantId), inArray(sites.id, siteIds)));
+    const byId = new Map(found.map((row) => [row.id, Math.max(0, row.mins ?? 0)]));
+    for (const row of pending) {
+      row.breakMinutes = byId.get(row.siteId!) ?? 0;
+    }
+  }
+
   async createShift(shift: InsertShift): Promise<Shift> {
+    await this.applySiteBreakDefaults([shift]);
     if (!shift.shiftCode) {
       shift.shiftCode = await nextCode("SHF-", "shifts", "shift_code", shift.tenantId);
     }
@@ -986,6 +1003,7 @@ export class DatabaseStorage implements IStorage {
 
   async createShiftsBulk(shiftsData: InsertShift[]): Promise<Shift[]> {
     if (shiftsData.length === 0) return [];
+    await this.applySiteBreakDefaults(shiftsData);
     const tenantId = shiftsData[0].tenantId;
     const result = tenantId
       ? await pool.query(`SELECT COALESCE(MAX(CAST(SUBSTRING(shift_code FROM '(\\d+)$') AS INTEGER)), 0) AS max_num FROM shifts WHERE shift_code IS NOT NULL AND tenant_id = $1`, [tenantId])

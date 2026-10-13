@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,8 +17,91 @@ import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Filter, Loader2,
   ArrowUpDown, DollarSign, Shield, Calendar, MapPin, Users, ChevronDown,
-  ChevronLeft, ChevronRight, Search,
+  ChevronLeft, ChevronRight, Search, Pencil,
 } from "lucide-react";
+
+const FINANCE_EDIT_ROLES = new Set([
+  "super_admin", "tenant_admin", "ceo", "accountant", "admin", "payroll_manager",
+  "operations_manager", "regional_manager",
+]);
+
+type FinanceEditableField =
+  | "holidayHours"
+  | "deductionHours"
+  | "breakMinutes"
+  | "payRate"
+  | "chargeRate"
+  | "lateMinutes";
+
+function FinanceNumInput({
+  value,
+  onSave,
+  disabled,
+  step = "0.01",
+  min = "0",
+  prefix,
+  suffix,
+  testId,
+  className,
+}: {
+  value: number | null | undefined;
+  onSave: (next: number | null) => void;
+  disabled?: boolean;
+  step?: string;
+  min?: string;
+  prefix?: string;
+  suffix?: string;
+  testId?: string;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+  useEffect(() => {
+    setDraft(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+  }, [value]);
+
+  const commit = () => {
+    if (disabled) return;
+    const trimmed = draft.trim();
+    if (trimmed === "") {
+      if (value == null || value === 0) {
+        setDraft(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+        return;
+      }
+      onSave(0);
+      return;
+    }
+    const n = Number(trimmed);
+    if (!Number.isFinite(n)) {
+      setDraft(value == null || Number.isNaN(Number(value)) ? "" : String(value));
+      return;
+    }
+    if (Number(value) === n) return;
+    onSave(n);
+  };
+
+  return (
+    <div className={`flex items-center justify-end gap-0.5 ${className || ""}`}>
+      {prefix ? <span className="text-[10px] text-muted-foreground">{prefix}</span> : null}
+      <Input
+        type="number"
+        step={step}
+        min={min}
+        value={draft}
+        disabled={disabled}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
+        className="h-7 w-[4.5rem] px-1.5 text-right text-xs tabular-nums"
+        data-testid={testId}
+      />
+      {suffix ? <span className="text-[10px] text-muted-foreground">{suffix}</span> : null}
+    </div>
+  );
+}
 
 interface EnrichedShift {
   id: number;
@@ -46,7 +129,11 @@ interface EnrichedShift {
   chargeRate?: number | null;
   hours?: number | null;
   holidayHours?: number | null;
+  lateHours?: number | null;
+  breakMinutes?: number | null;
   deductionHours?: number | null;
+  /** Persisted £ self-employed / payroll deduction */
+  deductionAmount?: number | null;
 }
 
 function formatShiftDate(value: string | null | undefined): string {
@@ -121,6 +208,10 @@ const SHIFT_STATUS_CONFIG: Record<string, { label: string; className: string }> 
   missed: { label: "Missed", className: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300" },
 };
 
+type TenantInfo = {
+  companyName?: string;
+};
+
 export default function FinanceApprovalPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -143,7 +234,17 @@ export default function FinanceApprovalPage() {
   const [rejectNote, setRejectNote] = useState("");
   const [rejectTarget, setRejectTarget] = useState<"single" | "bulk">("bulk");
   const [rejectSingleId, setRejectSingleId] = useState<number | null>(null);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEdit, setBulkEdit] = useState({
+    holidayHours: "",
+    deductionHours: "",
+    breakMinutes: "",
+    payRate: "",
+    chargeRate: "",
+    lateMinutes: "",
+  });
   const limit = 50;
+  const canEditFields = !!user?.role && FINANCE_EDIT_ROLES.has(user.role);
 
   const resetPage = useCallback(() => {
     setPage(1);
@@ -210,6 +311,15 @@ export default function FinanceApprovalPage() {
   const clients = response?.clients || [];
   const officers = response?.officers || [];
   const suppliers = response?.suppliers || [];
+  const { data: permissionsData } = useQuery<{ tenant?: TenantInfo }>({
+    queryKey: ["/api/my-permissions"],
+  });
+  const tenantCompanyName = permissionsData?.tenant?.companyName || "Own Company";
+  const inhouseLabel = `${tenantCompanyName} (In-house)`;
+  const supplierOptions = [
+    { value: "inhouse", label: inhouseLabel },
+    ...suppliers.map((s) => ({ value: String(s.id), label: s.name })),
+  ];
   const totalPages = Math.ceil(total / limit);
   const hasAdvancedFilters =
     filterSite !== "all" || filterClient !== "all" || filterOfficer !== "all" || filterSupplier !== "all";
@@ -289,6 +399,79 @@ export default function FinanceApprovalPage() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const updateFieldsMutation = useMutation({
+    mutationFn: async ({ id, fields }: { id: number; fields: Partial<Record<FinanceEditableField, number | null>> }) => {
+      const res = await apiRequest("PATCH", `/api/finance-approval/shifts/${id}`, fields);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/finance-approval/shifts"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ ids, fields }: { ids: number[]; fields: Partial<Record<FinanceEditableField, number | null>> }) => {
+      const res = await apiRequest("POST", "/api/finance-approval/shifts/bulk-update", {
+        shiftIds: ids,
+        fields,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk update complete",
+        description: `Updated ${data.processed?.length || 0} shift${(data.processed?.length || 0) === 1 ? "" : "s"}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/finance-approval/shifts"] });
+      setBulkEditOpen(false);
+      setBulkEdit({
+        holidayHours: "",
+        deductionHours: "",
+        breakMinutes: "",
+        payRate: "",
+        chargeRate: "",
+        lateMinutes: "",
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: "Bulk update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const saveField = (id: number, field: FinanceEditableField, next: number | null) => {
+    updateFieldsMutation.mutate({ id, fields: { [field]: next } });
+  };
+
+  const handleBulkEditApply = () => {
+    const fields: Partial<Record<FinanceEditableField, number | null>> = {};
+    const map: Array<[FinanceEditableField, string]> = [
+      ["holidayHours", bulkEdit.holidayHours],
+      ["deductionHours", bulkEdit.deductionHours],
+      ["breakMinutes", bulkEdit.breakMinutes],
+      ["payRate", bulkEdit.payRate],
+      ["chargeRate", bulkEdit.chargeRate],
+      ["lateMinutes", bulkEdit.lateMinutes],
+    ];
+    for (const [key, raw] of map) {
+      const t = raw.trim();
+      if (!t) continue;
+      const n = Number(t);
+      if (!Number.isFinite(n)) {
+        toast({ title: "Invalid value", description: `Check ${key}`, variant: "destructive" });
+        return;
+      }
+      fields[key] = n;
+    }
+    if (Object.keys(fields).length === 0) {
+      toast({ title: "Nothing to update", description: "Fill at least one field.", variant: "destructive" });
+      return;
+    }
+    bulkUpdateMutation.mutate({ ids: Array.from(selectedIds), fields });
+  };
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
@@ -395,7 +578,26 @@ export default function FinanceApprovalPage() {
               <Filter className="w-4 h-4 text-muted-foreground" />
               <CardTitle className="text-base">Filters</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {canEditFields && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (selectedIds.size === 0) {
+                      toast({
+                        title: "Select shifts first",
+                        description: "Tick one or more rows, then use Bulk Update.",
+                      });
+                      return;
+                    }
+                    setBulkEditOpen(true);
+                  }}
+                  data-testid="button-bulk-edit-toolbar"
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-1" />
+                  Bulk Update{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -536,7 +738,7 @@ export default function FinanceApprovalPage() {
                 <SearchableSelect
                   value={filterSupplier}
                   onValueChange={(val) => { setFilterSupplier(val); resetPage(); }}
-                  options={suppliers.map((s) => ({ value: String(s.id), label: s.name }))}
+                  options={supplierOptions}
                   noneValue="all"
                   noneLabel="All Suppliers"
                   placeholder="All Suppliers"
@@ -565,9 +767,15 @@ export default function FinanceApprovalPage() {
       </Card>
 
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-[#1F3A5F]/5 dark:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-lg" data-testid="bulk-action-bar">
+        <div className="flex items-center gap-3 p-3 bg-[#1F3A5F]/5 dark:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-lg flex-wrap" data-testid="bulk-action-bar">
           <span className="text-sm font-medium">{selectedIds.size} shift{selectedIds.size > 1 ? "s" : ""} selected</span>
           <Separator orientation="vertical" className="h-6" />
+          {canEditFields && (
+            <Button size="sm" variant="outline" onClick={() => setBulkEditOpen(true)} data-testid="button-bulk-edit">
+              <Pencil className="w-3 h-3 mr-1" />
+              Bulk Update Fields
+            </Button>
+          )}
           <Button size="sm" onClick={handleBulkApprove} disabled={bulkApproveMutation.isPending} className="bg-green-600 hover:bg-green-700" data-testid="button-bulk-approve">
             {bulkApproveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
             Approve Selected
@@ -604,12 +812,14 @@ export default function FinanceApprovalPage() {
                         data-testid="checkbox-select-all"
                       />
                     </th>
-                    <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Shift</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Date & Time</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Officer</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Site</th>
+                    <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Supplier</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Hours</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Break</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Holiday hrs</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Late hrs</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Deduction</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
@@ -636,10 +846,6 @@ export default function FinanceApprovalPage() {
                           />
                         </td>
                         <td className="p-3">
-                          <div className="font-medium" data-testid={`text-shift-title-${shift.id}`}>{shift.title}</div>
-                          {shift.shiftCode && <div className="text-xs text-muted-foreground font-mono">{shift.shiftCode}</div>}
-                        </td>
-                        <td className="p-3">
                           <div className="flex items-center gap-1 text-xs">
                             <Calendar className="w-3 h-3 text-muted-foreground" />
                             {formatShiftDate(shift.date)}
@@ -660,22 +866,78 @@ export default function FinanceApprovalPage() {
                             <span data-testid={`text-site-${shift.id}`}>{shift.siteName || "—"}</span>
                           </div>
                         </td>
+                        <td className="p-3 text-xs" data-testid={`text-supplier-${shift.id}`}>
+                          {shift.supplierName?.trim() || inhouseLabel}
+                        </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-hours-${shift.id}`}>
                           {fmtNum(shiftDisplayHours(shift))}
                         </td>
-                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-holiday-hours-${shift.id}`}>
-                          {fmtNum(shift.holidayHours ?? 0)}
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-break-${shift.id}`}>
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.breakMinutes ?? 0}
+                              step="1"
+                              min="0"
+                              suffix="m"
+                              testId={`input-break-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "breakMinutes", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (
+                            (shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"
+                          )}
                         </td>
-                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-deduction-${shift.id}`}>
-                          {fmtNum(shift.deductionHours ?? 0)}
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-holiday-hours-${shift.id}`}>
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.holidayHours ?? 0}
+                              testId={`input-holiday-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "holidayHours", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (
+                            fmtNum(shift.holidayHours ?? 0)
+                          )}
+                        </td>
+                        <td className={`p-3 text-right tabular-nums text-xs ${(shift.lateHours ?? 0) > 0 ? "text-amber-600" : ""}`} data-testid={`text-late-hours-${shift.id}`}>
+                          {fmtNum(shift.lateHours ?? 0)}
+                        </td>
+                        <td className={`p-3 text-right tabular-nums text-xs ${(shift.deductionAmount ?? 0) > 0 ? "text-red-600" : ""}`} data-testid={`text-deduction-${shift.id}`}>
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.deductionHours ?? 0}
+                              min="-999"
+                              testId={`input-deduction-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "deductionHours", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (shift.deductionAmount ?? 0) > 0
+                            ? `£${fmtNum(shift.deductionAmount)}`
+                            : fmtNum(shift.deductionHours ?? 0)}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-pay-rate-${shift.id}`}>
-                          {shift.payRate == null || Number.isNaN(Number(shift.payRate))
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.payRate ?? null}
+                              prefix="£"
+                              testId={`input-pay-rate-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "payRate", n)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : shift.payRate == null || Number.isNaN(Number(shift.payRate))
                             ? "—"
                             : `£${fmtNum(shift.payRate)}`}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-charge-rate-${shift.id}`}>
-                          {shift.chargeRate == null || Number.isNaN(Number(shift.chargeRate))
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.chargeRate ?? null}
+                              prefix="£"
+                              testId={`input-charge-rate-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "chargeRate", n)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : shift.chargeRate == null || Number.isNaN(Number(shift.chargeRate))
                             ? "—"
                             : `£${fmtNum(shift.chargeRate)}`}
                         </td>
@@ -685,10 +947,34 @@ export default function FinanceApprovalPage() {
                           </Badge>
                         </td>
                         <td className="p-3">
-                          {isLate ? (
-                            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" data-testid={`text-late-${shift.id}`}>
-                              <AlertTriangle className="w-3 h-3" />
-                              {shift.lateMinutes} min late
+                          {canEditFields ? (
+                            <div className="space-y-1" data-testid={`text-late-${shift.id}`}>
+                              <FinanceNumInput
+                                value={shift.lateMinutes ?? 0}
+                                step="1"
+                                min="0"
+                                suffix="min"
+                                testId={`input-arrival-${shift.id}`}
+                                onSave={(n) => saveField(shift.id, "lateMinutes", n ?? 0)}
+                                disabled={updateFieldsMutation.isPending}
+                              />
+                              {(shift.lateMinutes || 0) > 0 ? (
+                                <div className="text-[10px] text-amber-600">Late {fmtNum(shift.lateHours)}h</div>
+                              ) : shift.bookedOnAt ? (
+                                <div className="text-[10px] text-green-600">On time</div>
+                              ) : null}
+                            </div>
+                          ) : isLate ? (
+                            <div className="text-xs text-amber-600 dark:text-amber-400" data-testid={`text-late-${shift.id}`}>
+                              <div className="flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {shift.lateMinutes} min late
+                              </div>
+                              {(shift.lateHours ?? 0) > 0 && (
+                                <div className="text-[10px] text-muted-foreground pl-4">
+                                  Late {fmtNum(shift.lateHours)}h
+                                </div>
+                              )}
                             </div>
                           ) : shift.bookedOnAt ? (
                             <div className="text-xs text-green-600 dark:text-green-400" data-testid={`text-ontime-${shift.id}`}>On time</div>
@@ -780,6 +1066,8 @@ export default function FinanceApprovalPage() {
               <li>Only shifts that have been booked on and booked off (or verified/completed) appear for finance review</li>
               <li>Shifts with no book-on remain as "scheduled" or "missed" and are not eligible for invoicing</li>
               <li>Late arrivals are highlighted with the number of minutes late for your review</li>
+              <li>Account/admin can edit Break, Holiday hrs, Deduction, Pay rate, Charge rate, and Arrival (late minutes)</li>
+              <li>Select multiple shifts and use Bulk Update Fields to apply the same values</li>
               <li>Rejected shifts require a reason and will not be included in invoices or payroll</li>
               <li>Only approved shifts can be invoiced to clients or paid to officers</li>
             </ul>
@@ -825,6 +1113,109 @@ export default function FinanceApprovalPage() {
                 <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Rejecting...</>
               ) : (
                 "Confirm Rejection"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5" />
+              Bulk update {selectedIds.size} shift{selectedIds.size === 1 ? "" : "s"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Leave a field blank to keep existing values. Only filled fields are applied.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="bulk-break">Break (minutes)</Label>
+              <Input
+                id="bulk-break"
+                type="number"
+                min={0}
+                step={1}
+                value={bulkEdit.breakMinutes}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, breakMinutes: e.target.value }))}
+                data-testid="input-bulk-break"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-holiday">Holiday hrs</Label>
+              <Input
+                id="bulk-holiday"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkEdit.holidayHours}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, holidayHours: e.target.value }))}
+                data-testid="input-bulk-holiday"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-deduction">Deduction hrs</Label>
+              <Input
+                id="bulk-deduction"
+                type="number"
+                step={0.01}
+                value={bulkEdit.deductionHours}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, deductionHours: e.target.value }))}
+                data-testid="input-bulk-deduction"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-arrival">Arrival (late minutes)</Label>
+              <Input
+                id="bulk-arrival"
+                type="number"
+                min={0}
+                step={1}
+                value={bulkEdit.lateMinutes}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, lateMinutes: e.target.value }))}
+                data-testid="input-bulk-arrival"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-pay">Pay rate (£)</Label>
+              <Input
+                id="bulk-pay"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkEdit.payRate}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, payRate: e.target.value }))}
+                data-testid="input-bulk-pay"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-charge">Charge rate (£)</Label>
+              <Input
+                id="bulk-charge"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkEdit.chargeRate}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, chargeRate: e.target.value }))}
+                data-testid="input-bulk-charge"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEditOpen(false)} data-testid="button-cancel-bulk-edit">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkEditApply}
+              disabled={bulkUpdateMutation.isPending || selectedIds.size === 0}
+              data-testid="button-apply-bulk-edit"
+            >
+              {bulkUpdateMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Updating...</>
+              ) : (
+                "Apply to selected"
               )}
             </Button>
           </DialogFooter>

@@ -60,11 +60,10 @@ export function normalizeTime(value: unknown): string {
 }
 
 /**
- * Paid hours for a shift (legacy parity):
+ * Paid duty hours for a shift (legacy parity):
  *   hours = end − start  (overnight +24h)
  *         − break_minutes / 60
- * Rounded to 2dp. Does NOT add holiday hours (shifts table has no holiday field;
- * PHP used Hours + holiday_hours from tbl_dutyschedule).
+ * Rounded to 2dp. Caller adds holiday_hours and subtracts late_hours for paid wages.
  */
 export function shiftHours(startTime: string, endTime: string, breakMinutes?: number | null): number {
   const [sh, sm] = normalizeTime(startTime).split(":").map((x) => parseInt(x, 10) || 0);
@@ -214,11 +213,11 @@ async function eligibleShifts(tenantId: number, employeeId: number, month: strin
 export async function refreshMonthTotals(monthRowId: number) {
   const { rows } = await pool.query(
     `SELECT
-        COALESCE(SUM(hours) FILTER (WHERE bucket = 'first4_paye'), 0) AS first4_hours,
+        COALESCE(SUM(hours + COALESCE(holiday_hours, 0) - COALESCE(late_hours, 0)) FILTER (WHERE bucket = 'first4_paye'), 0) AS first4_hours,
         COALESCE(SUM(wages) FILTER (WHERE bucket = 'first4_paye'), 0) AS first4_wages,
-        COALESCE(SUM(hours) FILTER (WHERE bucket = 'gfm_paye'), 0) AS gfm_hours,
+        COALESCE(SUM(hours + COALESCE(holiday_hours, 0) - COALESCE(late_hours, 0)) FILTER (WHERE bucket = 'gfm_paye'), 0) AS gfm_hours,
         COALESCE(SUM(wages) FILTER (WHERE bucket = 'gfm_paye'), 0) AS gfm_wages,
-        COALESCE(SUM(hours) FILTER (WHERE bucket = 'self'), 0) AS self_hours,
+        COALESCE(SUM(hours + COALESCE(holiday_hours, 0) - COALESCE(late_hours, 0)) FILTER (WHERE bucket = 'self'), 0) AS self_hours,
         COALESCE(SUM(wages) FILTER (WHERE bucket = 'self'), 0) AS self_wages
      FROM payroll_applied_lines WHERE month_row_id = $1`,
     [monthRowId],
@@ -259,6 +258,15 @@ export async function applyRulesForOfficer(opts: {
   const shifts = (await eligibleShifts(opts.tenantId, opts.employeeId, opts.month))
     .filter((s: any) => !billedShiftIds.has(Number(s.id)));
 
+  // Reset persisted £ deduction on shifts being re-applied (non-billed)
+  if (shifts.length) {
+    await pool.query(
+      `UPDATE shifts SET deduction_amount = 0, updated_at = NOW()
+       WHERE tenant_id = $1 AND id = ANY($2::int[])`,
+      [opts.tenantId, shifts.map((s: any) => Number(s.id))],
+    ).catch(() => {});
+  }
+
   const def = getRuleDef(monthRow.rules_of_payment);
   const isNiRest = def.mode === "ni_rest";
   const niCap = Math.max(0, (def.niCap || 0) - Number(monthRow.ni_used || 0));
@@ -272,16 +280,19 @@ export async function applyRulesForOfficer(opts: {
   const wageBucketHint = sourceRow.rows[0]?.wage_bucket as string | undefined;
 
   for (const shift of shifts) {
-    const hours = shiftHours(shift.start_time, shift.end_time, shift.break_minutes);
-    if (hours <= 0) continue;
+    const dutyHours = shiftHours(shift.start_time, shift.end_time, shift.break_minutes);
+    const holiday = money(Math.max(0, num(shift.holiday_hours)));
+    const late = money(Math.max(0, num(shift.late_hours)));
+    if (dutyHours <= 0 && holiday <= 0) continue;
     const selfRate = await selfRateForShift(opts.tenantId, opts.employeeId, shift);
+    const hoursForRules = dutyHours > 0 ? dutyHours : holiday;
 
     let pieces: SplitPiece[];
     if (isNiRest) {
-      // PHP apply_rules.php: add shift hours, then if cumulative ≤ NI cap → whole shift PAYE, else whole Self.
-      cumulative = money(cumulative + hours);
+      // PHP apply_rules.php: add shift hours (including holiday), then if cumulative ≤ NI cap → whole shift PAYE, else whole Self.
+      cumulative = money(cumulative + dutyHours + holiday);
       pieces = [tagWholeShiftNi({
-        hours,
+        hours: hoursForRules,
         cumulativeAfter: cumulative,
         niCap,
         source: monthRow.payroll_source,
@@ -291,7 +302,7 @@ export async function applyRulesForOfficer(opts: {
       })];
     } else {
       pieces = splitHours({
-        hours,
+        hours: hoursForRules,
         ruleValue: monthRow.rules_of_payment,
         source: monthRow.payroll_source,
         selfRate,
@@ -299,20 +310,37 @@ export async function applyRulesForOfficer(opts: {
       });
     }
 
+    let shiftDeduction = 0;
+    let holidayLeft = dutyHours > 0 ? holiday : 0;
+    let lateLeft = late;
     for (const piece of pieces) {
-      if (piece.hours <= 0) continue;
-      const wages = money(piece.hours * piece.rate - (piece.expense || 0));
+      const holidayOnly = dutyHours <= 0;
+      const lineHoliday = holidayOnly ? piece.hours : holidayLeft;
+      if (!holidayOnly) holidayLeft = 0;
+      const lineHours = holidayOnly ? 0 : piece.hours;
+      const lineLate = lateLeft;
+      lateLeft = 0;
+      const paidHours = money(Math.max(0, lineHours + lineHoliday - lineLate));
+      if (paidHours <= 0 && lineLate <= 0) continue;
+      const wages = money(paidHours * piece.rate - (piece.expense || 0));
+      shiftDeduction = money(shiftDeduction + (piece.expense || 0));
       await pool.query(
         `INSERT INTO payroll_applied_lines
-          (tenant_id, month_row_id, employee_id, shift_id, hours, holiday_hours, rate, expense, wages, bucket, payee_to_claim, claimable, billed)
-         VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,$9,$10,true,false)`,
+          (tenant_id, month_row_id, employee_id, shift_id, hours, holiday_hours, late_hours, rate, expense, wages, bucket, payee_to_claim, claimable, billed)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,true,false)`,
         [
           opts.tenantId, monthRow.id, opts.employeeId, shift.id,
-          piece.hours, piece.rate, piece.expense, wages, piece.bucket, piece.payeeToClaim,
+          lineHours, lineHoliday, lineLate, piece.rate, piece.expense, wages, piece.bucket, piece.payeeToClaim,
         ],
       );
       applied += 1;
     }
+
+    // Persist £ deduction on the shift so Finance Approval / other screens can reuse it
+    await pool.query(
+      `UPDATE shifts SET deduction_amount = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`,
+      [shiftDeduction, shift.id, opts.tenantId],
+    ).catch(() => {});
   }
 
   await refreshMonthTotals(monthRow.id);
@@ -653,9 +681,9 @@ export async function createBills(opts: {
     const billId = bill.rows[0].id;
     for (const line of payee.lines) {
       await pool.query(
-        `INSERT INTO payroll_bill_lines (bill_id, applied_line_id, shift_id, hours, holiday_hours, rate, wages)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [billId, line.id, line.shift_id, line.hours, line.holiday_hours || 0, line.rate, line.wages],
+        `INSERT INTO payroll_bill_lines (bill_id, applied_line_id, shift_id, hours, holiday_hours, late_hours, rate, wages)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [billId, line.id, line.shift_id, line.hours, line.holiday_hours || 0, line.late_hours || 0, line.rate, line.wages],
       );
       await pool.query(`UPDATE payroll_applied_lines SET billed = true WHERE id = $1`, [line.id]);
     }
@@ -830,7 +858,7 @@ export async function loadBillReview(tenantId: number, billId: number) {
   const bill = await pool.query(`SELECT * FROM payroll_bills WHERE id = $1 AND tenant_id = $2`, [billId, tenantId]);
   if (!bill.rows[0]) throw new Error("Bill not found");
   const { rows } = await pool.query(
-    `SELECT bl.*, s.date, s.start_time, s.end_time, s.title,
+    `SELECT bl.*, s.date, s.start_time, s.end_time, s.title, s.break_minutes,
             st.name AS site_name, u.first_name, u.last_name, e.employee_number
      FROM payroll_bill_lines bl
      JOIN shifts s ON s.id = bl.shift_id

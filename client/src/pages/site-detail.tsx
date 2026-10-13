@@ -70,6 +70,7 @@ type SiteDetail = {
   notes: string | null;
   siteCode: string | null;
   geofenceRadiusMetres: number | null;
+  breakDeductionMinutes: number | null;
   shiftPatterns: { period: string; hours: number }[] | null;
 };
 
@@ -219,6 +220,7 @@ export default function SiteDetailPage() {
     bookOnEmail: "",
     contractRef: "",
     geofenceRadiusMetres: "",
+    breakDeductionMinutes: "0",
     isActive: true,
     notes: "",
   });
@@ -246,6 +248,7 @@ export default function SiteDetailPage() {
       bookOnEmail: site.bookOnEmail || "",
       contractRef: site.contractRef || "",
       geofenceRadiusMetres: site.geofenceRadiusMetres != null ? String(site.geofenceRadiusMetres) : "",
+      breakDeductionMinutes: site.breakDeductionMinutes != null ? String(site.breakDeductionMinutes) : "0",
       isActive: site.isActive !== false,
       notes: site.notes || "",
     });
@@ -273,6 +276,7 @@ export default function SiteDetailPage() {
         bookOnEmail: basicForm.bookOnEmail.trim() || null,
         contractRef: basicForm.contractRef.trim() || null,
         geofenceRadiusMetres: basicForm.geofenceRadiusMetres ? parseInt(basicForm.geofenceRadiusMetres, 10) : null,
+        breakDeductionMinutes: Math.max(0, parseInt(basicForm.breakDeductionMinutes, 10) || 0),
         isActive: basicForm.isActive,
         notes: basicForm.notes.trim() || null,
       });
@@ -551,6 +555,18 @@ export default function SiteDetailPage() {
                 <div className="space-y-2">
                   <Label>Geofence radius (m)</Label>
                   <Input value={basicForm.geofenceRadiusMetres} onChange={(e) => setBasicForm((f) => ({ ...f, geofenceRadiusMetres: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Break deduction (minutes)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={basicForm.breakDeductionMinutes}
+                    onChange={(e) => setBasicForm((f) => ({ ...f, breakDeductionMinutes: e.target.value }))}
+                    data-testid="input-site-detail-break-deduction"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Unpaid break for new shifts at this site.</p>
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Switch checked={basicForm.isActive} onCheckedChange={(v) => setBasicForm((f) => ({ ...f, isActive: v }))} />

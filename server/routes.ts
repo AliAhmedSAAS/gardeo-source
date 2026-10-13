@@ -30,6 +30,7 @@ import { getRequiredSupplierDocumentTypes, hasAllRequiredDocuments, SUPPLIER_DOC
 import { SUPPLIER_POLICY_LABELS } from "@shared/supplierRequiredPolicies";
 import { getSubmitOnboardingReadiness } from "@shared/supplierOnboardingValidation";
 import { getSupplierFieldLabel } from "@shared/supplierProfileFields";
+import { calculateLateDeduction, shiftDateTime } from "@shared/lateDeduction";
 import {
   sendInAppMessage, sendSMSToEmployee, callEmployee,
   escalatingContact, contactAvailableOfficers, getContactLogs, getServiceStatus
@@ -4504,7 +4505,8 @@ export async function registerRoutes(
                 s.manager_name as "managerName", s.manager_email as "managerEmail",
                 s.book_on_email as "bookOnEmail",
                 s.is_active as "isActive", s.notes, s.site_code as "siteCode",
-                s.geofence_radius_metres as "geofenceRadiusMetres"
+                s.geofence_radius_metres as "geofenceRadiusMetres",
+                COALESCE(s.break_deduction_minutes, 0) as "breakDeductionMinutes"
          FROM sites s LEFT JOIN clients c ON s.client_id = c.id
          WHERE ${whereClause}
          ORDER BY s.name ASC
@@ -4571,7 +4573,19 @@ export async function registerRoutes(
           return res.status(400).json({ message: "Invalid check-call schedule mode" });
         }
       }
+      if (body.breakDeductionMinutes !== undefined) {
+        body.breakDeductionMinutes = Math.max(0, parseInt(String(body.breakDeductionMinutes), 10) || 0);
+      }
       const updated = await storage.updateSite(siteId, body);
+      if (body.breakDeductionMinutes !== undefined && site.tenantId) {
+        await pool.query(
+          `UPDATE shifts
+           SET break_minutes = $1, updated_at = NOW()
+           WHERE site_id = $2 AND tenant_id = $3
+             AND status IN ('scheduled', 'booked_on', 'in_progress', 'booked_off')`,
+          [body.breakDeductionMinutes, siteId, site.tenantId],
+        );
+      }
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -4997,7 +5011,12 @@ export async function registerRoutes(
       const officerId = req.query.officerId || req.query.employeeId
         ? parseInt(String(req.query.officerId || req.query.employeeId))
         : null;
-      const supplierId = req.query.supplierId ? parseInt(req.query.supplierId as string) : null;
+      const supplierIdRaw = String(req.query.supplierId || "").trim();
+      const supplierId =
+        supplierIdRaw && supplierIdRaw !== "inhouse"
+          ? parseInt(supplierIdRaw, 10)
+          : null;
+      const filterInhouse = supplierIdRaw === "inhouse";
       const dateFrom = req.query.dateFrom as string || null;
       const dateTo = req.query.dateTo as string || null;
       const search = (req.query.search as string || "").trim().toLowerCase();
@@ -5035,7 +5054,9 @@ export async function registerRoutes(
         params.push(officerId);
         paramIdx++;
       }
-      if (supplierId && Number.isFinite(supplierId)) {
+      if (filterInhouse) {
+        conditions.push(`sh.supplier_id IS NULL`);
+      } else if (supplierId && Number.isFinite(supplierId)) {
         conditions.push(`sh.supplier_id = $${paramIdx}`);
         params.push(supplierId);
         paramIdx++;
@@ -5073,17 +5094,21 @@ export async function registerRoutes(
           LEFT JOIN suppliers su ON sh.supplier_id = su.id`;
 
       // Optional PANL columns may not exist until bootstrap/migration runs.
-      let panlSelect = `0::numeric AS holiday_hours, 0::numeric AS deduction_hours, NULL::numeric AS hours_override, 0::numeric AS expense`;
+      let panlSelect = `0::numeric AS holiday_hours, 0::numeric AS late_hours, 0::numeric AS deduction_hours, 0::numeric AS deduction_amount, NULL::numeric AS hours_override, 0::numeric AS expense`;
       try {
         await pool.query(`
           ALTER TABLE shifts
             ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS deduction_amount numeric(12, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS hours_override numeric(10, 2)
         `);
         panlSelect = `COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+            COALESCE(sh.late_hours, 0) AS late_hours,
             COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+            COALESCE(sh.deduction_amount, 0) AS deduction_amount,
             sh.hours_override,
             COALESCE(sh.expense, 0) AS expense`;
       } catch {
@@ -5244,7 +5269,10 @@ export async function registerRoutes(
           chargeRate: chargeRate != null && !Number.isNaN(chargeRate) ? chargeRate : null,
           hours,
           holidayHours: parseFloat(String(r.holiday_hours ?? 0)) || 0,
+          lateHours: parseFloat(String(r.late_hours ?? 0)) || 0,
+          breakMinutes: parseInt(String(r.break_minutes ?? 0), 10) || 0,
           deductionHours: parseFloat(String(r.deduction_hours ?? 0)) || 0,
+          deductionAmount: parseFloat(String(r.deduction_amount ?? 0)) || 0,
           expense: parseFloat(String(r.expense ?? 0)) || 0,
         };
       });
@@ -5260,6 +5288,134 @@ export async function registerRoutes(
         officers: officersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
         suppliers: suppliersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
       });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  const FINANCE_FIELD_ROLES = [
+    "super_admin", "tenant_admin", "ceo", "accountant", "admin", "payroll_manager",
+    "operations_manager", "regional_manager",
+  ] as const;
+
+  function parseFinanceFieldPatch(body: any): { patch?: Record<string, any>; error?: string } {
+    const patch: Record<string, any> = {};
+    const numOrNull = (raw: unknown, allowNull: boolean, label: string, min = 0) => {
+      if (raw === null || raw === "") {
+        if (!allowNull) return { error: `${label} is required` };
+        return { value: null as number | null };
+      }
+      const v = Number(raw);
+      if (!Number.isFinite(v) || v < min) return { error: `Invalid ${label}` };
+      return { value: Math.round(v * 100) / 100 };
+    };
+
+    if (body.holidayHours !== undefined) {
+      const r = numOrNull(body.holidayHours, false, "holiday hours");
+      if (r.error) return { error: r.error };
+      patch.holidayHours = String(r.value);
+    }
+    if (body.deductionHours !== undefined) {
+      const r = numOrNull(body.deductionHours, false, "deduction hours", Number.NEGATIVE_INFINITY);
+      if (r.error) return { error: r.error };
+      patch.deductionHours = String(r.value);
+    }
+    if (body.breakMinutes !== undefined) {
+      const v = Number(body.breakMinutes);
+      if (!Number.isFinite(v) || v < 0) return { error: "Invalid break minutes" };
+      patch.breakMinutes = Math.round(v);
+    }
+    if (body.payRate !== undefined) {
+      const r = numOrNull(body.payRate, true, "pay rate");
+      if (r.error) return { error: r.error };
+      patch.payRate = r.value == null ? null : String(r.value);
+    }
+    if (body.chargeRate !== undefined) {
+      const r = numOrNull(body.chargeRate, true, "charge rate");
+      if (r.error) return { error: r.error };
+      patch.chargeRate = r.value == null ? null : String(r.value);
+    }
+    if (body.lateMinutes !== undefined) {
+      const v = Number(body.lateMinutes);
+      if (!Number.isFinite(v) || v < 0) return { error: "Invalid late minutes" };
+      const lateMinutes = Math.round(v);
+      patch.lateMinutes = lateMinutes;
+      patch.lateHours = (Math.round((lateMinutes / 60) * 100) / 100).toFixed(2);
+    }
+    if (Object.keys(patch).length === 0) return { error: "No fields to update" };
+    return { patch };
+  }
+
+  app.patch("/api/finance-approval/shifts/:id", requireRole(...FINANCE_FIELD_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      const shiftId = parseInt(req.params.id, 10);
+      if (!Number.isFinite(shiftId)) return res.status(400).json({ message: "Invalid shift id" });
+      const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
+      const shift = await storage.getShift(shiftId, tenantFilter);
+      if (!shift) return res.status(404).json({ message: "Shift not found" });
+
+      const parsed = parseFinanceFieldPatch(req.body || {});
+      if (parsed.error || !parsed.patch) return res.status(400).json({ message: parsed.error || "Invalid request" });
+
+      const updated = await storage.updateShift(shiftId, parsed.patch as any);
+      if (user.tenantId != null) {
+        await storage.createAuditLog({
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: "finance_shift_fields_updated",
+          entityType: "shift",
+          entityId: String(shiftId),
+          details: { fields: parsed.patch },
+        }).catch(() => null);
+      }
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/finance-approval/shifts/bulk-update", requireRole(...FINANCE_FIELD_ROLES), async (req, res) => {
+    try {
+      const user = req.user as User;
+      const shiftIds = Array.isArray(req.body?.shiftIds) ? req.body.shiftIds.map((id: any) => parseInt(String(id), 10)).filter((n: number) => Number.isFinite(n)) : [];
+      if (shiftIds.length === 0) return res.status(400).json({ message: "shiftIds array is required" });
+
+      const parsed = parseFinanceFieldPatch(req.body?.fields || req.body || {});
+      if (parsed.error || !parsed.patch) return res.status(400).json({ message: parsed.error || "Invalid request" });
+
+      const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
+      const processed: number[] = [];
+      const skipped: number[] = [];
+      const errors: string[] = [];
+
+      for (const id of shiftIds) {
+        try {
+          const shift = await storage.getShift(id, tenantFilter);
+          if (!shift) {
+            skipped.push(id);
+            errors.push(`Shift ${id} not found`);
+            continue;
+          }
+          await storage.updateShift(id, parsed.patch as any);
+          if (user.tenantId != null) {
+            await storage.createAuditLog({
+              tenantId: user.tenantId,
+              userId: user.id,
+              action: "finance_shift_fields_bulk_updated",
+              entityType: "shift",
+              entityId: String(id),
+              details: { fields: parsed.patch, bulk: true },
+            }).catch(() => null);
+          }
+          processed.push(id);
+        } catch (e: any) {
+          skipped.push(id);
+          errors.push(`Shift ${id}: ${e.message}`);
+        }
+      }
+
+      res.json({ processed, skipped, errors, fields: parsed.patch });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -5388,6 +5544,10 @@ export async function registerRoutes(
           verifiedAt: r.verified_at,
           verifiedBy: r.verified_by,
           lateMinutes: r.late_minutes || 0,
+          lateHours: r.late_hours != null ? parseFloat(String(r.late_hours)) || 0 : 0,
+          payRate: r.pay_rate ?? null,
+          chargeRate: r.charge_rate ?? null,
+          holidayHours: r.holiday_hours != null ? parseFloat(String(r.holiday_hours)) || 0 : 0,
           createdBy: r.created_by,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
@@ -5436,16 +5596,35 @@ export async function registerRoutes(
           }
         }
       }
+      const now = new Date();
+      const late = shift
+        ? calculateLateDeduction(shiftDateTime(shift.date, shift.startTime), now)
+        : { rawLateMinutes: 0, lateMinutes: 0, lateHours: "0.00" };
       const updated = await storage.updateShift(shiftId, {
-        checkInTime: new Date(),
+        checkInTime: now,
+        bookedOnAt: now,
+        bookedOnBy: user.id,
         lastCheckInLat: parsedLat != null ? String(parsedLat) : null,
         lastCheckInLng: parsedLng != null ? String(parsedLng) : null,
         lastCheckInAddress: address || null,
         checkInDistanceMetres: distanceMetres != null ? String(distanceMetres) : null,
         status: "in_progress",
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
       } as any);
-      if (user.tenantId) logControllerAction(user.tenantId, user.id, "checkin", shiftId, null, "Manual check-in");
-      res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius });
+      if (user.tenantId) {
+        logControllerAction(
+          user.tenantId,
+          user.id,
+          "checkin",
+          shiftId,
+          null,
+          late.lateMinutes > 0
+            ? `Manual check-in ${late.lateMinutes}min late (${late.lateHours}h after 15m grace)`
+            : "Manual check-in",
+        );
+      }
+      res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius, lateMinutes: late.lateMinutes, lateHours: late.lateHours });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -5555,12 +5734,17 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Pre-shift ops check must be completed with all items passed before checking in. Please complete the ops check first." });
       }
 
+      const late = calculateLateDeduction(shiftDateTime(shift.date, shift.startTime), now);
       const updated = await storage.updateShift(shiftId, {
         status: "in_progress",
         checkInTime: now,
+        bookedOnAt: now,
+        bookedOnBy: user.id,
         lastCheckInLat: String(geo.lat),
         lastCheckInLng: String(geo.lng),
         checkInDistanceMetres: geo.distanceMetres != null ? String(geo.distanceMetres) : null,
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
       } as any);
       try {
         const { ensureCheckCallsForShift } = await import("./control-room-calls");
@@ -5574,9 +5758,25 @@ export async function registerRoutes(
         action: "employee_self_checkin",
         entityType: "shift",
         entityId: String(shiftId),
-        details: { employeeId: employee.id, lat: geo.lat, lng: geo.lng, distanceMetres: geo.distanceMetres, withinRange: geo.withinRange },
+        details: {
+          employeeId: employee.id,
+          lat: geo.lat,
+          lng: geo.lng,
+          distanceMetres: geo.distanceMetres,
+          withinRange: geo.withinRange,
+          lateMinutes: late.lateMinutes,
+          rawLateMinutes: late.rawLateMinutes,
+          lateHours: late.lateHours,
+        },
       });
-      res.json({ ...updated, distanceFromSite: geo.distanceMetres, withinRange: geo.withinRange, geofenceRadius: geo.geofenceRadius });
+      res.json({
+        ...updated,
+        distanceFromSite: geo.distanceMetres,
+        withinRange: geo.withinRange,
+        geofenceRadius: geo.geofenceRadius,
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -6034,20 +6234,15 @@ export async function registerRoutes(
       }
 
       const now = new Date();
-      let lateMinutes = 0;
-      if (shift.startTime && shift.date) {
-        const scheduledStart = new Date(`${shift.date}T${shift.startTime}:00`);
-        if (now > scheduledStart) {
-          lateMinutes = Math.ceil((now.getTime() - scheduledStart.getTime()) / 60000);
-        }
-      }
+      const late = calculateLateDeduction(shiftDateTime(shift.date, shift.startTime), now);
 
       const updated = await storage.updateShift(shiftId, {
         status: "booked_on",
         bookedOnAt: now,
         bookedOnBy: user.id,
         checkInTime: now,
-        lateMinutes,
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
       } as any);
 
       if (user.tenantId != null) {
@@ -6059,12 +6254,25 @@ export async function registerRoutes(
           entityId: String(shiftId),
           details: {
             bookedOnAt: now.toISOString(),
-            lateMinutes,
+            lateMinutes: late.lateMinutes,
+            rawLateMinutes: late.rawLateMinutes,
+            lateHours: late.lateHours,
             bookedOnBy: user.id,
             employeeId: shift.employeeId,
           },
         });
-        logControllerAction(user.tenantId, user.id, "book_on", shiftId, null, lateMinutes > 0 ? `Booked on ${lateMinutes}min late` : "Booked on");
+        logControllerAction(
+          user.tenantId,
+          user.id,
+          "book_on",
+          shiftId,
+          null,
+          late.lateMinutes > 0
+            ? `Booked on ${late.lateMinutes}min late (${late.lateHours}h after 15m grace)`
+            : late.rawLateMinutes > 0
+              ? `Booked on within ${late.rawLateMinutes}min grace`
+              : "Booked on",
+        );
       }
 
       res.json(updated);
@@ -21166,12 +21374,16 @@ Respond in JSON format:
           if (isNaN(hh) || isNaN(mm)) continue;
 
           const shiftStart = new Date(shift.date + "T" + startTimeStr.padStart(5, "0") + ":00");
-          const minutesLate = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
+          const minutesLateRaw = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
 
-          if (minutesLate < rule.delay_minutes) continue;
+          if (minutesLateRaw < rule.delay_minutes) continue;
 
           if (rule.action_type === "mark_late") {
-            await pool.query(`UPDATE shifts SET status = 'in_progress', late_minutes = $1 WHERE id = $2`, [minutesLate, shift.id]);
+            const late = calculateLateDeduction(shiftStart, now);
+            await pool.query(
+              `UPDATE shifts SET status = 'in_progress', late_minutes = $1, late_hours = $2, updated_at = NOW() WHERE id = $3`,
+              [late.lateMinutes, late.lateHours, shift.id],
+            );
             actions.push({ shiftId: shift.id, rule: rule.name, action: "marked_late" });
           } else if (rule.action_type === "mark_no_show") {
             await pool.query(`UPDATE shifts SET status = 'no_show' WHERE id = $1`, [shift.id]);
@@ -21179,7 +21391,7 @@ Respond in JSON format:
           } else if (rule.action_type === "notify_controller") {
             actions.push({ shiftId: shift.id, rule: rule.name, action: "controller_notified" });
           }
-          await logControllerAction(tenantId, user.id, `escalation_${rule.action_type}`, shift.id, null, `Rule: ${rule.name}, ${minutesLate}min late`);
+          await logControllerAction(tenantId, user.id, `escalation_${rule.action_type}`, shift.id, null, `Rule: ${rule.name}, ${minutesLateRaw}min late`);
           escalatedCount++;
         }
       }
@@ -29394,6 +29606,7 @@ Respond in JSON format:
         const bookOffTimes: string[] = [];
         const empIds: string[] = [];
         const lateMins: number[] = [];
+        const lateHoursList: string[] = [];
         const checkLats: string[] = [];
         const checkLngs: string[] = [];
         const checkAddrs: string[] = [];
@@ -29404,12 +29617,16 @@ Respond in JSON format:
 
           let bookOnTs = "";
           let lateMin = 0;
+          let lateHrs = "0.00";
           if (shift.start_time) {
             const [sh, sm] = shift.start_time.split(":").map(Number);
             const scheduledStart = new Date(`${dateStr}T${String(sh).padStart(2,"0")}:${String(sm).padStart(2,"0")}:00Z`);
             const bookOnOffsetMins = pickBookOnOffset();
-            bookOnTs = new Date(scheduledStart.getTime() + bookOnOffsetMins * 60000).toISOString();
-            lateMin = Math.max(0, Math.round(bookOnOffsetMins));
+            const bookOnAt = new Date(scheduledStart.getTime() + bookOnOffsetMins * 60000);
+            bookOnTs = bookOnAt.toISOString();
+            const late = calculateLateDeduction(scheduledStart, bookOnAt);
+            lateMin = late.lateMinutes;
+            lateHrs = late.lateHours;
           }
 
           let bookOffTs = "";
@@ -29442,6 +29659,7 @@ Respond in JSON format:
           bookOffTimes.push(bookOffTs);
           empIds.push(employeeIdStr);
           lateMins.push(lateMin);
+          lateHoursList.push(lateHrs);
           checkLats.push(cLat);
           checkLngs.push(cLng);
           checkAddrs.push(cAddr);
@@ -29456,13 +29674,14 @@ Respond in JSON format:
             booked_on_by = CASE WHEN v.emp != '' THEN v.emp ELSE booked_on_by END,
             booked_off_by = CASE WHEN v.emp != '' THEN v.emp ELSE booked_off_by END,
             late_minutes = v.late_min,
+            late_hours = v.late_hrs::numeric,
             last_check_in_lat = CASE WHEN v.c_lat != '' THEN v.c_lat ELSE last_check_in_lat END,
             last_check_in_lng = CASE WHEN v.c_lng != '' THEN v.c_lng ELSE last_check_in_lng END,
             last_check_in_address = CASE WHEN v.c_addr != '' THEN v.c_addr ELSE last_check_in_address END
-          FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::int[], $6::text[], $7::text[], $8::text[])
-            AS v(id, book_on, book_off, emp, late_min, c_lat, c_lng, c_addr)
+          FROM unnest($1::int[], $2::text[], $3::text[], $4::text[], $5::int[], $6::text[], $7::text[], $8::text[], $9::text[])
+            AS v(id, book_on, book_off, emp, late_min, late_hrs, c_lat, c_lng, c_addr)
           WHERE shifts.id = v.id`,
-          [ids, bookOnTimes, bookOffTimes, empIds, lateMins, checkLats, checkLngs, checkAddrs]
+          [ids, bookOnTimes, bookOffTimes, empIds, lateMins, lateHoursList, checkLats, checkLngs, checkAddrs]
         );
 
         totalUpdated += shifts.length;
@@ -30959,12 +31178,17 @@ Respond in JSON format:
         return res.status(400).json({ message: "Pre-shift ops check must be completed with all items passed before checking in. Please complete the ops check first." });
       }
 
+      const late = calculateLateDeduction(shiftDateTime(shift.date, shift.startTime), now);
       const updated = await storage.updateShift(shiftId, {
         status: "in_progress",
         checkInTime: now,
+        bookedOnAt: now,
+        bookedOnBy: user.id,
         lastCheckInLat: String(parsedLat),
         lastCheckInLng: String(parsedLng),
         checkInDistanceMetres: distanceMetres != null ? String(distanceMetres) : null,
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
       } as any);
       await storage.createAuditLog({
         tenantId: user.tenantId,
@@ -30972,9 +31196,26 @@ Respond in JSON format:
         action: "employee_self_checkin",
         entityType: "shift",
         entityId: String(shiftId),
-        details: { employeeId: employee.id, lat: parsedLat, lng: parsedLng, distanceMetres, withinRange, source: "mobile_app" },
+        details: {
+          employeeId: employee.id,
+          lat: parsedLat,
+          lng: parsedLng,
+          distanceMetres,
+          withinRange,
+          source: "mobile_app",
+          lateMinutes: late.lateMinutes,
+          rawLateMinutes: late.rawLateMinutes,
+          lateHours: late.lateHours,
+        },
       });
-      res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius });
+      res.json({
+        ...updated,
+        distanceFromSite: distanceMetres,
+        withinRange,
+        geofenceRadius,
+        lateMinutes: late.lateMinutes,
+        lateHours: late.lateHours,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

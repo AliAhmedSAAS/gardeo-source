@@ -916,6 +916,9 @@ export default function PayrollSummaryPage() {
                     <th className="p-1">In</th>
                     <th className="p-1">Out</th>
                     <th className="p-1">Hours</th>
+                    <th className="p-1">Break</th>
+                    <th className="p-1">Holiday</th>
+                    <th className="p-1">Late</th>
                     <th className="p-1">Rate</th>
                     <th className="p-1">Wages</th>
                     <th className="p-1">Deduction</th>
@@ -938,6 +941,13 @@ export default function PayrollSummaryPage() {
                         <td className="p-1">{s.start_time}</td>
                         <td className="p-1">{s.end_time}</td>
                         <td className="p-1">{s.hours || "—"}</td>
+                        <td className="p-1">
+                          {(s.break_minutes || 0) > 0 ? `${s.break_minutes}m` : "—"}
+                        </td>
+                        <td className="p-1">{s.holiday_hours ?? "—"}</td>
+                        <td className={`p-1 ${Number(s.late_hours) > 0 ? "text-amber-600" : ""}`}>
+                          {s.late_hours ?? "—"}
+                        </td>
                         <td className="p-1">{pay.rate ? pay.rate.toFixed(2) : "—"}</td>
                         <td className="p-1">{s.wages != null && s.wages !== "" ? gbp(pay.wages) : "—"}</td>
                         <td className={`p-1 ${pay.deduction > 0 ? "text-red-600" : ""}`}>

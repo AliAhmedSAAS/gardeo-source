@@ -231,6 +231,7 @@ function BilledTab() {
                           <th className="pb-2 pr-3">Start</th>
                           <th className="pb-2 pr-3">End</th>
                           <th className="pb-2 pr-3 text-right">Hours</th>
+                          <th className="pb-2 pr-3 text-right">Break</th>
                           <th className="pb-2 pr-3 text-right">Rate</th>
                           <th className="pb-2 text-right">Amount</th>
                         </tr>
@@ -244,6 +245,9 @@ function BilledTab() {
                             <td className="py-2 pr-3">{shift.startTime}</td>
                             <td className="py-2 pr-3">{shift.endTime}</td>
                             <td className="py-2 pr-3 text-right">{shift.hours.toFixed(1)}</td>
+                            <td className="py-2 pr-3 text-right text-muted-foreground">
+                              {(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}
+                            </td>
                             <td className="py-2 pr-3 text-right">£{shift.rate.toFixed(2)}</td>
                             <td className="py-2 text-right">£{shift.amount.toFixed(2)}</td>
                           </tr>
@@ -254,11 +258,12 @@ function BilledTab() {
                           <td colSpan={5} className="pt-2 pr-3">Totals</td>
                           <td className="pt-2 pr-3 text-right">{invoice.totalHours.toFixed(1)}</td>
                           <td className="pt-2 pr-3"></td>
+                          <td className="pt-2 pr-3"></td>
                           <td className="pt-2 text-right">£{invoice.totalAmount.toFixed(2)}</td>
                         </tr>
                         {invoice.vatAmount > 0 && (
                           <tr className="text-muted-foreground text-xs">
-                            <td colSpan={7} className="pt-1 pr-3 text-right">VAT</td>
+                            <td colSpan={8} className="pt-1 pr-3 text-right">VAT</td>
                             <td className="pt-1 text-right">£{invoice.vatAmount.toFixed(2)}</td>
                           </tr>
                         )}
@@ -814,7 +819,7 @@ export default function SupplierTimesheetsPage() {
 
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t space-y-3 ml-7" data-testid={`details-shift-${shift.id}`}>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                         <div>
                           <p className="text-xs text-muted-foreground">Site</p>
                           <p className="font-medium">{shift.siteName}</p>
@@ -827,9 +832,10 @@ export default function SupplierTimesheetsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground">Hours</p>
                           <p className="font-medium">{hours}</p>
-                          {(shift.breakMinutes || 0) > 0 && (
-                            <p className="text-xs text-muted-foreground">{shift.breakMinutes}min break</p>
-                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Break</p>
+                          <p className="font-medium">{(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Shift Status</p>

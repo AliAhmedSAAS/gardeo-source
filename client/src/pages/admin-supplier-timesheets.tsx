@@ -49,6 +49,7 @@ type BilledShift = {
   siteName: string;
   startTime: string;
   endTime: string;
+  breakMinutes?: number;
   hours: number;
   rate: number;
   amount: number;
@@ -403,6 +404,7 @@ function BilledTab({ suppliers }: { suppliers: { id: number; name: string }[] })
                               <th className="text-left py-2 pr-3 font-medium">Start</th>
                               <th className="text-left py-2 pr-3 font-medium">End</th>
                               <th className="text-right py-2 pr-3 font-medium">Hours</th>
+                              <th className="text-right py-2 pr-3 font-medium">Break</th>
                               <th className="text-right py-2 pr-3 font-medium">Rate</th>
                               <th className="text-right py-2 font-medium">Amount</th>
                             </tr>
@@ -415,6 +417,9 @@ function BilledTab({ suppliers }: { suppliers: { id: number; name: string }[] })
                                 <td className="py-2 pr-3">{shift.startTime}</td>
                                 <td className="py-2 pr-3">{shift.endTime}</td>
                                 <td className="py-2 pr-3 text-right">{shift.hours.toFixed(1)}</td>
+                                <td className="py-2 pr-3 text-right text-muted-foreground">
+                                  {(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}
+                                </td>
                                 <td className="py-2 pr-3 text-right">{formatCurrency(shift.rate)}</td>
                                 <td className="py-2 text-right font-medium">{formatCurrency(shift.amount)}</td>
                               </tr>
@@ -424,6 +429,7 @@ function BilledTab({ suppliers }: { suppliers: { id: number; name: string }[] })
                             <tr className="border-t font-medium">
                               <td colSpan={4} className="py-2 pr-3 text-right">Totals</td>
                               <td className="py-2 pr-3 text-right">{invoice.totalHours.toFixed(1)}</td>
+                              <td className="py-2 pr-3"></td>
                               <td className="py-2 pr-3"></td>
                               <td className="py-2 text-right">{formatCurrency(invoice.totalAmount)}</td>
                             </tr>
@@ -779,7 +785,7 @@ export default function AdminSupplierTimesheetsPage() {
 
                           {isExpanded && (
                             <div className="mt-4 pt-4 border-t space-y-3" data-testid={`details-shift-${shift.id}`}>
-                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
                                 <div>
                                   <p className="text-xs text-muted-foreground">Site</p>
                                   <p className="font-medium">{shift.siteName}</p>
@@ -796,9 +802,10 @@ export default function AdminSupplierTimesheetsPage() {
                                 <div>
                                   <p className="text-xs text-muted-foreground">Hours</p>
                                   <p className="font-medium">{hours}</p>
-                                  {(shift.breakMinutes || 0) > 0 && (
-                                    <p className="text-xs text-muted-foreground">{shift.breakMinutes}min break</p>
-                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Break</p>
+                                  <p className="font-medium">{(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground">Approval Status</p>
