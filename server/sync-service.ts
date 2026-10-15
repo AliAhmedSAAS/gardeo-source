@@ -1643,7 +1643,8 @@ export async function runSync(
   supplierId?: string,
   siteDecisions?: Record<string, { action: "use_existing" | "create_new"; siteId?: number }>,
   pageFrom?: number,
-  pageTo?: number
+  pageTo?: number,
+  skipEnrichment?: boolean
 ): Promise<SyncLog> {
   const config = await storage.getSyncConfiguration(configId);
   if (!config) throw new Error("Sync configuration not found");
@@ -1813,22 +1814,26 @@ export async function runSync(
       const shiftResult = await syncRestPhpShifts(tenantId, shifts, supplierIdMap, clientIdMap, siteIdMap, employeeIdMap);
       breakdown.shifts = shiftResult;
 
-      try {
-        const enrichResult = await enrichEmployeesFromApi(config, tenantId, employeeIdMap, supplierId);
-        if (enrichResult) {
-          allErrors.push(
-            `[ENRICHMENT] ${enrichResult.enriched} employees enriched: ` +
-            `${enrichResult.bankDetails} bank, ${enrichResult.documents} docs, ` +
-            `${enrichResult.employmentHistory} history, ${enrichResult.passportRecords} passport, ` +
-            `${enrichResult.emergencyContacts} NOK, ${enrichResult.educationHistory} education, ` +
-            `${enrichResult.rightOfWork} ROW`
-          );
-          if (enrichResult.errors.length > 0) {
-            allErrors.push(...enrichResult.errors.map(e => `[ENRICHMENT ERROR] ${e}`));
+      if (skipEnrichment) {
+        allErrors.push("[ENRICHMENT] Skipped for this chunk (skipEnrichment=true)");
+      } else {
+        try {
+          const enrichResult = await enrichEmployeesFromApi(config, tenantId, employeeIdMap, supplierId);
+          if (enrichResult) {
+            allErrors.push(
+              `[ENRICHMENT] ${enrichResult.enriched} employees enriched: ` +
+              `${enrichResult.bankDetails} bank, ${enrichResult.documents} docs, ` +
+              `${enrichResult.employmentHistory} history, ${enrichResult.passportRecords} passport, ` +
+              `${enrichResult.emergencyContacts} NOK, ${enrichResult.educationHistory} education, ` +
+              `${enrichResult.rightOfWork} ROW`
+            );
+            if (enrichResult.errors.length > 0) {
+              allErrors.push(...enrichResult.errors.map(e => `[ENRICHMENT ERROR] ${e}`));
+            }
           }
+        } catch (enrichErr: any) {
+          allErrors.push(`Employee enrichment failed: ${enrichErr.message}`);
         }
-      } catch (enrichErr: any) {
-        allErrors.push(`Employee enrichment failed: ${enrichErr.message}`);
       }
     } else if (isPhpApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";

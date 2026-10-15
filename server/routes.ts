@@ -25263,9 +25263,20 @@ Respond in JSON format:
       if (!config || config.tenantId !== tenantId) {
         return res.status(404).json({ message: "Configuration not found" });
       }
-      const { dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo } = req.body || {};
+      const { dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo, skipEnrichment } = req.body || {};
       const { runSync } = await import("./sync-service");
-      const log = await runSync(configId, tenantId, undefined, dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo);
+      const log = await runSync(
+        configId,
+        tenantId,
+        undefined,
+        dateFrom,
+        dateTo,
+        supplierId,
+        siteDecisions,
+        pageFrom,
+        pageTo,
+        !!skipEnrichment
+      );
       res.json(log);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
