@@ -8,7 +8,7 @@ import {
   checkShiftDuplicate, DEPENDENCY_ORDER, buildFillBlanksUpdate,
   findByExternalId, findEmployeeByExtIdOrName, findSiteByExtIdOrFuzzy,
   findClientByNameOrExtId, findSupplierByNameOrExtId,
-  syncEmployeeBankDetails, syncEmployeeDocuments, syncEmploymentHistory, syncPassportData,
+  applyEmployeeRelatedData,
   sanitizeDate,
 } from "./sync-utils";
 
@@ -1458,19 +1458,44 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
 async function enrichEmployeesFromApi(
   config: SyncConfiguration,
   tenantId: number,
-  employeeIdMap: Map<string, number>
-): Promise<{ enriched: number; bankDetails: number; documents: number; employmentHistory: number; passportRecords: number; errors: string[] }> {
-  const result = { enriched: 0, bankDetails: 0, documents: 0, employmentHistory: 0, passportRecords: 0, errors: [] as string[] };
+  employeeIdMap: Map<string, number>,
+  supplierId?: string
+): Promise<{
+  enriched: number;
+  bankDetails: number;
+  documents: number;
+  employmentHistory: number;
+  passportRecords: number;
+  emergencyContacts: number;
+  educationHistory: number;
+  rightOfWork: number;
+  errors: string[];
+}> {
+  const result = {
+    enriched: 0,
+    bankDetails: 0,
+    documents: 0,
+    employmentHistory: 0,
+    passportRecords: 0,
+    emergencyContacts: 0,
+    educationHistory: 0,
+    rightOfWork: 0,
+    errors: [] as string[],
+  };
 
   const apiBaseUrl = config.apiBaseUrl.replace(/\/api\/.*$/, "").replace(/\/$/, "");
   const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
+  const extraParams: Record<string, string> = { api_key: apiKey };
+  if (supplierId) {
+    extraParams.supplier_id = stripEntityPrefix(String(supplierId));
+  }
 
   let allEmployees: any[] = [];
   try {
-    allEmployees = await fetchPaginated(apiBaseUrl, apiKey, "/api/employees.php", null, { api_key: apiKey });
+    allEmployees = await fetchPaginated(apiBaseUrl, apiKey, "/api/employees.php", null, extraParams);
   } catch (err: any) {
     try {
-      allEmployees = await fetchPaginated(apiBaseUrl, apiKey, "/api/employees", null, { api_key: apiKey });
+      allEmployees = await fetchPaginated(apiBaseUrl, apiKey, "/api/employees", null, extraParams);
     } catch {
       result.errors.push(`Failed to fetch employees API: ${err.message}`);
       return result;
@@ -1523,33 +1548,20 @@ async function enrichEmployeesFromApi(
         placeOfBirth: { dbField: "place_of_birth", value: emp.placeOfBirth || emp.place_of_birth },
         siaLicenseNumber: { dbField: "sia_license_number", value: emp.sia },
         siaExpiryDate: { dbField: "sia_expiry_date", value: sanitizeDate(emp.siaexp) },
+        startDate: { dbField: "start_date", value: sanitizeDate(emp.joinDate || emp.startDate) },
       }, {}, empId);
       if (empUpdate?.hasFieldUpdates) {
         await pool.query(empUpdate.sql, empUpdate.values);
       }
 
-      if (emp.bankname || emp.sortcode || emp.account) {
-        const bankSynced = await syncEmployeeBankDetails(empId, {
-          bankname: emp.bankname, acctitle: emp.acctitle,
-          sortcode: emp.sortcode, account: emp.account,
-        });
-        if (bankSynced) result.bankDetails++;
-      }
-
-      if (emp.documentData && Array.isArray(emp.documentData) && emp.documentData.length > 0) {
-        const docCount = await syncEmployeeDocuments(empId, tenantId, emp.documentData);
-        result.documents += docCount;
-      }
-
-      if (emp.employmentHistory && Array.isArray(emp.employmentHistory) && emp.employmentHistory.length > 0) {
-        const histCount = await syncEmploymentHistory(empId, emp.employmentHistory);
-        result.employmentHistory += histCount;
-      }
-
-      if (emp.passportData) {
-        const passCount = await syncPassportData(empId, tenantId, emp.passportData);
-        result.passportRecords += passCount;
-      }
+      const related = await applyEmployeeRelatedData(empId, tenantId, emp);
+      result.bankDetails += related.bankDetails;
+      result.documents += related.documents;
+      result.employmentHistory += related.employmentHistory;
+      result.passportRecords += related.passportRecords;
+      result.emergencyContacts += related.emergencyContacts;
+      result.educationHistory += related.educationHistory;
+      result.rightOfWork += related.rightOfWork;
 
       result.enriched++;
     } catch (empErr: any) {
@@ -1668,12 +1680,21 @@ export async function runSync(
       const startPage = pageFrom && pageFrom >= 1 ? pageFrom : 1;
       let empPage = startPage;
       let empTotalPages = pageTo || 999999;
+      const supplierFilter = supplierId ? stripEntityPrefix(String(supplierId)) : "";
       while (empPage <= empTotalPages) {
         let retries = 5;
         while (retries > 0) {
           try {
             if (empPage > startPage) await new Promise(r => setTimeout(r, 300));
-            const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${empPage}&per_page=200&_t=${Date.now()}&_nocache=1`;
+            const params = new URLSearchParams({
+              api_key: apiKey,
+              page: String(empPage),
+              per_page: "200",
+              _t: String(Date.now()),
+              _nocache: "1",
+            });
+            if (supplierFilter) params.set("supplier_id", supplierFilter);
+            const url = `${config.apiBaseUrl.replace(/\/$/, "")}?${params.toString()}`;
             const response = await fetch(url, noCacheFetchInit());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const text = await response.text();
@@ -1732,21 +1753,7 @@ export async function runSync(
                 }
               }
             }
-            if (emp.bankname || emp.sortcode || emp.account) {
-              await syncEmployeeBankDetails(empId, {
-                bankname: emp.bankname, acctitle: emp.acctitle,
-                sortcode: emp.sortcode, account: emp.account,
-              });
-            }
-            if (emp.documentData && Array.isArray(emp.documentData) && emp.documentData.length > 0) {
-              await syncEmployeeDocuments(empId, tenantId, emp.documentData);
-            }
-            if (emp.employmentHistory && Array.isArray(emp.employmentHistory) && emp.employmentHistory.length > 0) {
-              await syncEmploymentHistory(empId, emp.employmentHistory);
-            }
-            if (emp.passportData) {
-              await syncPassportData(empId, tenantId, emp.passportData);
-            }
+            await applyEmployeeRelatedData(empId, tenantId, emp);
           } catch {}
         }
       }
@@ -1807,9 +1814,15 @@ export async function runSync(
       breakdown.shifts = shiftResult;
 
       try {
-        const enrichResult = await enrichEmployeesFromApi(config, tenantId, employeeIdMap);
+        const enrichResult = await enrichEmployeesFromApi(config, tenantId, employeeIdMap, supplierId);
         if (enrichResult) {
-          allErrors.push(`[ENRICHMENT] ${enrichResult.enriched} employees enriched: ${enrichResult.bankDetails} bank, ${enrichResult.documents} docs, ${enrichResult.employmentHistory} history, ${enrichResult.passportRecords} passport records`);
+          allErrors.push(
+            `[ENRICHMENT] ${enrichResult.enriched} employees enriched: ` +
+            `${enrichResult.bankDetails} bank, ${enrichResult.documents} docs, ` +
+            `${enrichResult.employmentHistory} history, ${enrichResult.passportRecords} passport, ` +
+            `${enrichResult.emergencyContacts} NOK, ${enrichResult.educationHistory} education, ` +
+            `${enrichResult.rightOfWork} ROW`
+          );
           if (enrichResult.errors.length > 0) {
             allErrors.push(...enrichResult.errors.map(e => `[ENRICHMENT ERROR] ${e}`));
           }
@@ -1946,21 +1959,7 @@ export async function runSync(
                       }
                     }
                   }
-                  if (item.bankname || item.sortcode || item.account) {
-                    await syncEmployeeBankDetails(enrichEmpId, {
-                      bankname: item.bankname, acctitle: item.acctitle,
-                      sortcode: item.sortcode, account: item.account,
-                    });
-                  }
-                  if (item.documentData && Array.isArray(item.documentData) && item.documentData.length > 0) {
-                    await syncEmployeeDocuments(enrichEmpId, tenantId, item.documentData);
-                  }
-                  if (item.employmentHistory && Array.isArray(item.employmentHistory) && item.employmentHistory.length > 0) {
-                    await syncEmploymentHistory(enrichEmpId, item.employmentHistory);
-                  }
-                  if (item.passportData) {
-                    await syncPassportData(enrichEmpId, tenantId, item.passportData);
-                  }
+                  await applyEmployeeRelatedData(enrichEmpId, tenantId, item);
                 } catch {}
               }
               break;
@@ -2494,10 +2493,19 @@ export async function runDrySync(
     let currentPage = startPage;
     let maxPage = pageTo || startPage;
     let totalRecords = 0;
+    const supplierFilter = supplierId ? stripEntityPrefix(String(supplierId)) : "";
     while (currentPage <= maxPage) {
       try {
         if (currentPage > startPage) await new Promise(r => setTimeout(r, 300));
-        const url = `${config.apiBaseUrl.replace(/\/$/, "")}?api_key=${encodeURIComponent(apiKey)}&page=${currentPage}&per_page=200&_t=${Date.now()}&_nocache=1`;
+        const params = new URLSearchParams({
+          api_key: apiKey,
+          page: String(currentPage),
+          per_page: "200",
+          _t: String(Date.now()),
+          _nocache: "1",
+        });
+        if (supplierFilter) params.set("supplier_id", supplierFilter);
+        const url = `${config.apiBaseUrl.replace(/\/$/, "")}?${params.toString()}`;
         const response = await fetch(url, noCacheFetchInit({}, 30000));
         if (!response.ok) throw new Error(`Employees API returned status ${response.status}`);
         const body = await response.json();

@@ -387,6 +387,7 @@ export async function upsertEmployee(
           dbsCertificateNumber: { dbField: "dbs_certificate_number", value: data.dbsCertificateNumber },
           employeeNumber: { dbField: "employee_number", value: data.employeeNumber },
           placeOfBirth: { dbField: "place_of_birth", value: data.placeOfBirth || data.place_of_birth },
+          startDate: { dbField: "start_date", value: sanitizeDate(data.startDate || data.joinDate || data.contract_start_date) },
           supplierId: { dbField: "supplier_id", value: supplierId },
         }, { external_id: extId }, existing.empId);
 
@@ -807,4 +808,276 @@ export async function syncPassportData(
     insertVals
   );
   return 1;
+}
+
+export async function syncEmergencyContacts(
+  employeeId: number,
+  contacts: Array<{
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    alternatePhone?: string;
+    email?: string;
+    address?: string;
+    isPrimary?: boolean;
+  }>
+): Promise<number> {
+  let synced = 0;
+  for (const c of contacts) {
+    const name = (c.name || "").trim();
+    const phone = (c.phone || "").trim();
+    if (!name || !phone) continue;
+    const relationship = (c.relationship || "Next of Kin").trim() || "Next of Kin";
+
+    const existing = await pool.query(
+      `SELECT id FROM emergency_contacts
+       WHERE employee_id = $1 AND name = $2 AND phone = $3
+       LIMIT 1`,
+      [employeeId, name, phone]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE emergency_contacts
+         SET relationship = $1, address = COALESCE($2, address),
+             alternate_phone = COALESCE($3, alternate_phone),
+             email = COALESCE($4, email),
+             is_primary = COALESCE($5, is_primary)
+         WHERE id = $6`,
+        [
+          relationship,
+          c.address || null,
+          c.alternatePhone || null,
+          c.email || null,
+          c.isPrimary ?? null,
+          existing.rows[0].id,
+        ]
+      );
+      continue;
+    }
+
+    await pool.query(
+      `INSERT INTO emergency_contacts
+         (employee_id, name, relationship, phone, alternate_phone, email, address, is_primary)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        employeeId,
+        name,
+        relationship,
+        phone,
+        c.alternatePhone || null,
+        c.email || null,
+        c.address || null,
+        !!c.isPrimary,
+      ]
+    );
+    synced++;
+  }
+  return synced;
+}
+
+export async function syncEducationHistory(
+  employeeId: number,
+  tenantId: number,
+  education: Array<{
+    institution?: string;
+    qualification?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    notes?: string;
+  }>
+): Promise<number> {
+  let synced = 0;
+  for (const e of education) {
+    const institution = (e.institution || "").trim();
+    if (!institution) continue;
+    const dateFrom = sanitizeDate(e.dateFrom);
+
+    const existing = await pool.query(
+      `SELECT id FROM employee_education
+       WHERE employee_id = $1 AND institution = $2
+         AND COALESCE(date_from::text, '') = COALESCE($3::text, '')
+       LIMIT 1`,
+      [employeeId, institution, dateFrom]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE employee_education
+         SET qualification = COALESCE($1, qualification),
+             date_to = COALESCE($2, date_to),
+             notes = COALESCE($3, notes)
+         WHERE id = $4`,
+        [e.qualification || null, sanitizeDate(e.dateTo), e.notes || null, existing.rows[0].id]
+      );
+      continue;
+    }
+
+    await pool.query(
+      `INSERT INTO employee_education
+         (employee_id, tenant_id, institution, qualification, date_from, date_to, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        employeeId,
+        tenantId,
+        institution,
+        e.qualification || null,
+        dateFrom,
+        sanitizeDate(e.dateTo),
+        e.notes || null,
+      ]
+    );
+    synced++;
+  }
+  return synced;
+}
+
+export async function syncRightOfWork(
+  employeeId: number,
+  tenantId: number,
+  checks: Array<{
+    lastUploadAt?: string;
+    nextReviewAt?: string;
+    status?: string;
+    notes?: string;
+    documentType?: string;
+    documentNumber?: string;
+    filePath?: string;
+  }>
+): Promise<number> {
+  let synced = 0;
+  for (const r of checks) {
+    const lastUploadAt = r.lastUploadAt ? new Date(r.lastUploadAt) : null;
+    const nextReviewAt = sanitizeDate(r.nextReviewAt)
+      ? new Date(sanitizeDate(r.nextReviewAt) as string)
+      : null;
+    const notesParts = [r.notes, r.documentType, r.documentNumber].filter(Boolean);
+    const notes = notesParts.join(" | ") || null;
+
+    let status = (r.status || "pending").toLowerCase();
+    if (!["pending", "valid", "expired", "rejected"].includes(status)) {
+      status = "pending";
+    }
+
+    // Prefer matching on next review + notes tip to avoid duplicates
+    const existing = await pool.query(
+      `SELECT id FROM right_of_work_checks
+       WHERE employee_id = $1
+         AND COALESCE(next_review_at::date::text, '') = COALESCE($2::text, '')
+         AND COALESCE(notes, '') = COALESCE($3, '')
+       LIMIT 1`,
+      [employeeId, sanitizeDate(r.nextReviewAt), notes]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE right_of_work_checks
+         SET last_upload_at = COALESCE($1, last_upload_at),
+             status = $2,
+             notes = COALESCE($3, notes)
+         WHERE id = $4`,
+        [lastUploadAt, status, notes, existing.rows[0].id]
+      );
+      continue;
+    }
+
+    await pool.query(
+      `INSERT INTO right_of_work_checks
+         (employee_id, tenant_id, last_upload_at, next_review_at, status, notes)
+       VALUES ($1, $2, $3, $4, $5::right_of_work_status, $6)`,
+      [employeeId, tenantId, lastUploadAt, nextReviewAt, status, notes]
+    );
+    synced++;
+
+    // Also store ROW file path as a document when present
+    if (r.filePath) {
+      await syncEmployeeDocuments(employeeId, tenantId, [
+        {
+          type: r.documentType || "right_of_work",
+          path: r.filePath,
+          uploadedDate: r.lastUploadAt,
+        },
+      ]);
+    }
+  }
+  return synced;
+}
+
+/** Apply bank/docs/history/passport/NOK/education/ROW/start_date from PHP employee payload */
+export async function applyEmployeeRelatedData(
+  employeeId: number,
+  tenantId: number,
+  emp: Record<string, any>
+): Promise<{
+  bankDetails: number;
+  documents: number;
+  employmentHistory: number;
+  passportRecords: number;
+  emergencyContacts: number;
+  educationHistory: number;
+  rightOfWork: number;
+}> {
+  const counts = {
+    bankDetails: 0,
+    documents: 0,
+    employmentHistory: 0,
+    passportRecords: 0,
+    emergencyContacts: 0,
+    educationHistory: 0,
+    rightOfWork: 0,
+  };
+
+  const joinDate = sanitizeDate(emp.joinDate || emp.startDate || emp.contract_start_date);
+  if (joinDate) {
+    await pool.query(
+      `UPDATE employees
+       SET start_date = COALESCE(start_date, $1::date),
+           contract_end_date = COALESCE(contract_end_date, $2::date),
+           vetting_complete_at = COALESCE(vetting_complete_at, $3::timestamp),
+           last_synced_at = NOW()
+       WHERE id = $4`,
+      [
+        joinDate,
+        sanitizeDate(emp.contractEndDate),
+        sanitizeDate(emp.vettingComplete) ? `${sanitizeDate(emp.vettingComplete)}T00:00:00Z` : null,
+        employeeId,
+      ]
+    );
+  }
+
+  if (emp.bankname || emp.sortcode || emp.account) {
+    const bankSynced = await syncEmployeeBankDetails(employeeId, {
+      bankname: emp.bankname,
+      acctitle: emp.acctitle,
+      sortcode: emp.sortcode,
+      account: emp.account,
+    });
+    if (bankSynced) counts.bankDetails++;
+  }
+
+  if (Array.isArray(emp.documentData) && emp.documentData.length > 0) {
+    counts.documents += await syncEmployeeDocuments(employeeId, tenantId, emp.documentData);
+  }
+
+  if (Array.isArray(emp.employmentHistory) && emp.employmentHistory.length > 0) {
+    counts.employmentHistory += await syncEmploymentHistory(employeeId, emp.employmentHistory);
+  }
+
+  if (emp.passportData) {
+    counts.passportRecords += await syncPassportData(employeeId, tenantId, emp.passportData);
+  }
+
+  if (Array.isArray(emp.emergencyContacts) && emp.emergencyContacts.length > 0) {
+    counts.emergencyContacts += await syncEmergencyContacts(employeeId, emp.emergencyContacts);
+  }
+
+  if (Array.isArray(emp.educationHistory) && emp.educationHistory.length > 0) {
+    counts.educationHistory += await syncEducationHistory(employeeId, tenantId, emp.educationHistory);
+  }
+
+  if (Array.isArray(emp.rightOfWork) && emp.rightOfWork.length > 0) {
+    counts.rightOfWork += await syncRightOfWork(employeeId, tenantId, emp.rightOfWork);
+  }
+
+  return counts;
 }
