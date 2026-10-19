@@ -526,15 +526,60 @@ export async function checkShiftDuplicate(
 export const DEPENDENCY_ORDER = ["clients", "sites", "suppliers", "employees", "shifts"] as const;
 export type SyncEntityType = typeof DEPENDENCY_ORDER[number];
 
+/**
+ * Resolve bank_details.account_purpose for sync:
+ * - custom payroll OFF → default
+ * - custom payroll ON + GuardTrack terms Self-employed → self
+ * - custom payroll ON + anything else → payee
+ */
+async function resolveBankAccountPurpose(
+  tenantId: number | undefined,
+  termsRaw?: string | null
+): Promise<"default" | "payee" | "self"> {
+  if (!tenantId) return "default";
+  const tenantRes = await pool.query(
+    `SELECT custom_payroll_control_enabled FROM tenants WHERE id = $1 LIMIT 1`,
+    [tenantId]
+  );
+  if (!tenantRes.rows[0]?.custom_payroll_control_enabled) return "default";
+
+  const terms = String(termsRaw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_]+/g, " ")
+    .replace(/\s+/g, " ");
+  if (
+    terms.includes("self-employ") ||
+    terms.includes("self employ") ||
+    terms === "self" ||
+    terms === "se"
+  ) {
+    return "self";
+  }
+  return "payee";
+}
+
 export async function syncEmployeeBankDetails(
   employeeId: number,
-  bankData: { bankname?: string; acctitle?: string; sortcode?: string; account?: string }
+  bankData: {
+    bankname?: string;
+    acctitle?: string;
+    sortcode?: string;
+    account?: string;
+    terms?: string;
+    jobTerms?: string;
+    job_terms?: string;
+  },
+  tenantId?: number
 ): Promise<boolean> {
   if (!bankData.bankname && !bankData.sortcode && !bankData.account && !bankData.acctitle) return false;
 
+  const terms = bankData.terms || bankData.jobTerms || bankData.job_terms || "";
+  const purpose = await resolveBankAccountPurpose(tenantId, terms);
+
   const existing = await pool.query(
-    `SELECT id FROM bank_details WHERE employee_id = $1 AND account_purpose = 'default' LIMIT 1`,
-    [employeeId]
+    `SELECT id FROM bank_details WHERE employee_id = $1 AND account_purpose = $2 LIMIT 1`,
+    [employeeId, purpose]
   );
 
   if (existing.rows.length > 0) {
@@ -556,9 +601,10 @@ export async function syncEmployeeBankDetails(
 
   await pool.query(
     `INSERT INTO bank_details (employee_id, account_purpose, account_name, bank_name, sort_code, account_number)
-     VALUES ($1, 'default', $2, $3, $4, $5)`,
+     VALUES ($1, $2, $3, $4, $5, $6)`,
     [
       employeeId,
+      purpose,
       bankData.acctitle || "Unknown",
       bankData.bankname || "Unknown",
       bankData.sortcode || "000000",
@@ -1045,13 +1091,20 @@ export async function applyEmployeeRelatedData(
     );
   }
 
-  if (emp.bankname || emp.sortcode || emp.account) {
-    const bankSynced = await syncEmployeeBankDetails(employeeId, {
-      bankname: emp.bankname,
-      acctitle: emp.acctitle,
-      sortcode: emp.sortcode,
-      account: emp.account,
-    });
+  if (emp.bankname || emp.sortcode || emp.account || emp.acctitle) {
+    const bankSynced = await syncEmployeeBankDetails(
+      employeeId,
+      {
+        bankname: emp.bankname,
+        acctitle: emp.acctitle,
+        sortcode: emp.sortcode,
+        account: emp.account,
+        terms: emp.terms || emp.jobTerms || emp.job_terms,
+        jobTerms: emp.jobTerms,
+        job_terms: emp.job_terms,
+      },
+      tenantId
+    );
     if (bankSynced) counts.bankDetails++;
   }
 
