@@ -27,21 +27,30 @@ function isPhpApi(config: { connectionType?: string; apiBaseUrl: string }): bool
   return config.apiBaseUrl.includes(".php");
 }
 
-function isRestPhpApi(config: { connectionType?: string }): boolean {
-  return config.connectionType === "rest_php";
-}
-
 /** Dedicated MAIN / in-house branch sync (e.g. shifts-main.php). Forces supplier_id = null. */
-function isRestPhpInhouseApi(config: { connectionType?: string }): boolean {
-  return config.connectionType === "rest_php_inhouse";
+function isRestPhpInhouseApi(config: { connectionType?: string; apiBaseUrl?: string }): boolean {
+  if (config.connectionType === "rest_php_inhouse") return true;
+  // Tolerate mis-labelled "rest" configs that still point at shifts-main.php
+  const url = String(config.apiBaseUrl || "").toLowerCase();
+  return url.includes("shifts-main.php");
 }
 
-function isPhpEmployeesApi(config: { connectionType?: string }): boolean {
-  return config.connectionType === "php_employees";
+function isRestPhpApi(config: { connectionType?: string; apiBaseUrl?: string }): boolean {
+  if (isRestPhpInhouseApi(config)) return false;
+  if (config.connectionType === "rest_php") return true;
+  // Tolerate mis-labelled "rest" configs that still point at shifts.php
+  const url = String(config.apiBaseUrl || "").toLowerCase();
+  return /shifts\.php(\?|$)/.test(url) || url.endsWith("/shifts.php");
+}
+
+function isPhpEmployeesApi(config: { connectionType?: string; apiBaseUrl?: string }): boolean {
+  if (config.connectionType === "php_employees") return true;
+  const url = String(config.apiBaseUrl || "").toLowerCase();
+  return url.includes("employees.php");
 }
 
 function needsDateRange(config: { connectionType?: string; apiBaseUrl: string }): boolean {
-  return isPhpApi(config) || isRestPhpApi(config) || isRestPhpInhouseApi(config);
+  return isPhpApi(config) || isRestPhpApi(config) || isRestPhpInhouseApi(config) || isPhpEmployeesApi(config);
 }
 
 function stripEntityPrefix(id: string): string {
@@ -175,11 +184,15 @@ async function getPayRateFromSupplierRateCard(
 
 /** MAIN / in-house branch rows from GFMTrack (shifts-main.php). */
 function isMainInhouseShift(item: any): boolean {
+  if (item?.isInhouse === true || item?.is_inhouse === true) return true;
+  const branch = String(item?.branchId ?? item?.branch_id ?? "").trim();
+  if (branch === "1120") return true;
   const name = String(item.supplierName || "").trim().toLowerCase();
   const id = stripEntityPrefix(String(item.supplierId || "")).toLowerCase();
   if (!item.supplierId && !item.supplierName) return true;
-  if (["main", "in house", "in-house", "inhouse"].includes(name)) return true;
-  if (id === "1120") return true; // known MAIN supplier external id
+  if (name === "in-house" || name === "inhouse" || name === "in house" || name === "main") return true;
+  if (name.includes("in-house") || name.includes("inhouse")) return true;
+  if (id === "1120") return true; // known MAIN / in-house external id
   return false;
 }
 
@@ -1682,6 +1695,12 @@ export async function runSync(
       let empPage = startPage;
       let empTotalPages = pageTo || 999999;
       const supplierFilter = supplierId ? stripEntityPrefix(String(supplierId)) : "";
+      if (supplierFilter && (!dateFrom || !dateTo)) {
+        throw new Error(
+          "php_employees sync with supplierId requires dateFrom and dateTo (month scope). " +
+          "GS tab must send the selected month; redeploy Gardeo if dates are still missing."
+        );
+      }
       while (empPage <= empTotalPages) {
         let retries = 5;
         while (retries > 0) {
@@ -1695,12 +1714,20 @@ export async function runSync(
               _nocache: "1",
             });
             if (supplierFilter) params.set("supplier_id", supplierFilter);
+            if (dateFrom) params.set("date_from", dateFrom);
+            if (dateTo) params.set("date_to", dateTo);
             const url = `${config.apiBaseUrl.replace(/\/$/, "")}?${params.toString()}`;
             const response = await fetch(url, noCacheFetchInit());
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+              const errText = await response.text();
+              throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
+            }
             const text = await response.text();
             if (!text || text.length < 2) throw new Error("Empty response");
             const body = JSON.parse(text);
+            if (body?.error?.message) {
+              throw new Error(String(body.error.message));
+            }
             const pageData = body.data || body;
             if (Array.isArray(pageData)) allEmployees.push(...pageData);
             if (body.pagination) {
@@ -1716,7 +1743,24 @@ export async function runSync(
         }
         empPage++;
       }
-      if (allEmployees.length === 0) throw new Error("No employees fetched from API (pages " + startPage + "-" + empTotalPages + ")");
+      // Defense: if API ignored dates, drop officers whose last duty is outside the month
+      let scopedEmployees = allEmployees;
+      if (dateFrom && dateTo && allEmployees.length > 0) {
+        scopedEmployees = allEmployees.filter((emp: any) => {
+          const last = String(emp.lastShiftAt || emp.last_shift_at || "").slice(0, 10);
+          // No usable duty date → exclude (prevents full-roster leakage)
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(last) || last === "0000-00-00") return false;
+          return last >= dateFrom && last <= dateTo;
+        });
+        allErrors.push(
+          `[MONTH SCOPE] supplier=${supplierFilter || "all"} ${dateFrom}→${dateTo}: ` +
+          `fetched ${allEmployees.length}, kept ${scopedEmployees.length}`
+        );
+      }
+      if (scopedEmployees.length === 0) throw new Error("No employees fetched from API (pages " + startPage + "-" + empTotalPages + ")");
+      // Replace working set
+      allEmployees.length = 0;
+      allEmployees.push(...scopedEmployees);
 
       breakdown.employees = newEntitySyncResult();
       const entityResult = breakdown.employees;
@@ -1760,7 +1804,21 @@ export async function runSync(
       }
     } else if (isRestPhpInhouseApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
+      // Do NOT pass supplierId — shifts-main.php is Branch 1120 only; shifts.php would exclude 1120
       const shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!);
+      const inhouseOnly = shifts.filter(isMainInhouseShift);
+      if (shifts.length > 0 && inhouseOnly.length === 0) {
+        allErrors.push(
+          `[INHOUSE] API returned ${shifts.length} shifts but 0 matched in-house filter. ` +
+          `Config #${configId} URL must be shifts-main.php and connection type rest_php_inhouse (not shifts.php / rest_php).`
+        );
+      }
+      if (shifts.length === 0) {
+        allErrors.push(
+          `[INHOUSE] API returned 0 shifts for ${dateFrom}→${dateTo}. ` +
+          `Check shifts-main.php is deployed and Branch_id=1120 has duties with jobdate in range.`
+        );
+      }
       const inhouseBreakdown = await syncRestPhpInhouseShifts(tenantId, shifts, siteDecisions);
       breakdown.clients = inhouseBreakdown.clients;
       breakdown.sites = inhouseBreakdown.sites;
@@ -1768,13 +1826,20 @@ export async function runSync(
       breakdown.employees = inhouseBreakdown.employees;
       breakdown.shifts = inhouseBreakdown.shifts;
       allErrors.push(
-        `[INHOUSE] Synced MAIN/in-house only — suppliers not created; shift supplier_id forced null (${shifts.filter(isMainInhouseShift).length} of ${shifts.length} shifts)`,
+        `[INHOUSE] Synced in-house only — supplier_id forced null (${inhouseOnly.length} of ${shifts.length} shifts)`,
       );
     } else if (isRestPhpApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
       let shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!, supplierId);
       if (supplierId) {
-        shifts = shifts.filter(s => stripEntityPrefix(String(s.supplierId || "")) === supplierId);
+        const want = stripEntityPrefix(String(supplierId));
+        shifts = shifts.filter(s => {
+          const sid = stripEntityPrefix(String(s.supplierId || ""));
+          if (sid === want) return true;
+          // Misconfigured in-house URL on rest_php: keep Branch 1120 / isInhouse rows
+          if (want === "1120" && isMainInhouseShift(s)) return true;
+          return false;
+        });
       }
       const entities = extractEntitiesFromRestPhpShifts(shifts);
 
@@ -2510,6 +2575,8 @@ export async function runDrySync(
           _nocache: "1",
         });
         if (supplierFilter) params.set("supplier_id", supplierFilter);
+        if (dateFrom) params.set("date_from", dateFrom);
+        if (dateTo) params.set("date_to", dateTo);
         const url = `${config.apiBaseUrl.replace(/\/$/, "")}?${params.toString()}`;
         const response = await fetch(url, noCacheFetchInit({}, 30000));
         if (!response.ok) throw new Error(`Employees API returned status ${response.status}`);
@@ -2541,7 +2608,13 @@ export async function runDrySync(
     const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
     let shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!, supplierId);
     if (supplierId) {
-      shifts = shifts.filter(s => stripEntityPrefix(String(s.supplierId || "")) === supplierId);
+      const want = stripEntityPrefix(String(supplierId));
+      shifts = shifts.filter(s => {
+        const sid = stripEntityPrefix(String(s.supplierId || ""));
+        if (sid === want) return true;
+        if (want === "1120" && isMainInhouseShift(s)) return true;
+        return false;
+      });
     }
     return dryRunRestPhpShifts(tenantId, shifts);
   }
