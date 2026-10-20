@@ -5335,7 +5335,13 @@ export async function registerRoutes(
       if (r.error) return { error: r.error };
       patch.chargeRate = r.value == null ? null : String(r.value);
     }
-    if (body.lateMinutes !== undefined) {
+    if (body.lateHours !== undefined) {
+      const r = numOrNull(body.lateHours, false, "late hours");
+      if (r.error) return { error: r.error };
+      const lateHours = r.value as number;
+      patch.lateHours = String(lateHours);
+      patch.lateMinutes = Math.round(lateHours * 60);
+    } else if (body.lateMinutes !== undefined) {
       const v = Number(body.lateMinutes);
       if (!Number.isFinite(v) || v < 0) return { error: "Invalid late minutes" };
       const lateMinutes = Math.round(v);
@@ -5453,19 +5459,29 @@ export async function registerRoutes(
           COALESCE(si.name, 'Unassigned') AS site_name,
           COALESCE(si.address, '') AS site_address,
           COALESCE(si.postcode, '') AS site_postcode,
+          si.manager_name AS manager_name,
           si.client_id AS client_id,
           COALESCE(cl.company_name, si.client_name, '') AS client_name,
           CASE WHEN eu.id IS NOT NULL THEN COALESCE(eu.first_name || ' ' || eu.last_name, 'Unassigned') ELSE 'Unassigned' END AS employee_name,
           eu.phone AS employee_phone,
+          e.employee_number AS employee_number,
+          e.external_id AS employee_external_id,
           e.sia_license_number AS emp_sia_license_number, e.sia_expiry_date AS emp_sia_expiry_date,
           e.dbs_certificate_number AS emp_dbs_certificate_number, e.dbs_issue_date AS emp_dbs_issue_date,
-          sup.company_name AS supplier_name
+          sup.company_name AS supplier_name,
+          COALESCE(NULLIF(TRIM(sup.supplier_code), ''), 'MAIN') AS branch_code,
+          COALESCE(cu.username, TRIM(CONCAT(COALESCE(cu.first_name, ''), ' ', COALESCE(cu.last_name, ''))), sh.created_by, '') AS created_by_name,
+          (SELECT COUNT(*)::int FROM incidents i
+            WHERE i.tenant_id = sh.tenant_id
+              AND i.site_id = sh.site_id
+              AND i.incident_date::date = sh.date) AS incident_count
         FROM shifts sh
         LEFT JOIN sites si ON sh.site_id = si.id
         LEFT JOIN clients cl ON si.client_id = cl.id
         LEFT JOIN employees e ON sh.employee_id = e.id
         LEFT JOIN users eu ON e.user_id = eu.id
         LEFT JOIN suppliers sup ON sh.supplier_id = sup.id
+        LEFT JOIN users cu ON cu.id = sh.created_by
         WHERE ${whereClause}
         ORDER BY sh.date ASC, sh.start_time ASC`,
         params
@@ -5554,9 +5570,11 @@ export async function registerRoutes(
           siteName: r.site_name,
           siteAddress: r.site_address,
           sitePostcode: r.site_postcode,
+          managerName: r.manager_name || null,
           clientId: r.client_id || null,
           clientName: r.client_name || null,
           employeeName: r.employee_name,
+          employeeNumber: r.employee_number || r.employee_external_id || null,
           employeePhone: r.employee_phone || null,
           siaLicenseNumber: r.emp_sia_license_number || null,
           siaExpiryDate: r.emp_sia_expiry_date || null,
@@ -5564,6 +5582,9 @@ export async function registerRoutes(
           dbsCertificateNumber: r.emp_dbs_certificate_number || null,
           dbsValid,
           supplierName: r.supplier_name || null,
+          branchCode: r.branch_code || (!r.supplier_id ? "MAIN" : "—"),
+          createdByName: (r.created_by_name || "").trim() || null,
+          incidentCount: Number(r.incident_count || 0),
           isLate,
         };
       });

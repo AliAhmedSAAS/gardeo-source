@@ -43,6 +43,7 @@ import {
   num,
   money,
   shiftHours,
+  sqlEmployeeIsInhouse,
 } from "./payroll-control";
 import { generatePayslipPdf, generateRemittanceAdvicePdf } from "./payroll-control-pdf";
 
@@ -241,7 +242,9 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
          LEFT JOIN bank_details b ON b.employee_id = e.id AND b.account_purpose = 'default'
          LEFT JOIN payroll_control_months m
            ON m.employee_id = e.id AND m.tenant_id = e.tenant_id AND m.period_month = $2
-         WHERE e.tenant_id = $1 AND COALESCE(e.is_merged, false) = false
+         WHERE e.tenant_id = $1
+           AND COALESCE(e.is_merged, false) = false
+           AND ${sqlEmployeeIsInhouse("e")}
          ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
         [ctx.tenantId, from, to],
       );
@@ -353,8 +356,13 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
           wid: widOf(r),
           name: `${r.first_name || ""} ${r.last_name || ""}`.trim() || `Officer ${r.employee_id}`,
           bank: [r.account_name, r.sort_code, r.account_number].filter(Boolean).join(" · ") || "—",
+          accountName: r.account_name || null,
+          sortCode: r.sort_code || null,
+          accountNumber: r.account_number || null,
           empType: r.employment_type || "—",
-          agent: r.agent_name || "In-house",
+          agent: (!r.supplier_id || /^(main|in[- ]?house)$/i.test(String(r.agent_name || "")))
+            ? "In-house"
+            : (r.agent_name || "In-house"),
           hrStatus: r.hr_status || "approved",
           rulesOfPayment: r.rules_of_payment || "full_paye",
           payrollSource: r.payroll_source || "first4_paye",
@@ -475,7 +483,9 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
            ORDER BY is_primary DESC NULLS LAST, id ASC
            LIMIT 1
          ) ec ON true
-         WHERE e.tenant_id = $1 AND COALESCE(e.is_merged, false) = false
+         WHERE e.tenant_id = $1
+           AND COALESCE(e.is_merged, false) = false
+           AND ${sqlEmployeeIsInhouse("e")}
            ${idFilter}
          ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
         params,
@@ -720,8 +730,17 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const month = String(req.body.month || currentPayrollMonth());
       const employeeIds: number[] = Array.isArray(req.body.employeeIds) ? req.body.employeeIds.map(Number) : [];
       if (!employeeIds.length) return res.status(400).json({ message: "Tick officers first" });
+      const inhouseCheck = await pool.query(
+        `SELECT id FROM employees e
+         WHERE e.tenant_id = $1 AND e.id = ANY($2::int[])
+           AND COALESCE(e.is_merged, false) = false
+           AND ${sqlEmployeeIsInhouse("e")}`,
+        [ctx.tenantId, employeeIds],
+      );
+      const allowed = new Set(inhouseCheck.rows.map((r: any) => Number(r.id)));
       const results = [];
       for (const employeeId of employeeIds) {
+        if (!allowed.has(employeeId)) continue; // payroll control is in-house / MAIN only
         await ensureMonthRow(ctx.tenantId, employeeId, month);
         results.push({ employeeId, ...(await applyRulesForOfficer({ tenantId: ctx.tenantId, employeeId, month })) });
       }
@@ -739,9 +758,8 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const claimTo = String(req.query.claimTo || "");
       const dueDate = String(req.query.dueDate || "");
       const payeeType = req.query.payeeType === "Self-employed" ? "Self-employed" : "PAYE";
-      const branch = (["ALL", "MAIN", "Contractor"].includes(String(req.query.branch))
-        ? String(req.query.branch)
-        : "ALL") as "ALL" | "MAIN" | "Contractor";
+      // Payroll control pages are in-house / MAIN only (supplier_id IS NULL)
+      const branch = "MAIN" as const;
       const provider = req.query.provider ? String(req.query.provider) : "ALL";
       if (!claimFrom || !claimTo) return res.status(400).json({ message: "claim from and claim to are required" });
       const payees = await listClaimable({
@@ -790,7 +808,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         claimTo: String(req.body.claimTo),
         dueDate: String(req.body.dueDate),
         payeeType: req.body.payeeType === "Self-employed" ? "Self-employed" : "PAYE",
-        branch: req.body.branch === "MAIN" || req.body.branch === "Contractor" ? req.body.branch : "ALL",
+        branch: "MAIN",
         provider: req.body.provider || "ALL",
         userId: ctx.user.id,
       });
@@ -834,7 +852,6 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const dueFrom = req.query.dueFrom ? String(req.query.dueFrom) : "";
       const dueTo = req.query.dueTo ? String(req.query.dueTo) : "";
       const payeeType = String(req.query.payeeType || "ALL");
-      const branch = String(req.query.branch || "ALL");
       const remarks = String(req.query.remarks || "ALL");
       const sort = String(req.query.sort || "bill_date");
       const dir = String(req.query.dir || "ASC").toUpperCase() === "DESC" ? "DESC" : "ASC";
@@ -842,7 +859,8 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const queMark = String(req.query.queMark || "ALL");
 
       const params: any[] = [ctx.tenantId, paid ? "PAID" : "UNPAID"];
-      const where = [`b.tenant_id = $1`, `b.status = $2`];
+      // In-house / MAIN only (includes employees tagged to MAIN / SUP-1120)
+      const where = [`b.tenant_id = $1`, `b.status = $2`, sqlEmployeeIsInhouse("e")];
       if (dueFrom) {
         params.push(dueFrom);
         where.push(`b.due_date >= $${params.length}`);
@@ -855,8 +873,6 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         params.push(payeeType);
         where.push(`b.payee_type = $${params.length}`);
       }
-      if (branch === "Employee") where.push(`b.branch_type = 'MAIN'`);
-      if (branch === "Contractor") where.push(`b.branch_type = 'Contractor'`);
       if (remarks === "1st4 PAYE") where.push(`(b.remarks ILIKE '%1st4%' OR b.payroll_provider = 'first4_paye')`);
       if (remarks === "GFM PAYE") where.push(`(b.remarks ILIKE '%GFM%' OR b.payroll_provider = 'gfm_paye')`);
       if (empLevel != null && !Number.isNaN(empLevel)) {
@@ -926,7 +942,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         `SELECT b.*, u.first_name, u.last_name FROM payroll_bills b
          JOIN employees e ON e.id = b.employee_id
          LEFT JOIN users u ON u.id = e.user_id
-         WHERE b.tenant_id = $1 AND b.status = $2
+         WHERE b.tenant_id = $1 AND b.status = $2 AND ${sqlEmployeeIsInhouse("e")}
          ORDER BY b.bill_date, b.id`,
         [ctx.tenantId, paid ? "PAID" : "UNPAID"],
       );
@@ -980,6 +996,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
          LEFT JOIN users u ON u.id = e.user_id
          WHERE b.tenant_id = $1
            AND b.status = $2
+           AND ${sqlEmployeeIsInhouse("e")}
            AND COALESCE(e.is_merged, false) = false
            ${billFilter}
          ORDER BY e.id, b.bill_date DESC, b.id DESC`,

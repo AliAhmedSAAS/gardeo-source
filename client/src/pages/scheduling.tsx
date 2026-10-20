@@ -48,14 +48,55 @@ type EnrichedShift = {
   holidayHours?: string | number | null;
   breakMinutes?: number | null;
   siteName: string;
+  siteAddress?: string | null;
+  sitePostcode?: string | null;
+  managerName?: string | null;
   employeeName: string;
+  employeeNumber?: string | null;
   supplierName: string;
+  branchCode?: string | null;
+  createdByName?: string | null;
+  incidentCount?: number;
   clientId?: number | null;
   clientName?: string | null;
   bookedOnAt?: string | null;
   checkInTime?: string | null;
   bookedOnCallData?: unknown;
 };
+
+function calcShiftHours(startTime?: string | null, endTime?: string | null, breakMinutes?: number | null): number {
+  const start = String(startTime || "").slice(0, 5);
+  const end = String(endTime || "").slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let hours = eh + em / 60 - (sh + sm / 60);
+  if (hours < 0) hours += 24;
+  hours -= (Number(breakMinutes) || 0) / 60;
+  return Math.round(Math.max(0, hours) * 100) / 100;
+}
+
+function formatShiftDateUk(dateStr: string): string {
+  const d = dateStr?.split("T")[0] || "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return dateStr || "—";
+  const [y, m, day] = d.split("-");
+  return `${day}-${m}-${y}`;
+}
+
+function siteDisplay(shift: EnrichedShift): string {
+  const addr = [shift.siteAddress, shift.sitePostcode].filter(Boolean).join(", ").trim();
+  return addr || shift.siteName || "Unassigned";
+}
+
+function guardDisplay(shift: EnrichedShift): string {
+  if (!shift.employeeId || !shift.employeeName || shift.employeeName === "Unassigned") return "—";
+  const wid = shift.employeeNumber || "";
+  return wid ? `${wid}- ${shift.employeeName}` : shift.employeeName;
+}
+
+function canVerifyShift(shift: EnrichedShift): boolean {
+  return shift.status === "booked_off" || shift.status === "completed";
+}
 
 function siteBreakMinutes(siteList: Site[], siteId: string): number {
   const site = siteList.find((s) => String(s.id) === siteId);
@@ -194,7 +235,7 @@ export default function SchedulingPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [viewMode, setViewMode] = useState<"calendar" | "table" | "cards">("calendar");
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
   const [currentDate, setCurrentDate] = useState(() => getMonday(new Date()));
   const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
@@ -222,6 +263,9 @@ export default function SchedulingPage() {
   const [searchSupplier, setSearchSupplier] = useState("all");
   const [searchOfficer, setSearchOfficer] = useState("all");
   const [searchAssignment, setSearchAssignment] = useState("all");
+  const [searchBranch, setSearchBranch] = useState("all");
+  const [incidentShift, setIncidentShift] = useState<EnrichedShift | null>(null);
+  const [incidentForm, setIncidentForm] = useState({ title: "", description: "", severity: "medium" });
 
   const [shiftForm, setShiftForm] = useState({
     title: "", date: "", startTime: "", endTime: "",
@@ -262,7 +306,7 @@ export default function SchedulingPage() {
   }, [currentDate, calendarView]);
 
   const shiftsFetchRange = useMemo(() => {
-    if (viewMode !== "list") return dateRange;
+    if (viewMode === "calendar") return dateRange;
     const start = searchDateFrom || dateRange.startDate;
     const end = searchDateTo || dateRange.endDate;
     if (start && end && end < start) return { startDate: start, endDate: start };
@@ -449,7 +493,7 @@ export default function SchedulingPage() {
 
   const { data: filterInhouseOfficers = [] } = useQuery<EmployeeOption[]>({
     queryKey: ["/api/employees/inhouse"],
-    enabled: viewMode === "list" && (searchSupplier === "inhouse" || searchSupplier === "all"),
+    enabled: (viewMode === "table" || viewMode === "cards") && (searchSupplier === "inhouse" || searchSupplier === "all"),
   });
 
   const { data: filterSupplierOfficers = [] } = useQuery<EmployeeOption[]>({
@@ -459,7 +503,7 @@ export default function SchedulingPage() {
       if (!res.ok) throw new Error("Failed to load supplier officers");
       return res.json();
     },
-    enabled: viewMode === "list" && !!searchSupplier && searchSupplier !== "all" && searchSupplier !== "inhouse",
+    enabled: (viewMode === "table" || viewMode === "cards") && !!searchSupplier && searchSupplier !== "all" && searchSupplier !== "inhouse",
   });
 
   const { data: permissionsData } = useQuery<{ tenant?: TenantInfo }>({
@@ -858,6 +902,7 @@ export default function SchedulingPage() {
     || searchSupplier !== "all"
     || searchOfficer !== "all"
     || searchAssignment !== "all"
+    || searchBranch !== "all"
   );
 
   const clearAllFilters = () => {
@@ -870,6 +915,7 @@ export default function SchedulingPage() {
     setSearchSupplier("all");
     setSearchOfficer("all");
     setSearchAssignment("all");
+    setSearchBranch("all");
   };
 
   const filteredShifts = useMemo(() => {
@@ -889,14 +935,20 @@ export default function SchedulingPage() {
       if (searchOfficer !== "all" && String(shift.employeeId || "") !== searchOfficer) return false;
       if (searchAssignment === "assigned" && !shift.employeeId) return false;
       if (searchAssignment === "unassigned" && shift.employeeId) return false;
+      if (searchBranch !== "all" && String(shift.branchCode || "MAIN") !== searchBranch) return false;
       if (q) {
         const statusLabel = (STATUS_CONFIG[shift.status || "scheduled"]?.label || shift.status || "").toLowerCase();
         const haystack = [
           shift.title,
           shift.employeeName,
+          shift.employeeNumber,
           shift.siteName,
+          shift.siteAddress,
+          shift.managerName,
           shift.supplierName,
+          shift.branchCode,
           shift.clientName,
+          shift.createdByName,
           shift.shiftCode,
           shift.externalId,
           shift.notes,
@@ -908,7 +960,64 @@ export default function SchedulingPage() {
       }
       return true;
     });
-  }, [shifts, searchQuery, searchDateFrom, searchDateTo, searchStatus, searchSite, searchClient, searchSupplier, searchOfficer, searchAssignment]);
+  }, [shifts, searchQuery, searchDateFrom, searchDateTo, searchStatus, searchSite, searchClient, searchSupplier, searchOfficer, searchAssignment, searchBranch]);
+
+  const branchFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of shifts) set.add(s.branchCode || "MAIN");
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [shifts]);
+
+  const verifyMutation = useMutation({
+    mutationFn: async (shiftIds: number[]) => {
+      const results = { ok: 0, failed: [] as string[] };
+      for (const id of shiftIds) {
+        try {
+          const res = await apiRequest("POST", `/api/shifts/${id}/verify`);
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            results.failed.push(body.message || `Shift ${id} failed`);
+          } else {
+            results.ok += 1;
+          }
+        } catch (err: any) {
+          results.failed.push(err.message || `Shift ${id} failed`);
+        }
+      }
+      return results;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      setSelectedShiftIds(new Set());
+      toast({
+        title: "Verify complete",
+        description: `${data.ok} verified${data.failed.length ? `, ${data.failed.length} failed` : ""}`,
+      });
+    },
+    onError: (err: Error) => toast({ title: "Verify failed", description: err.message, variant: "destructive" }),
+  });
+
+  const createIncidentMutation = useMutation({
+    mutationFn: async () => {
+      if (!incidentShift?.siteId) throw new Error("Site is required");
+      const res = await apiRequest("POST", "/api/incidents", {
+        title: incidentForm.title.trim(),
+        description: incidentForm.description.trim(),
+        severity: incidentForm.severity,
+        siteId: incidentShift.siteId,
+      });
+      if (!res.ok) throw new Error((await res.json()).message || "Failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/incidents"] });
+      setIncidentShift(null);
+      setIncidentForm({ title: "", description: "", severity: "medium" });
+      toast({ title: "Incident reported" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
 
   const stats = useMemo(() => ({
     total: filteredShifts.length,
@@ -1062,8 +1171,7 @@ export default function SchedulingPage() {
     );
   };
 
-  const renderListView = () => (
-    <div className="space-y-4">
+  const renderShiftFilters = () => (
       <div
         className="flex items-end gap-2 flex-nowrap overflow-x-auto pb-1"
         data-testid="list-filters-row"
@@ -1225,7 +1333,9 @@ export default function SchedulingPage() {
           </Button>
         )}
       </div>
-      {filteredShifts.length === 0 ? (
+  );
+
+  const renderEmptyShifts = () => (
         <Card>
           <CardContent className="p-8 text-center">
             <CalendarDays className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -1235,8 +1345,13 @@ export default function SchedulingPage() {
             </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-2">
+  );
+
+  const renderCardsView = () => (
+    <div className="space-y-4">
+      {renderShiftFilters()}
+      {filteredShifts.length === 0 ? renderEmptyShifts() : (
+        <div className="space-y-2" data-testid="schedule-cards-view">
           {filteredShifts.map((shift) => {
             const statusConf = STATUS_CONFIG[shift.status || "scheduled"] || STATUS_CONFIG.scheduled;
             return (
@@ -1301,12 +1416,197 @@ export default function SchedulingPage() {
     </div>
   );
 
+  const renderTableView = () => (
+    <div className="space-y-4">
+      {renderShiftFilters()}
+      {filteredShifts.length === 0 ? renderEmptyShifts() : (
+        <div className="border rounded-lg overflow-auto max-h-[70vh]" data-testid="schedule-table-view">
+          <table className="w-full text-xs border-collapse min-w-[1400px]">
+            <thead className="bg-muted sticky top-0 z-10">
+              <tr className="border-b">
+                <th className="p-2 text-center w-14">S.no</th>
+                <th className="p-2 text-left min-w-[140px]">CLIENT NAME</th>
+                <th className="p-2 text-left min-w-[100px]">Manager NAME</th>
+                <th className="p-2 text-left min-w-[180px]">SITE</th>
+                <th className="p-2 text-left whitespace-nowrap">Shift Date</th>
+                <th className="p-2 text-left whitespace-nowrap">Time In-OUT</th>
+                <th className="p-2 text-center">Action</th>
+                <th className="p-2 text-left min-w-[140px]">GUARD DETAIL</th>
+                <th className="p-2 text-left">BRANCH</th>
+                <th className="p-2 text-center">HOURS</th>
+                <th className="p-2 text-left">STATUS</th>
+                <th className="p-2 text-center">INCIDENT</th>
+                <th className="p-2 text-left">USER</th>
+                <th className="p-2 text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span>VERIFY</span>
+                    <Checkbox
+                      checked={filteredShifts.filter(canVerifyShift).length > 0 && filteredShifts.filter(canVerifyShift).every((s) => selectedShiftIds.has(s.id))}
+                      onCheckedChange={(v) => {
+                        const eligible = filteredShifts.filter(canVerifyShift);
+                        if (v) setSelectedShiftIds(new Set([...selectedShiftIds, ...eligible.map((s) => s.id)]));
+                        else {
+                          const drop = new Set(eligible.map((s) => s.id));
+                          setSelectedShiftIds(new Set([...selectedShiftIds].filter((id) => !drop.has(id))));
+                        }
+                      }}
+                      data-testid="checkbox-verify-all"
+                    />
+                    <span className="text-[9px] font-normal text-muted-foreground">ALL</span>
+                  </div>
+                </th>
+              </tr>
+              <tr className="border-b bg-muted/60">
+                <th className="p-1" />
+                <th className="p-1">
+                  <Select value={searchClient} onValueChange={(val) => { setSearchClient(val); setSearchSite("all"); }}>
+                    <SelectTrigger className="h-7 text-[11px]"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.companyName || c.company_name || `#${c.id}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </th>
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1">
+                  <Select value={searchOfficer} onValueChange={setSearchOfficer}>
+                    <SelectTrigger className="h-7 text-[11px]"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {officerFilterOptions.map((o) => (
+                        <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </th>
+                <th className="p-1">
+                  <Select value={searchBranch} onValueChange={setSearchBranch}>
+                    <SelectTrigger className="h-7 text-[11px]"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {branchFilterOptions.map((b) => (
+                        <SelectItem key={b} value={b}>{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </th>
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+                <th className="p-1" />
+              </tr>
+            </thead>
+            <tbody>
+              {filteredShifts.map((shift, idx) => {
+                const statusConf = STATUS_CONFIG[shift.status || "scheduled"] || STATUS_CONFIG.scheduled;
+                const hours = calcShiftHours(shift.startTime, shift.endTime, shift.breakMinutes);
+                const verified = shift.status === "verified";
+                return (
+                  <tr
+                    key={shift.id}
+                    className="border-t hover:bg-muted/40"
+                    data-testid={`row-shift-${shift.id}`}
+                  >
+                    <td className="p-2 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Checkbox
+                          checked={selectedShiftIds.has(shift.id)}
+                          onCheckedChange={(v) => {
+                            const next = new Set(selectedShiftIds);
+                            if (v) next.add(shift.id); else next.delete(shift.id);
+                            setSelectedShiftIds(next);
+                          }}
+                          data-testid={`checkbox-shift-${shift.id}`}
+                        />
+                        <span>{idx + 1}</span>
+                      </div>
+                    </td>
+                    <td className="p-2 max-w-[180px] truncate" title={shift.clientName || ""}>{shift.clientName || "—"}</td>
+                    <td className="p-2 max-w-[120px] truncate" title={shift.managerName || ""}>{shift.managerName || "—"}</td>
+                    <td className="p-2 max-w-[220px] truncate" title={siteDisplay(shift)}>{siteDisplay(shift)}</td>
+                    <td className="p-2 whitespace-nowrap font-mono">{formatShiftDateUk(shift.date)}</td>
+                    <td className="p-2 whitespace-nowrap font-mono">
+                      {String(shift.startTime || "").slice(0, 5)} - {String(shift.endTime || "").slice(0, 5)}
+                    </td>
+                    <td className="p-2 text-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700"
+                        onClick={(e) => { e.stopPropagation(); openEditShift(shift); }}
+                        data-testid={`button-edit-row-${shift.id}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                    <td className="p-2 max-w-[160px] truncate" title={guardDisplay(shift)}>{guardDisplay(shift)}</td>
+                    <td className="p-2 font-medium">{shift.branchCode || "MAIN"}</td>
+                    <td className="p-2 text-center font-mono">{hours}</td>
+                    <td className="p-2">
+                      <Badge variant="secondary" className={`${statusConf.className} text-[10px]`}>{statusConf.label}</Badge>
+                    </td>
+                    <td className="p-2 text-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700 relative"
+                        disabled={!shift.siteId}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIncidentShift(shift);
+                          setIncidentForm({
+                            title: `Incident — ${shift.siteName || "Site"}`,
+                            description: "",
+                            severity: "medium",
+                          });
+                        }}
+                        data-testid={`button-incident-${shift.id}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        {(shift.incidentCount || 0) > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] leading-3.5">
+                            {shift.incidentCount}
+                          </span>
+                        )}
+                      </Button>
+                    </td>
+                    <td className="p-2 max-w-[100px] truncate" title={shift.createdByName || ""}>{shift.createdByName || "—"}</td>
+                    <td className="p-2 text-center">
+                      <Checkbox
+                        checked={verified || (canVerifyShift(shift) && selectedShiftIds.has(shift.id))}
+                        disabled={verified || !canVerifyShift(shift)}
+                        onCheckedChange={(v) => {
+                          if (verified || !canVerifyShift(shift)) return;
+                          const next = new Set(selectedShiftIds);
+                          if (v) next.add(shift.id); else next.delete(shift.id);
+                          setSelectedShiftIds(next);
+                        }}
+                        data-testid={`checkbox-verify-${shift.id}`}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6" data-testid="scheduling-page">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Scheduling</h1>
-          <p className="text-muted-foreground text-sm">Manage shifts and schedules with calendar or list view.</p>
+          <p className="text-muted-foreground text-sm">Manage shifts with calendar, table, or card view.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setShowTemplatesDialog(true)} data-testid="button-manage-templates">
@@ -1323,13 +1623,22 @@ export default function SchedulingPage() {
               <LayoutGrid className="w-4 h-4 mr-1" /> Calendar
             </Button>
             <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
+              variant={viewMode === "table" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode("list")}
+              onClick={() => setViewMode("table")}
               className="rounded-none"
-              data-testid="button-view-list"
+              data-testid="button-view-table"
             >
-              <LayoutList className="w-4 h-4 mr-1" /> List
+              <LayoutList className="w-4 h-4 mr-1" /> Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="rounded-none"
+              data-testid="button-view-cards"
+            >
+              <LayoutTemplate className="w-4 h-4 mr-1" /> Cards
             </Button>
           </div>
           <Button onClick={() => { setShiftForm(f => ({ ...f, date: formatDateKey(new Date()) })); setShiftDialogOpen(true); }} data-testid="button-create-shift">
@@ -1469,8 +1778,10 @@ export default function SchedulingPage() {
             <span>Click any day to create a shift</span>
           </div>
         </div>
+      ) : viewMode === "cards" ? (
+        renderCardsView()
       ) : (
-        renderListView()
+        renderTableView()
       )}
 
       <Dialog open={shiftDialogOpen} onOpenChange={(open) => { if (!open) closeShiftDialog(); else setShiftDialogOpen(true); }}>
@@ -2196,11 +2507,78 @@ export default function SchedulingPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={!!incidentShift} onOpenChange={(open) => { if (!open) setIncidentShift(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log Incident</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Site: <strong>{incidentShift?.siteName || "—"}</strong>
+              {incidentShift ? ` · ${formatShiftDateUk(incidentShift.date)}` : ""}
+            </p>
+            <div className="space-y-1">
+              <Label>Title</Label>
+              <Input value={incidentForm.title} onChange={(e) => setIncidentForm((f) => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea rows={4} value={incidentForm.description} onChange={(e) => setIncidentForm((f) => ({ ...f, description: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Severity</Label>
+              <Select value={incidentForm.severity} onValueChange={(v) => setIncidentForm((f) => ({ ...f, severity: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIncidentShift(null)}>Cancel</Button>
+            <Button
+              disabled={createIncidentMutation.isPending || !incidentForm.title.trim() || !incidentForm.description.trim()}
+              onClick={() => createIncidentMutation.mutate()}
+              data-testid="button-submit-incident"
+            >
+              {createIncidentMutation.isPending ? "Saving…" : "Report Incident"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {selectedShiftIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50" data-testid="bulk-action-bar">
           <div className="flex items-center gap-3 bg-[#1F3A5F] text-white px-6 py-3 rounded-full shadow-xl">
             <CheckSquare className="w-4 h-4" />
             <span className="font-medium text-sm">{selectedShiftIds.size} shift{selectedShiftIds.size !== 1 ? "s" : ""} selected</span>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs"
+              disabled={verifyMutation.isPending || ![...selectedShiftIds].some((id) => {
+                const s = shifts.find((x) => x.id === id);
+                return s && canVerifyShift(s);
+              })}
+              onClick={() => {
+                const ids = [...selectedShiftIds].filter((id) => {
+                  const s = shifts.find((x) => x.id === id);
+                  return s && canVerifyShift(s);
+                });
+                if (ids.length === 0) {
+                  toast({ title: "Nothing to verify", description: "Select booked-off or completed shifts.", variant: "destructive" });
+                  return;
+                }
+                verifyMutation.mutate(ids);
+              }}
+              data-testid="button-bulk-verify"
+            >
+              <CheckCircle2 className="w-3 h-3 mr-1" /> {verifyMutation.isPending ? "Verifying…" : "Verify"}
+            </Button>
             <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setBulkDeleteConfirmOpen(true)} data-testid="button-bulk-delete">
               <Trash2 className="w-3 h-3 mr-1" /> Delete
             </Button>

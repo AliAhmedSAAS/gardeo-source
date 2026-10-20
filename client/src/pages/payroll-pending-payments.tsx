@@ -58,7 +58,7 @@ export default function PayrollPendingPaymentsPage() {
   const [dueFrom, setDueFrom] = useState("");
   const [dueTo, setDueTo] = useState("");
   const [payeeType, setPayeeType] = useState("ALL");
-  const [branch, setBranch] = useState("ALL");
+  const [branch] = useState("Employee"); // MAIN / in-house only
   const [remarksFilter, setRemarksFilter] = useState("ALL");
   const [sort, setSort] = useState("bill_date");
   const [dir, setDir] = useState("ASC");
@@ -261,14 +261,9 @@ export default function PayrollPendingPaymentsPage() {
             <SelectItem value="PAYE">PAYE</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={branch} onValueChange={setBranch}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">ALL</SelectItem>
-            <SelectItem value="Employee">Employee</SelectItem>
-            <SelectItem value="Contractor">Contractor</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-sm text-muted-foreground w-36">
+          MAIN (in-house)
+        </div>
         <Select value={remarksFilter} onValueChange={setRemarksFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>

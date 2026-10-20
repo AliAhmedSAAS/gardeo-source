@@ -675,6 +675,10 @@ export async function syncEmploymentHistory(
   for (const h of history) {
     if (!h.company) continue;
 
+    const phone = String(h.phone || "").trim() || null;
+    const email = String(h.email || "").trim() || null;
+    const refName = String(h.refName || "").trim();
+
     const existing = await pool.query(
       `SELECT id FROM employment_history WHERE employee_id = $1 AND employer_name = $2 AND date_from = $3 LIMIT 1`,
       [employeeId, h.company, sanitizeDate(h.empFrom)]
@@ -692,15 +696,23 @@ export async function syncEmploymentHistory(
       if (h.submittedDate) { sets.push(`submitted_date = $${idx}`); vals.push(h.submittedDate); idx++; }
       if (h.address) { sets.push(`referee_address = $${idx}`); vals.push(h.address); idx++; }
       if (h.postcode) { sets.push(`referee_postcode = $${idx}`); vals.push(h.postcode); idx++; }
+      // Employment references UI reads these columns (not the separate references table)
+      if (phone) { sets.push(`referee_phone = $${idx}`); vals.push(phone); idx++; }
+      if (email) { sets.push(`referee_email = $${idx}`); vals.push(email); idx++; }
       sets.push(`is_current = $${idx}`); vals.push(h.currentlyWork === "yes"); idx++;
       if (sets.length > 0) {
         vals.push(existing.rows[0].id);
         await pool.query(`UPDATE employment_history SET ${sets.join(", ")} WHERE id = $${idx}`, vals);
       }
+      synced++;
     } else {
       await pool.query(
-        `INSERT INTO employment_history (employee_id, employer_name, job_title, date_from, date_to, is_current, reason_for_leaving, duties, verification_status, submitted_date, referee_address, referee_postcode)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        `INSERT INTO employment_history (
+           employee_id, employer_name, job_title, date_from, date_to, is_current,
+           reason_for_leaving, duties, verification_status, submitted_date,
+           referee_address, referee_postcode, referee_phone, referee_email
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           employeeId,
           h.company,
@@ -714,12 +726,16 @@ export async function syncEmploymentHistory(
           sanitizeDate(h.submittedDate),
           h.address || null,
           h.postcode || null,
+          phone,
+          email,
         ]
       );
       synced++;
     }
 
-    if (h.refName) {
+    // Keep legacy references table in sync when we have any referee contact info
+    if (refName || phone || email) {
+      const refereeName = refName || h.company;
       const refExists = await pool.query(
         `SELECT id FROM "references" WHERE employee_id = $1 AND company = $2 LIMIT 1`,
         [employeeId, h.company]
@@ -728,15 +744,15 @@ export async function syncEmploymentHistory(
         await pool.query(
           `INSERT INTO "references" (employee_id, referee_name, referee_email, referee_phone, company, job_title, status, verification_status)
            VALUES ($1, $2, $3, $4, $5, $6, 'not_started', $7)`,
-          [employeeId, h.refName, h.email || null, h.phone || null, h.company, h.jobTitle || null, h.verify || null]
+          [employeeId, refereeName, email, phone, h.company, h.jobTitle || null, h.verify || null]
         );
       } else {
         const refSets: string[] = [];
         const refVals: any[] = [];
         let rIdx = 1;
-        if (h.refName) { refSets.push(`referee_name = $${rIdx}`); refVals.push(h.refName); rIdx++; }
-        if (h.email) { refSets.push(`referee_email = $${rIdx}`); refVals.push(h.email); rIdx++; }
-        if (h.phone) { refSets.push(`referee_phone = $${rIdx}`); refVals.push(h.phone); rIdx++; }
+        if (refName) { refSets.push(`referee_name = $${rIdx}`); refVals.push(refName); rIdx++; }
+        if (email) { refSets.push(`referee_email = $${rIdx}`); refVals.push(email); rIdx++; }
+        if (phone) { refSets.push(`referee_phone = $${rIdx}`); refVals.push(phone); rIdx++; }
         if (h.verify) { refSets.push(`verification_status = $${rIdx}`); refVals.push(h.verify); rIdx++; }
         if (refSets.length > 0) {
           refVals.push(refExists.rows[0].id);

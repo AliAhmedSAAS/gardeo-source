@@ -42,6 +42,9 @@ type OfficerRow = {
   wid: string;
   name: string;
   bank: string;
+  accountName?: string | null;
+  sortCode?: string | null;
+  accountNumber?: string | null;
   empType: string;
   agent: string;
   hrStatus: string;
@@ -674,7 +677,17 @@ export default function PayrollSummaryPage() {
                   </td>
                   <td className="p-2 font-mono">{row.wid}</td>
                   <td className="p-2 font-medium">{row.name}</td>
-                  <td className="p-2 max-w-[140px] truncate">{row.bank}</td>
+                  <td className="p-2 whitespace-normal min-w-[110px]">
+                    {row.accountName || row.sortCode || row.accountNumber ? (
+                      <div className="leading-tight space-y-0.5">
+                        {row.accountName ? <div className="truncate max-w-[130px]" title={row.accountName}>{row.accountName}</div> : null}
+                        {row.sortCode ? <div className="font-mono">{row.sortCode}</div> : null}
+                        {row.accountNumber ? <div className="font-mono">{row.accountNumber}</div> : null}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="p-2">{row.empType}</td>
                   <td className="p-2">{row.agent}</td>
                   <td className="p-2">
@@ -692,8 +705,8 @@ export default function PayrollSummaryPage() {
                   </td>
                   <td className="p-2">
                     <Select value={row.rulesOfPayment} onValueChange={(v) => changeRule(row, v, row.payrollSource)}>
-                      <SelectTrigger className="h-8 w-72"><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
+                      <SelectContent className="max-w-[280px]">
                         {PAYMENT_RULES.map((r) => <SelectItem key={r.value} value={r.value}>{ruleLabel(r.value)}</SelectItem>)}
                       </SelectContent>
                     </Select>

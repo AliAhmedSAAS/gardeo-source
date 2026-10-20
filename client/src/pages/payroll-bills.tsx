@@ -47,7 +47,7 @@ export default function PayrollBillsPage() {
   const [claimTo, setClaimTo] = useState(today());
   const [dueDate, setDueDate] = useState(today());
   const [payeeType, setPayeeType] = useState<"PAYE" | "Self-employed">("PAYE");
-  const [branch, setBranch] = useState("ALL");
+  const [branch] = useState("MAIN"); // in-house only
   const [provider, setProvider] = useState("ALL");
   const [viewed, setViewed] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -142,14 +142,9 @@ export default function PayrollBillsPage() {
         </div>
         <div>
           <Label>Branch</Label>
-          <Select value={branch} onValueChange={(v) => { setBranch(v); setViewed(false); }}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">ALL</SelectItem>
-              <SelectItem value="MAIN">MAIN</SelectItem>
-              <SelectItem value="Contractor">Contractor</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-sm text-muted-foreground w-36">
+            MAIN (in-house)
+          </div>
         </div>
         <div>
           <Label>Payroll provider</Label>

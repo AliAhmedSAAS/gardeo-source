@@ -15,9 +15,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
-  CheckCircle2, XCircle, Clock, AlertTriangle, Filter, Loader2,
+  CheckCircle2, XCircle, Clock, Filter, Loader2,
   ArrowUpDown, DollarSign, Shield, Calendar, MapPin, Users, ChevronDown,
-  ChevronLeft, ChevronRight, Search, Pencil,
+  ChevronLeft, ChevronRight, Search, Pencil, Download,
 } from "lucide-react";
 
 const FINANCE_EDIT_ROLES = new Set([
@@ -31,7 +31,7 @@ type FinanceEditableField =
   | "breakMinutes"
   | "payRate"
   | "chargeRate"
-  | "lateMinutes";
+  | "lateHours";
 
 function FinanceNumInput({
   value,
@@ -158,6 +158,46 @@ function fmtNum(value: number | null | undefined, digits = 2): string {
   return Number(value).toFixed(digits);
 }
 
+function escapeCsv(val: unknown): string {
+  if (val == null) return "";
+  const s = String(val);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsvBlob(content: string, filename: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const FINANCE_CSV_HEADERS = [
+  "Date",
+  "Start",
+  "End",
+  "Officer",
+  "Site",
+  "Supplier",
+  "Hours",
+  "Break (min)",
+  "Holiday hrs",
+  "Late hrs",
+  "Deduction hrs",
+  "Deduction £",
+  "Pay rate",
+  "Charge rate",
+  "Shift status",
+  "Finance status",
+  "Finance note",
+  "Shift ID",
+] as const;
+
 /** Fallback hours from duty window when API doesn't send hours yet. */
 function calcHoursFromTimes(
   startTime?: string | null,
@@ -241,8 +281,9 @@ export default function FinanceApprovalPage() {
     breakMinutes: "",
     payRate: "",
     chargeRate: "",
-    lateMinutes: "",
+    lateHours: "",
   });
+  const [csvExporting, setCsvExporting] = useState(false);
   const limit = 50;
   const canEditFields = !!user?.role && FINANCE_EDIT_ROLES.has(user.role);
 
@@ -434,7 +475,7 @@ export default function FinanceApprovalPage() {
         breakMinutes: "",
         payRate: "",
         chargeRate: "",
-        lateMinutes: "",
+        lateHours: "",
       });
     },
     onError: (err: any) => {
@@ -454,7 +495,7 @@ export default function FinanceApprovalPage() {
       ["breakMinutes", bulkEdit.breakMinutes],
       ["payRate", bulkEdit.payRate],
       ["chargeRate", bulkEdit.chargeRate],
-      ["lateMinutes", bulkEdit.lateMinutes],
+      ["lateHours", bulkEdit.lateHours],
     ];
     for (const [key, raw] of map) {
       const t = raw.trim();
@@ -516,6 +557,105 @@ export default function FinanceApprovalPage() {
     }
   };
 
+  const buildFilterParams = useCallback(
+    (pageNum: number, pageLimit: number) =>
+      new URLSearchParams({
+        page: String(pageNum),
+        limit: String(pageLimit),
+        financeStatus: filterFinanceStatus,
+        shiftStatus: filterShiftStatus,
+        siteId: filterSite !== "all" ? filterSite : "",
+        clientId: filterClient !== "all" ? filterClient : "",
+        officerId: filterOfficer !== "all" ? filterOfficer : "",
+        supplierId: filterSupplier !== "all" ? filterSupplier : "",
+        dateFrom: filterDateFrom,
+        dateTo: filterDateTo,
+        search: appliedSearch,
+      }),
+    [
+      filterFinanceStatus,
+      filterShiftStatus,
+      filterSite,
+      filterClient,
+      filterOfficer,
+      filterSupplier,
+      filterDateFrom,
+      filterDateTo,
+      appliedSearch,
+    ],
+  );
+
+  const handleExportCsv = async () => {
+    if (csvExporting) return;
+    setCsvExporting(true);
+    try {
+      const pageLimit = 100;
+      const all: EnrichedShift[] = [];
+      let pageNum = 1;
+      let totalCount = Infinity;
+
+      while (all.length < totalCount) {
+        const params = buildFilterParams(pageNum, pageLimit);
+        const res = await fetch(`/api/finance-approval/shifts?${params}`, { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to load shifts for CSV");
+        const body = (await res.json()) as PaginatedResponse;
+        totalCount = body.total || 0;
+        const batch = body.data || [];
+        all.push(...batch);
+        if (batch.length === 0 || all.length >= totalCount) break;
+        pageNum += 1;
+        if (pageNum > 500) break;
+      }
+
+      if (all.length === 0) {
+        toast({
+          title: "Nothing to export",
+          description: "No shifts match the current filters.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const supplierLabel = (s: EnrichedShift) => s.supplierName?.trim() || inhouseLabel;
+      const rows = all.map((s) => [
+        formatShiftDate(s.date),
+        formatShiftTime(s.startTime),
+        formatShiftTime(s.endTime),
+        s.employeeName || "Unassigned",
+        s.siteName || "",
+        supplierLabel(s),
+        shiftDisplayHours(s) ?? "",
+        s.breakMinutes ?? 0,
+        s.holidayHours ?? 0,
+        s.lateHours ?? 0,
+        s.deductionHours ?? 0,
+        s.deductionAmount ?? 0,
+        s.payRate ?? "",
+        s.chargeRate ?? "",
+        s.status || "",
+        s.financeStatus || "pending",
+        s.financeNote || "",
+        s.id,
+      ]);
+
+      const lines = [
+        FINANCE_CSV_HEADERS.map(escapeCsv).join(","),
+        ...rows.map((r) => r.map(escapeCsv).join(",")),
+      ];
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsvBlob(`\uFEFF${lines.join("\n")}`, `finance-approval-${stamp}.csv`);
+      toast({ title: "CSV downloaded", description: `${all.length} shift(s) exported.` });
+    } catch (err: any) {
+      toast({
+        title: "CSV export failed",
+        description: err?.message || "Could not export CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setCsvExporting(false);
+    }
+  };
+
   if (isLoading && !response) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -536,6 +676,20 @@ export default function FinanceApprovalPage() {
             <p className="text-sm text-muted-foreground">Review and approve worked shifts for invoicing and payroll</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={csvExporting || total === 0}
+          data-testid="button-export-csv"
+        >
+          {csvExporting ? (
+            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-1" />
+          )}
+          {csvExporting ? "Exporting…" : "Download CSV"}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -824,7 +978,6 @@ export default function FinanceApprovalPage() {
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Shift Status</th>
-                    <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Arrival</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Finance</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
                   </tr>
@@ -833,7 +986,7 @@ export default function FinanceApprovalPage() {
                   {shifts.map((shift) => {
                     const financeConf = FINANCE_STATUS_CONFIG[(shift.financeStatus || "pending")] || FINANCE_STATUS_CONFIG.pending;
                     const shiftConf = SHIFT_STATUS_CONFIG[shift.status || "scheduled"] || SHIFT_STATUS_CONFIG.scheduled;
-                    const isLate = (shift.lateMinutes || 0) > 0;
+                    const isLate = (shift.lateHours ?? 0) > 0 || (shift.lateMinutes || 0) > 0;
                     const isPending = !shift.financeStatus || shift.financeStatus === "pending";
 
                     return (
@@ -900,7 +1053,16 @@ export default function FinanceApprovalPage() {
                           )}
                         </td>
                         <td className={`p-3 text-right tabular-nums text-xs ${(shift.lateHours ?? 0) > 0 ? "text-amber-600" : ""}`} data-testid={`text-late-hours-${shift.id}`}>
-                          {fmtNum(shift.lateHours ?? 0)}
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.lateHours ?? 0}
+                              testId={`input-late-hours-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "lateHours", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (
+                            fmtNum(shift.lateHours ?? 0)
+                          )}
                         </td>
                         <td className={`p-3 text-right tabular-nums text-xs ${(shift.deductionAmount ?? 0) > 0 ? "text-red-600" : ""}`} data-testid={`text-deduction-${shift.id}`}>
                           {canEditFields ? (
@@ -947,42 +1109,6 @@ export default function FinanceApprovalPage() {
                           </Badge>
                         </td>
                         <td className="p-3">
-                          {canEditFields ? (
-                            <div className="space-y-1" data-testid={`text-late-${shift.id}`}>
-                              <FinanceNumInput
-                                value={shift.lateMinutes ?? 0}
-                                step="1"
-                                min="0"
-                                suffix="min"
-                                testId={`input-arrival-${shift.id}`}
-                                onSave={(n) => saveField(shift.id, "lateMinutes", n ?? 0)}
-                                disabled={updateFieldsMutation.isPending}
-                              />
-                              {(shift.lateMinutes || 0) > 0 ? (
-                                <div className="text-[10px] text-amber-600">Late {fmtNum(shift.lateHours)}h</div>
-                              ) : shift.bookedOnAt ? (
-                                <div className="text-[10px] text-green-600">On time</div>
-                              ) : null}
-                            </div>
-                          ) : isLate ? (
-                            <div className="text-xs text-amber-600 dark:text-amber-400" data-testid={`text-late-${shift.id}`}>
-                              <div className="flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" />
-                                {shift.lateMinutes} min late
-                              </div>
-                              {(shift.lateHours ?? 0) > 0 && (
-                                <div className="text-[10px] text-muted-foreground pl-4">
-                                  Late {fmtNum(shift.lateHours)}h
-                                </div>
-                              )}
-                            </div>
-                          ) : shift.bookedOnAt ? (
-                            <div className="text-xs text-green-600 dark:text-green-400" data-testid={`text-ontime-${shift.id}`}>On time</div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">—</div>
-                          )}
-                        </td>
-                        <td className="p-3">
                           <Badge variant="secondary" className={`text-[10px] ${financeConf.className}`} data-testid={`badge-finance-${shift.id}`}>
                             {financeConf.label}
                           </Badge>
@@ -994,25 +1120,29 @@ export default function FinanceApprovalPage() {
                         </td>
                         <td className="p-3 text-right">
                           {isPending ? (
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex items-center justify-end gap-0.5">
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="ghost"
-                                className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                title="Approve"
                                 onClick={() => singleApproveMutation.mutate(shift.id)}
                                 disabled={singleApproveMutation.isPending}
                                 data-testid={`button-approve-${shift.id}`}
                               >
-                                <CheckCircle2 className="w-3 h-3 mr-0.5" /> Approve
+                                {singleApproveMutation.isPending
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <CheckCircle2 className="w-3.5 h-3.5" />}
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="ghost"
-                                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Reject"
                                 onClick={() => handleSingleReject(shift.id)}
                                 data-testid={`button-reject-${shift.id}`}
                               >
-                                <XCircle className="w-3 h-3 mr-0.5" /> Reject
+                                <XCircle className="w-3.5 h-3.5" />
                               </Button>
                             </div>
                           ) : (
@@ -1065,8 +1195,8 @@ export default function FinanceApprovalPage() {
             <ul className="space-y-0.5 list-disc ml-4">
               <li>Only shifts that have been booked on and booked off (or verified/completed) appear for finance review</li>
               <li>Shifts with no book-on remain as "scheduled" or "missed" and are not eligible for invoicing</li>
-              <li>Late arrivals are highlighted with the number of minutes late for your review</li>
-              <li>Account/admin can edit Break, Holiday hrs, Deduction, Pay rate, Charge rate, and Arrival (late minutes)</li>
+              <li>Late shifts are highlighted when Late hrs is greater than zero</li>
+              <li>Account/admin can edit Break, Holiday hrs, Late hrs, Deduction, Pay rate, and Charge rate</li>
               <li>Select multiple shifts and use Bulk Update Fields to apply the same values</li>
               <li>Rejected shifts require a reason and will not be included in invoices or payroll</li>
               <li>Only approved shifts can be invoiced to clients or paid to officers</li>
@@ -1167,15 +1297,15 @@ export default function FinanceApprovalPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="bulk-arrival">Arrival (late minutes)</Label>
+              <Label htmlFor="bulk-late-hours">Late hrs</Label>
               <Input
-                id="bulk-arrival"
+                id="bulk-late-hours"
                 type="number"
                 min={0}
-                step={1}
-                value={bulkEdit.lateMinutes}
-                onChange={(e) => setBulkEdit((p) => ({ ...p, lateMinutes: e.target.value }))}
-                data-testid="input-bulk-arrival"
+                step={0.01}
+                value={bulkEdit.lateHours}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, lateHours: e.target.value }))}
+                data-testid="input-bulk-late-hours"
               />
             </div>
             <div className="space-y-1">
