@@ -82,6 +82,21 @@ function findApplicableRate(rateCards: any[], shiftDate: Date, siteId: number | 
   return scored.length > 0 ? scored[0].rc : null;
 }
 
+/** Prefer shift pay_rate when set; otherwise supplier rate card / default. */
+function resolveInvoiceShiftRate(
+  payRate: string | number | null | undefined,
+  rateCards: any[],
+  shiftDate: Date,
+  siteId: number | null,
+  employeeId: number | null,
+  defaultRate: number,
+): number {
+  const parsed = payRate != null && String(payRate).trim() !== "" ? parseFloat(String(payRate)) : NaN;
+  if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+  const applicableRate = findApplicableRate(rateCards, shiftDate, siteId, employeeId);
+  return applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate;
+}
+
 function getClientMeta(req: Request): { ipAddress: string | null; userAgent: string | null } {
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null;
   const userAgent = (req.headers["user-agent"] as string) || null;
@@ -10172,9 +10187,7 @@ export async function registerRoutes(
         hours = Math.floor(hours * 100) / 100;
 
         const shiftDate = new Date(row.date);
-        const usePerShiftRate = supplier.rateType === "per_shift" && row.pay_rate != null;
-        const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, shiftDate, row.site_id, row.employee_id);
-        const rate = usePerShiftRate ? parseFloat(row.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+        const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
         const amount = Math.round(hours * rate * 100) / 100;
 
         shifts.push({
@@ -10310,10 +10323,7 @@ export async function registerRoutes(
         hours -= (row.break_minutes || 0) / 60;
 
         const shiftDate = new Date(row.date);
-        const usePerShiftRate = supplier.rateType === "per_shift" && row.pay_rate != null;
-        const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, shiftDate, row.site_id, row.employee_id);
-
-        const rate = usePerShiftRate ? parseFloat(row.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+        const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
 
         const clientId = row.client_id;
         let chargeRate: number | null = null;
@@ -10539,9 +10549,7 @@ export async function registerRoutes(
         hours -= (row.break_minutes || 0) / 60;
 
         const shiftDate = new Date(row.date);
-        const usePerShiftRate = supplier.rateType === "per_shift" && row.pay_rate != null;
-        const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, shiftDate, row.site_id, row.employee_id);
-        const rate = usePerShiftRate ? parseFloat(row.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+        const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
 
         const clientId = row.client_id;
         let chargeRate: number | null = null;
@@ -10719,10 +10727,7 @@ export async function registerRoutes(
 
         const rateCards = allRateCards.get(row.supplier_id) || [];
         const defaultRate = rateCards.length > 0 ? parseFloat(rateCards[0].hourlyRate) : 12.50;
-        const supplierObj = supplierMap.get(row.supplier_id);
-        const usePerShiftRate = supplierObj?.rateType === "per_shift" && row.pay_rate != null;
-        const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, new Date(row.date), row.site_id, row.employee_id);
-        const rate = usePerShiftRate ? parseFloat(row.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+        const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, new Date(row.date), row.site_id, row.employee_id, defaultRate);
 
         const [startH, startM] = row.start_time.split(":").map(Number);
         const [endH, endM] = row.end_time.split(":").map(Number);
@@ -10932,9 +10937,7 @@ export async function registerRoutes(
         interface ShiftCalc { shift: RefreshedShift; hours: number; rate: number; site: any; chargeRate: number | null; }
         const allShiftCalcs: ShiftCalc[] = [];
         for (const shift of supplierShifts) {
-          const usePerShiftRate = supplier.rateType === "per_shift" && shift.pay_rate != null;
-          const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, new Date(shift.date), shift.site_id, shift.employee_id);
-          const rate = usePerShiftRate ? parseFloat(shift.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+          const rate = resolveInvoiceShiftRate(shift.pay_rate, rateCards, new Date(shift.date), shift.site_id, shift.employee_id, defaultRate);
           const [startH, startM] = shift.start_time.split(":").map(Number);
           const [endH, endM] = shift.end_time.split(":").map(Number);
           let hours = (endH + endM / 60) - (startH + startM / 60);
@@ -19429,9 +19432,7 @@ Respond in JSON format:
                 hours -= (shift.breakMinutes || 0) / 60;
                 hours = Math.round(hours * 100) / 100;
 
-                const usePerShiftRate = supplier.rateType === "per_shift" && (shift as any).payRate != null;
-                const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, new Date(shift.date), shift.siteId, shift.employeeId);
-                const rate = usePerShiftRate ? parseFloat((shift as any).payRate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+                const rate = resolveInvoiceShiftRate((shift as any).payRate, rateCards, new Date(shift.date), shift.siteId, shift.employeeId, defaultRate);
 
                 const site = shift.siteId ? await storage.getSite(shift.siteId) : null;
                 const lineSubtotal = Math.round(hours * rate * 100) / 100;
