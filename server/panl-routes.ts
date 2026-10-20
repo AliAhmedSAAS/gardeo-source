@@ -482,7 +482,7 @@ export function registerPanlRoutes(
       }
 
       const colMap: Record<string, string> = {
-        hours: "hours_override",
+        // hours / hours_override intentionally not editable on P&L
         payrate: "pay_rate",
         pay_rate: "pay_rate",
         expense: "expense",
@@ -540,7 +540,7 @@ export function registerPanlRoutes(
         const column = colMap[fieldKey];
         if (!column) {
           return res.status(400).json({
-            message: `Unsupported field "${fieldKey}" — use hours, payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours`,
+            message: `Unsupported field "${fieldKey}" — use payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours (hours are not editable)`,
           });
         }
 

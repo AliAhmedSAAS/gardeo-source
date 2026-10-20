@@ -155,7 +155,6 @@ export default function PanlReconciliationPage() {
     Map<number, { locationId: number; customerId: number | null; label: string }>
   >(new Map());
 
-  const [bulkHours, setBulkHours] = useState("");
   const [bulkBreak, setBulkBreak] = useState("");
   const [bulkHoliday, setBulkHoliday] = useState("");
   const [bulkLate, setBulkLate] = useState("");
@@ -165,7 +164,6 @@ export default function PanlReconciliationPage() {
   const [bulkSell, setBulkSell] = useState("");
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState({
-    hours: "",
     breakMinutes: "",
     holidayHours: "",
     lateHours: "",
@@ -323,7 +321,6 @@ export default function PanlReconciliationPage() {
     },
     onSuccess: (result) => {
       toast({ title: "Updated", description: `${result.updated} shift(s) updated.` });
-      setBulkHours("");
       setBulkBreak("");
       setBulkHoliday("");
       setBulkLate("");
@@ -332,7 +329,6 @@ export default function PanlReconciliationPage() {
       setBulkExpense("");
       setBulkSell("");
       setBulkForm({
-        hours: "",
         breakMinutes: "",
         holidayHours: "",
         lateHours: "",
@@ -391,7 +387,6 @@ export default function PanlReconciliationPage() {
     }
     const fields: Record<string, number> = {};
     const map: Array<[string, string]> = [
-      ["hours", bulkForm.hours],
       ["breakMinutes", bulkForm.breakMinutes],
       ["holidayHours", bulkForm.holidayHours],
       ["lateHours", bulkForm.lateHours],
@@ -526,7 +521,7 @@ export default function PanlReconciliationPage() {
               Profit &amp; Loss Reconciliation
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Confirmed shifts only. Select rows → Bulk Update for hours, break, holiday, late, pay rate, expense, sell rate — or edit cells / column headers.
+              Confirmed shifts only. Select rows → Bulk Update for break, holiday, late, pay rate, expense, sell rate — or edit cells / column headers. Hours are read-only.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -790,16 +785,7 @@ export default function PanlReconciliationPage() {
                       <th className="p-2">Customer</th>
                       <th className="p-2">Officer</th>
                       <th className="p-2">Location</th>
-                      <th className="p-2 text-right">
-                        <div>Hours</div>
-                        <Input
-                          className="h-7 mt-1 text-right"
-                          value={bulkHours}
-                          onChange={(e) => setBulkHours(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && applyBulk("hours", bulkHours)}
-                          placeholder="…"
-                        />
-                      </th>
+                      <th className="p-2 text-right">Hours</th>
                       <th className="p-2 text-right">
                         <div>Break</div>
                         <Input
@@ -949,13 +935,7 @@ export default function PanlReconciliationPage() {
                             <td className="p-2">{s.customerName}</td>
                             <td className="p-2">{s.officerName}</td>
                             <td className="p-2">{s.locationName}</td>
-                            <td className="p-2 text-right">
-                              <PanlNumInput
-                                value={s.hours}
-                                disabled={busy}
-                                onSave={(n) => saveCell(s.id, "hours", n)}
-                              />
-                            </td>
+                            <td className="p-2 text-right tabular-nums">{fmt(s.hours)}</td>
                             <td className="p-2 text-right">
                               <div className="flex items-center justify-end gap-0.5">
                                 <PanlNumInput
@@ -1069,18 +1049,6 @@ export default function PanlReconciliationPage() {
             Leave a field blank to keep existing values. Only filled fields are applied.
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="panl-bulk-hours">Hours</Label>
-              <Input
-                id="panl-bulk-hours"
-                type="number"
-                min={0}
-                step={0.01}
-                value={bulkForm.hours}
-                onChange={(e) => setBulkForm((p) => ({ ...p, hours: e.target.value }))}
-                data-testid="input-panl-bulk-hours"
-              />
-            </div>
             <div className="space-y-1">
               <Label htmlFor="panl-bulk-break">Break (minutes)</Label>
               <Input
