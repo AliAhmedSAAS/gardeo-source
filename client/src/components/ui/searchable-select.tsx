@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export type SearchableSelectOption = {
   value: string;
   label: string;
-  /** Extra text used by cmdk filter (e.g. code, email, SIA). */
+  /** Extra text used by search filter (e.g. code, email, SIA). */
   keywords?: string;
 };
 
@@ -36,6 +36,11 @@ type SearchableSelectProps = {
   "data-testid"?: string;
 };
 
+function matchesQuery(haystack: string, query: string): boolean {
+  if (!query) return true;
+  return haystack.toLowerCase().includes(query);
+}
+
 export function SearchableSelect({
   value,
   onValueChange,
@@ -51,6 +56,7 @@ export function SearchableSelect({
   "data-testid": testId,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   const selected = React.useMemo(() => {
     if (value == null || value === "") return null;
@@ -61,9 +67,25 @@ export function SearchableSelect({
   }, [value, options, noneValue, noneLabel]);
 
   const displayLabel = selected?.label || placeholder;
+  const query = search.trim().toLowerCase();
+
+  const filteredOptions = React.useMemo(() => {
+    if (!query) return options;
+    return options.filter((opt) =>
+      matchesQuery(`${opt.label || ""} ${opt.keywords || ""} ${opt.value || ""}`, query),
+    );
+  }, [options, query]);
+
+  const showNone =
+    noneValue != null &&
+    matchesQuery(`${noneLabel || "None"} ${noneValue}`, query);
+
+  React.useEffect(() => {
+    if (!open) setSearch("");
+  }, [open]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -83,23 +105,26 @@ export function SearchableSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command
-          filter={(itemValue, search) => {
-            const q = search.toLowerCase().trim();
-            if (!q) return 1;
-            return itemValue.toLowerCase().includes(q) ? 1 : 0;
-          }}
-        >
-          <CommandInput placeholder={searchPlaceholder} />
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{ width: "var(--radix-popover-trigger-width)", minWidth: 220 }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
-              {noneValue != null && (
+              {showNone && (
                 <CommandItem
-                  value={`${noneLabel || "None"} ${noneValue}`}
+                  value={`none-${noneValue}`}
                   onSelect={() => {
-                    onValueChange(noneValue);
+                    onValueChange(noneValue!);
                     setOpen(false);
                   }}
                 >
@@ -112,27 +137,24 @@ export function SearchableSelect({
                   {noneLabel || "None"}
                 </CommandItem>
               )}
-              {options.map((opt) => {
-                const searchValue = `${opt.label} ${opt.keywords || ""} ${opt.value}`;
-                return (
-                  <CommandItem
-                    key={opt.value}
-                    value={searchValue}
-                    onSelect={() => {
-                      onValueChange(opt.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === opt.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <span className="truncate">{opt.label}</span>
-                  </CommandItem>
-                );
-              })}
+              {filteredOptions.map((opt) => (
+                <CommandItem
+                  key={opt.value}
+                  value={`opt-${opt.value}`}
+                  onSelect={() => {
+                    onValueChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === opt.value ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="truncate">{opt.label}</span>
+                </CommandItem>
+              ))}
             </CommandGroup>
           </CommandList>
         </Command>

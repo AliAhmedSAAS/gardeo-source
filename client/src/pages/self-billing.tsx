@@ -173,6 +173,7 @@ export default function SelfBillingPage() {
   const [invoiceDateTo, setInvoiceDateTo] = useState("");
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [confirmRegenerateId, setConfirmRegenerateId] = useState<number | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteSelection, setBulkDeleteSelection] = useState<Set<number>>(new Set());
 
@@ -196,6 +197,11 @@ export default function SelfBillingPage() {
     effectiveFrom: "",
     effectiveTo: "",
   });
+
+  const { data: permData } = useQuery<{ tenant?: { customPayrollControlEnabled?: boolean } }>({
+    queryKey: ["/api/my-permissions"],
+  });
+  const customPayrollEnabled = !!permData?.tenant?.customPayrollControlEnabled;
 
   const { data: allInvoices = [], isLoading: invoicesLoading } = useQuery<EnrichedInvoice[]>({
     queryKey: ["/api/invoices"],
@@ -327,7 +333,13 @@ export default function SelfBillingPage() {
       default: return 0;
     }
   });
-  const invoiceSupplierOptions = Array.from(new Map(selfBilledInvoices.map((inv) => [inv.supplierId, inv.supplierName || `Supplier #${inv.supplierId}`])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  const invoiceSupplierOptions = Array.from(
+    new Map(
+      selfBilledInvoices
+        .filter((inv) => inv.supplierId != null)
+        .map((inv) => [inv.supplierId, String(inv.supplierName || `Supplier #${inv.supplierId}`)]),
+    ).entries(),
+  ).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
   const hasActiveFilters = invoiceSupplierFilter !== "all" || invoiceVatFilter !== "all" || invoiceDateFrom !== "" || invoiceDateTo !== "";
   const handleSort = (col: string) => {
     if (sortColumn === col) {
@@ -455,6 +467,26 @@ export default function SelfBillingPage() {
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/self-billing/invoices/${id}/regenerate`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices", expandedInvoiceId, "line-items"] });
+      setConfirmRegenerateId(null);
+      const approvedMsg = data.shiftsAutoApproved > 0 ? ` ${data.shiftsAutoApproved} pending shift(s) auto-approved.` : "";
+      toast({
+        title: "Invoice Regenerated",
+        description: `${data.invoiceNumber} rebuilt with ${data.lineItemCount} shift(s). Invoice number unchanged.${approvedMsg}`,
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Regenerate Failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -1028,6 +1060,17 @@ export default function SelfBillingPage() {
                                         >
                                           <Send className="w-4 h-4 mr-2" />
                                           Issue Invoice
+                                        </Button>
+                                      )}
+                                      {customPayrollEnabled && inv.status !== "paid" && inv.status !== "cancelled" && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={(e) => { e.stopPropagation(); setConfirmRegenerateId(inv.id); }}
+                                          data-testid={`button-regenerate-invoice-${inv.id}`}
+                                        >
+                                          <RefreshCw className="w-4 h-4 mr-2" />
+                                          Regenerate
                                         </Button>
                                       )}
                                       <Button
@@ -2021,6 +2064,42 @@ export default function SelfBillingPage() {
             >
               {issueMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Confirm Issue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmRegenerateId !== null} onOpenChange={(open) => { if (!open) setConfirmRegenerateId(null); }}>
+        <DialogContent className="max-w-md" data-testid="dialog-confirm-regenerate">
+          <DialogHeader>
+            <DialogTitle>Regenerate Invoice</DialogTitle>
+          </DialogHeader>
+          {confirmRegenerateId && (() => {
+            const inv = selfBilledInvoices.find(i => i.id === confirmRegenerateId);
+            return (
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Rebuild <span className="font-medium text-foreground">{inv?.invoiceNumber}</span> from current timesheets for this period.
+                </p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Pending shifts in the period will be auto-approved</li>
+                  <li>New / removed / changed shifts will update line items</li>
+                  <li>Invoice number stays the same</li>
+                </ul>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmRegenerateId(null)} data-testid="button-cancel-regenerate">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => confirmRegenerateId && regenerateMutation.mutate(confirmRegenerateId)}
+              disabled={regenerateMutation.isPending}
+              data-testid="button-confirm-regenerate"
+            >
+              {regenerateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Regenerate
             </Button>
           </DialogFooter>
         </DialogContent>

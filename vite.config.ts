@@ -6,7 +6,16 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    runtimeErrorOverlay({
+      // Combobox / popover layout can fire benign ResizeObserver notifications
+      // that Chrome surfaces as error events with a null Error object.
+      filter: (error) => {
+        const msg = String(error?.message || "");
+        if (msg.includes("ResizeObserver")) return false;
+        if (msg === "(unknown runtime error)") return false;
+        return true;
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

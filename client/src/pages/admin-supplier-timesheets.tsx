@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +11,13 @@ import {
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
   Clock, MapPin, User, CheckCircle2, XCircle, AlertTriangle,
   FileText, Loader2, MessageSquare, Calendar, Filter,
   ChevronDown, ChevronUp, Building2, ChevronLeft, ChevronRight, CalendarRange,
-  Download, Receipt, FileSpreadsheet,
+  Download, Receipt, FileSpreadsheet, LayoutList, LayoutGrid,
 } from "lucide-react";
 
 type AdminTimesheetShift = {
@@ -459,6 +462,7 @@ export default function AdminSupplierTimesheetsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const limit = 50;
   const periodOptions = buildPeriodOptions();
 
@@ -550,6 +554,28 @@ export default function AdminSupplierTimesheetsPage() {
             Admin overview of all supplier shift approvals and disputes
           </p>
         </div>
+        {activeTab === "pending" && (
+          <div className="flex items-center rounded-md border p-0.5" data-testid="view-mode-toggle">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setViewMode("table")}
+              data-testid="button-view-table"
+            >
+              <LayoutList className="w-4 h-4 mr-1" /> Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              className="h-8"
+              onClick={() => setViewMode("cards")}
+              data-testid="button-view-cards"
+            >
+              <LayoutGrid className="w-4 h-4 mr-1" /> Cards
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -729,127 +755,240 @@ export default function AdminSupplierTimesheetsPage() {
                   </span>
                 </div>
 
-                <div className="space-y-3" data-testid="timesheet-list">
-                  {shifts.map((shift) => {
-                    const approvalStatus = shift.supplierApprovalStatus || "pending";
-                    const statusConf = APPROVAL_STATUS_CONFIG[approvalStatus] || APPROVAL_STATUS_CONFIG.pending;
-                    const StatusIcon = statusConf.icon;
-                    const isExpanded = expandedId === shift.id;
-                    const hours = calculateHours(shift.startTime, shift.endTime, shift.breakMinutes || 0);
+                {viewMode === "table" ? (
+                  <Card data-testid="timesheet-table-view">
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="w-[90px]">Date</TableHead>
+                              <TableHead className="min-w-[140px]">Shift</TableHead>
+                              <TableHead className="min-w-[140px]">Site</TableHead>
+                              <TableHead className="min-w-[120px]">Officer</TableHead>
+                              <TableHead className="min-w-[140px]">Supplier</TableHead>
+                              <TableHead className="w-[70px] text-center">Start</TableHead>
+                              <TableHead className="w-[70px] text-center">End</TableHead>
+                              <TableHead className="w-[70px] text-right">Hours</TableHead>
+                              <TableHead className="w-[60px] text-right">Break</TableHead>
+                              <TableHead className="w-[120px]">Status</TableHead>
+                              <TableHead className="w-[40px]" />
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {shifts.map((shift) => {
+                              const approvalStatus = shift.supplierApprovalStatus || "pending";
+                              const statusConf = APPROVAL_STATUS_CONFIG[approvalStatus] || APPROVAL_STATUS_CONFIG.pending;
+                              const StatusIcon = statusConf.icon;
+                              const isExpanded = expandedId === shift.id;
+                              const hours = calculateHours(shift.startTime, shift.endTime, shift.breakMinutes || 0);
 
-                    return (
-                      <Card key={shift.id} data-testid={`card-shift-${shift.id}`}>
-                        <CardContent className="p-4">
-                          <div
-                            className="flex items-center justify-between gap-3 cursor-pointer"
-                            onClick={() => setExpandedId(isExpanded ? null : shift.id)}
-                            data-testid={`row-shift-${shift.id}`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
-                                style={{ background: "linear-gradient(135deg, #1F3A5F, #2d5a8e)" }}>
-                                <Calendar className="w-4 h-4 text-white" />
+                              return (
+                                <Fragment key={shift.id}>
+                                  <TableRow
+                                    className="cursor-pointer hover:bg-muted/30"
+                                    onClick={() => setExpandedId(isExpanded ? null : shift.id)}
+                                    data-testid={`row-shift-${shift.id}`}
+                                  >
+                                    <TableCell className="font-mono text-xs whitespace-nowrap">{shift.date}</TableCell>
+                                    <TableCell>
+                                      <span className="text-sm font-medium truncate block max-w-[180px]" title={shift.title}>
+                                        {shift.title}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="text-sm truncate max-w-[160px]" title={shift.siteName}>{shift.siteName}</div>
+                                      {shift.siteCity && (
+                                        <span className="text-xs text-muted-foreground">{shift.siteCity}</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-sm">{shift.employeeName}</TableCell>
+                                    <TableCell className="text-sm">{shift.supplierName}</TableCell>
+                                    <TableCell className="text-center font-mono text-xs">{shift.startTime}</TableCell>
+                                    <TableCell className="text-center font-mono text-xs">{shift.endTime}</TableCell>
+                                    <TableCell className="text-right font-mono text-xs font-medium">{hours}</TableCell>
+                                    <TableCell className="text-right font-mono text-xs">
+                                      {(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className={statusConf.className + " text-xs"} data-testid={`badge-approval-${shift.id}`}>
+                                        <StatusIcon className="w-3 h-3 mr-1" />
+                                        {statusConf.label}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      {isExpanded
+                                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                                    </TableCell>
+                                  </TableRow>
+                                  {isExpanded && (
+                                    <TableRow data-testid={`details-shift-${shift.id}`}>
+                                      <TableCell colSpan={11} className="bg-muted/20">
+                                        <div className="py-2 space-y-2 text-sm">
+                                          {shift.notes && (
+                                            <div>
+                                              <p className="text-xs text-muted-foreground">Shift Notes</p>
+                                              <p>{shift.notes}</p>
+                                            </div>
+                                          )}
+                                          {shift.supplierApprovalComment && (
+                                            <div className="p-3 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/10 dark:border-red-800/30">
+                                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <MessageSquare className="w-3 h-3" /> Dispute Comment
+                                              </p>
+                                              <p className="mt-1">{shift.supplierApprovalComment}</p>
+                                            </div>
+                                          )}
+                                          {shift.supplierApprovedAt && (
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                              <StatusIcon className={`w-3.5 h-3.5 ${approvalStatus === "approved" ? "text-green-600" : approvalStatus === "disputed" ? "text-red-500" : approvalStatus === "resolved" ? "text-blue-500" : "text-yellow-500"}`} />
+                                              <span className="font-medium">
+                                                {approvalStatus === "approved" ? "Approved by supplier" : approvalStatus === "disputed" ? "Disputed by supplier" : approvalStatus === "resolved" ? "Resolved" : "Pending review"}
+                                              </span>
+                                              <span className="text-muted-foreground ml-1">
+                                                on {new Date(shift.supplierApprovedAt).toLocaleDateString("en-GB")}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {!shift.notes && !shift.supplierApprovalComment && !shift.supplierApprovedAt && (
+                                            <p className="text-xs text-muted-foreground">No additional details.</p>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Fragment>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3" data-testid="timesheet-list">
+                    {shifts.map((shift) => {
+                      const approvalStatus = shift.supplierApprovalStatus || "pending";
+                      const statusConf = APPROVAL_STATUS_CONFIG[approvalStatus] || APPROVAL_STATUS_CONFIG.pending;
+                      const StatusIcon = statusConf.icon;
+                      const isExpanded = expandedId === shift.id;
+                      const hours = calculateHours(shift.startTime, shift.endTime, shift.breakMinutes || 0);
+
+                      return (
+                        <Card key={shift.id} data-testid={`card-shift-${shift.id}`}>
+                          <CardContent className="p-4">
+                            <div
+                              className="flex items-center justify-between gap-3 cursor-pointer"
+                              onClick={() => setExpandedId(isExpanded ? null : shift.id)}
+                              data-testid={`row-shift-${shift.id}`}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
+                                  style={{ background: "linear-gradient(135deg, #1F3A5F, #2d5a8e)" }}>
+                                  <Calendar className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium text-sm truncate">{shift.title}</p>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" /> {shift.date}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" /> {shift.startTime} - {shift.endTime} ({hours})
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3" /> {shift.siteName}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" /> {shift.employeeName}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Building2 className="w-3 h-3" /> {shift.supplierName}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="font-medium text-sm truncate">{shift.title}</p>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" /> {shift.date}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" /> {shift.startTime} - {shift.endTime} ({hours})
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> {shift.siteName}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" /> {shift.employeeName}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Building2 className="w-3 h-3" /> {shift.supplierName}
-                                  </span>
-                                </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge className={statusConf.className + " text-xs"} data-testid={`badge-approval-${shift.id}`}>
+                                  <StatusIcon className="w-3 h-3 mr-1" />
+                                  {statusConf.label}
+                                </Badge>
+                                {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge className={statusConf.className + " text-xs"} data-testid={`badge-approval-${shift.id}`}>
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {statusConf.label}
-                              </Badge>
-                              {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                            </div>
-                          </div>
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t space-y-3" data-testid={`details-shift-${shift.id}`}>
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Site</p>
+                                    <p className="font-medium">{shift.siteName}</p>
+                                    {shift.siteCity && <p className="text-xs text-muted-foreground">{shift.siteCity}</p>}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Officer</p>
+                                    <p className="font-medium">{shift.employeeName}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Supplier</p>
+                                    <p className="font-medium">{shift.supplierName}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Hours</p>
+                                    <p className="font-medium">{hours}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Break</p>
+                                    <p className="font-medium">{(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Approval Status</p>
+                                    <Badge className={statusConf.className + " text-xs mt-0.5"}>
+                                      <StatusIcon className="w-3 h-3 mr-1" />
+                                      {statusConf.label}
+                                    </Badge>
+                                  </div>
+                                </div>
 
-                          {isExpanded && (
-                            <div className="mt-4 pt-4 border-t space-y-3" data-testid={`details-shift-${shift.id}`}>
-                              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Site</p>
-                                  <p className="font-medium">{shift.siteName}</p>
-                                  {shift.siteCity && <p className="text-xs text-muted-foreground">{shift.siteCity}</p>}
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Officer</p>
-                                  <p className="font-medium">{shift.employeeName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Supplier</p>
-                                  <p className="font-medium">{shift.supplierName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Hours</p>
-                                  <p className="font-medium">{hours}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Break</p>
-                                  <p className="font-medium">{(shift.breakMinutes || 0) > 0 ? `${shift.breakMinutes}m` : "—"}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Approval Status</p>
-                                  <Badge className={statusConf.className + " text-xs mt-0.5"}>
-                                    <StatusIcon className="w-3 h-3 mr-1" />
-                                    {statusConf.label}
-                                  </Badge>
-                                </div>
+                                {shift.notes && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Shift Notes</p>
+                                    <p className="text-sm">{shift.notes}</p>
+                                  </div>
+                                )}
+
+                                {shift.supplierApprovalComment && (
+                                  <div className="p-3 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/10 dark:border-red-800/30">
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <MessageSquare className="w-3 h-3" /> Dispute Comment
+                                    </p>
+                                    <p className="text-sm mt-1">{shift.supplierApprovalComment}</p>
+                                  </div>
+                                )}
+
+                                {shift.supplierApprovedAt && (
+                                  <div className="flex items-center gap-1.5 text-xs pt-1">
+                                    <StatusIcon className={`w-3.5 h-3.5 ${approvalStatus === "approved" ? "text-green-600" : approvalStatus === "disputed" ? "text-red-500" : approvalStatus === "resolved" ? "text-blue-500" : "text-yellow-500"}`} />
+                                    <span className="font-medium">
+                                      {approvalStatus === "approved" ? "Approved by supplier" : approvalStatus === "disputed" ? "Disputed by supplier" : approvalStatus === "resolved" ? "Resolved" : "Pending review"}
+                                    </span>
+                                    <span className="text-muted-foreground ml-1">
+                                      on {new Date(shift.supplierApprovedAt).toLocaleDateString("en-GB")}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-
-                              {shift.notes && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Shift Notes</p>
-                                  <p className="text-sm">{shift.notes}</p>
-                                </div>
-                              )}
-
-                              {shift.supplierApprovalComment && (
-                                <div className="p-3 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/10 dark:border-red-800/30">
-                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <MessageSquare className="w-3 h-3" /> Dispute Comment
-                                  </p>
-                                  <p className="text-sm mt-1">{shift.supplierApprovalComment}</p>
-                                </div>
-                              )}
-
-                              {shift.supplierApprovedAt && (
-                                <div className="flex items-center gap-1.5 text-xs pt-1">
-                                  <StatusIcon className={`w-3.5 h-3.5 ${approvalStatus === "approved" ? "text-green-600" : approvalStatus === "disputed" ? "text-red-500" : approvalStatus === "resolved" ? "text-blue-500" : "text-yellow-500"}`} />
-                                  <span className="font-medium">
-                                    {approvalStatus === "approved" ? "Approved by supplier" : approvalStatus === "disputed" ? "Disputed by supplier" : approvalStatus === "resolved" ? "Resolved" : "Pending review"}
-                                  </span>
-                                  <span className="text-muted-foreground ml-1">
-                                    on {new Date(shift.supplierApprovedAt).toLocaleDateString("en-GB")}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between pt-2" data-testid="pagination">

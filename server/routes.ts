@@ -10427,6 +10427,246 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/self-billing/invoices/:id/regenerate", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "accountant", "payroll_manager"), async (req, res) => {
+    try {
+      const user = req.user as User;
+      if (!user.tenantId) return res.status(400).json({ message: "No tenant associated" });
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!(tenant as any)?.customPayrollControlEnabled) {
+        return res.status(403).json({ message: "Invoice regenerate is only available when custom payroll control is enabled." });
+      }
+
+      const invoiceId = parseInt(req.params.id);
+      if (isNaN(invoiceId)) return res.status(400).json({ message: "Invalid invoice ID" });
+
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+      if (invoice.invoiceType !== "self_billed") {
+        return res.status(400).json({ message: "Only self-billed invoices can be regenerated." });
+      }
+      if (invoice.status === "paid") {
+        return res.status(400).json({ message: "Cannot regenerate a paid invoice." });
+      }
+      if (invoice.status === "cancelled") {
+        return res.status(400).json({ message: "Cannot regenerate a cancelled invoice." });
+      }
+
+      const { rows: existingCreditNotes } = await pool.query(
+        `SELECT id FROM credit_notes WHERE invoice_id = $1 LIMIT 1`,
+        [invoiceId]
+      );
+      if (existingCreditNotes.length > 0) {
+        return res.status(400).json({ message: "Cannot regenerate an invoice that has a credit note. Delete the credit note first." });
+      }
+
+      const supplier = await storage.getSupplier(invoice.supplierId);
+      if (!supplier) return res.status(404).json({ message: "Supplier not found" });
+      if (supplier.tenantId !== user.tenantId) return res.status(403).json({ message: "Access denied" });
+
+      if (supplier.selfBillingAgreementStatus !== "active") {
+        return res.status(400).json({ message: "Supplier does not have an active self-billing agreement." });
+      }
+      if (supplier.selfBillingExpiryDate && new Date(supplier.selfBillingExpiryDate) < new Date()) {
+        return res.status(400).json({ message: "Supplier's self-billing agreement has expired." });
+      }
+
+      const periodStart = typeof invoice.periodStart === "string"
+        ? invoice.periodStart.substring(0, 10)
+        : new Date(invoice.periodStart as any).toISOString().substring(0, 10);
+      const periodEnd = typeof invoice.periodEnd === "string"
+        ? invoice.periodEnd.substring(0, 10)
+        : new Date(invoice.periodEnd as any).toISOString().substring(0, 10);
+
+      const autoApproveResult = await pool.query(
+        `UPDATE shifts SET supplier_approval_status = 'approved', supplier_approved_at = NOW(), supplier_approved_by = $4,
+          status = CASE WHEN status != 'completed' THEN 'completed' ELSE status END,
+          check_out_time = CASE WHEN status != 'completed' THEN NOW() ELSE check_out_time END
+         WHERE tenant_id = $1 AND supplier_id = $2 AND date >= $3::date AND date <= $5::date
+           AND (supplier_approval_status = 'pending' OR supplier_approval_status IS NULL)
+           AND status != 'cancelled'`,
+        [user.tenantId, invoice.supplierId, periodStart, user.id, periodEnd]
+      );
+      const shiftsAutoApproved = autoApproveResult.rowCount || 0;
+
+      const genDataResult = await pool.query(
+        `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          COALESCE(si.name, 'N/A') AS site_name,
+          si.client_id
+        FROM shifts sh
+        LEFT JOIN sites si ON sh.site_id = si.id
+        WHERE sh.tenant_id = $1
+          AND sh.supplier_id = $2
+          AND sh.date >= $3::date AND sh.date <= $4::date
+          AND sh.supplier_approval_status = 'approved'
+          AND sh.status != 'cancelled'
+          AND NOT EXISTS (SELECT 1 FROM disputes d WHERE d.shift_id = sh.id AND d.status IN ('open', 'under_review', 'escalated'))
+          AND (
+            NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)
+            OR EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id AND ili.invoice_id = $5)
+          )
+        ORDER BY sh.date ASC, sh.start_time ASC`,
+        [user.tenantId, invoice.supplierId, periodStart, periodEnd, invoiceId]
+      );
+
+      if (genDataResult.rows.length === 0) {
+        return res.status(400).json({ message: "No eligible timesheets found for this invoice period after regenerate. Shifts may be cancelled, under dispute, or already on another invoice." });
+      }
+
+      const rateCards = await storage.getRateCardsBySupplier(invoice.supplierId);
+      const defaultRate = rateCards.length > 0 ? parseFloat(rateCards[0].hourlyRate) : 12.50;
+
+      const tenantHasValidVat = !!(tenant?.vatNumber && tenant.vatNumber.trim().length > 0);
+      const supplierHasValidVat = !!(supplier.vatNumber && supplier.vatNumber.trim().length > 0 && supplier.vatStatus === "vat_registered");
+      const supplierVatFromDate = supplier.vatRegisteredFrom ? new Date(supplier.vatRegisteredFrom) : null;
+      const invoicePeriodDate = new Date(periodStart);
+      const supplierVatActiveForPeriod = supplierHasValidVat && (!supplierVatFromDate || invoicePeriodDate >= supplierVatFromDate);
+      const vatRate = (tenantHasValidVat && supplierVatActiveForPeriod) ? parseFloat(supplier.defaultVatRate || "20") : 0;
+
+      const { rows: clientChargeRates } = await pool.query(
+        `SELECT crc.* FROM client_rate_cards crc WHERE crc.tenant_id = $1 ORDER BY crc.effective_from DESC`,
+        [user.tenantId]
+      );
+
+      let totalHours = 0;
+      const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number }> = [];
+
+      for (const row of genDataResult.rows) {
+        const [startH, startM] = row.start_time.split(":").map(Number);
+        const [endH, endM] = row.end_time.split(":").map(Number);
+        let hours = (endH + endM / 60) - (startH + startM / 60);
+        if (hours < 0) hours += 24;
+        hours -= (row.break_minutes || 0) / 60;
+
+        const shiftDate = new Date(row.date);
+        const usePerShiftRate = supplier.rateType === "per_shift" && row.pay_rate != null;
+        const applicableRate = usePerShiftRate ? null : findApplicableRate(rateCards, shiftDate, row.site_id, row.employee_id);
+        const rate = usePerShiftRate ? parseFloat(row.pay_rate) : (applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate);
+
+        const clientId = row.client_id;
+        let chargeRate: number | null = null;
+        if (clientId) {
+          const applicableChargeRate = clientChargeRates.find((crc: any) => {
+            if (crc.client_id !== clientId) return false;
+            if (crc.site_id && crc.site_id !== row.site_id) return false;
+            const from = new Date(crc.effective_from);
+            const to = crc.effective_to ? new Date(crc.effective_to) : new Date("2099-12-31");
+            return shiftDate >= from && shiftDate <= to;
+          });
+          if (applicableChargeRate) chargeRate = parseFloat(applicableChargeRate.hourly_charge_rate);
+        }
+        const roundedHours = Math.floor(hours * 100) / 100;
+        const chargeAmount = chargeRate !== null ? Math.round(roundedHours * chargeRate * 100) / 100 : null;
+
+        const lineSubtotal = Math.round(roundedHours * rate * 100) / 100;
+        const lineVatAmount = Math.round(lineSubtotal * (vatRate / 100) * 100) / 100;
+        totalHours += roundedHours;
+        lineItemsData.push({
+          shiftId: row.id,
+          hours: roundedHours,
+          rate,
+          chargeRate,
+          chargeAmount,
+          description: `${shiftDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${row.site_name || row.title} @ £${rate.toFixed(2)}/hr`,
+          lineVatRate: vatRate,
+          lineVatAmount,
+          lineTotal: lineSubtotal + lineVatAmount,
+        });
+      }
+
+      const subtotal = lineItemsData.reduce((sum, item) => sum + (item.hours * item.rate), 0);
+      const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100;
+      const totalAmount = Math.round((subtotal + vatAmount) * 100) / 100;
+
+      const genRateMap = new Map<string, { rate: number; shifts: number; hours: number; amount: number }>();
+      for (const item of lineItemsData) {
+        const key = item.rate.toFixed(2);
+        const ex = genRateMap.get(key) || { rate: item.rate, shifts: 0, hours: 0, amount: 0 };
+        ex.shifts++;
+        ex.hours = Math.round((ex.hours + item.hours) * 100) / 100;
+        ex.amount = Math.round((ex.amount + item.hours * item.rate) * 100) / 100;
+        genRateMap.set(key, ex);
+      }
+      const genRateBreakdown = Array.from(genRateMap.values()).sort((a, b) => a.rate - b.rate);
+      const rateNotesLines = genRateBreakdown.map(rb =>
+        `${rb.shifts} shift${rb.shifts !== 1 ? "s" : ""} @ £${rb.rate.toFixed(2)}/hr (${rb.hours.toFixed(2)} hrs = £${rb.amount.toFixed(2)})`
+      );
+      const invoiceNotes = genRateBreakdown.length > 1
+        ? `Rate breakdown: ${rateNotesLines.join("; ")}`
+        : null;
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(`DELETE FROM invoice_line_items WHERE invoice_id = $1`, [invoiceId]);
+        for (const item of lineItemsData) {
+          await client.query(
+            `INSERT INTO invoice_line_items (invoice_id, shift_id, description, hours, rate, subtotal, vat_rate, vat_amount, line_total, charge_rate, charge_amount)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              invoiceId, item.shiftId, item.description,
+              String(item.hours), String(item.rate),
+              String(Math.round(item.hours * item.rate * 100) / 100),
+              String(item.lineVatRate), String(item.lineVatAmount),
+              String(item.lineTotal),
+              item.chargeRate !== null ? String(item.chargeRate) : null,
+              item.chargeAmount !== null ? String(item.chargeAmount) : null,
+            ]
+          );
+        }
+        await client.query(
+          `UPDATE invoices SET
+            total_hours = $1, hourly_rate = $2, subtotal = $3, vat_rate = $4, vat_amount = $5, total_amount = $6,
+            notes = $7, approved_timesheet_count = $8, generated_at = NOW(), updated_at = NOW()
+           WHERE id = $9 AND tenant_id = $10`,
+          [
+            String(Math.round(totalHours * 100) / 100),
+            String(defaultRate),
+            String(Math.round(subtotal * 100) / 100),
+            String(vatRate),
+            String(Math.round(vatAmount * 100) / 100),
+            String(Math.round(totalAmount * 100) / 100),
+            invoiceNotes,
+            lineItemsData.length,
+            invoiceId,
+            user.tenantId,
+          ]
+        );
+        await client.query("COMMIT");
+      } catch (txErr: any) {
+        await client.query("ROLLBACK");
+        throw txErr;
+      } finally {
+        client.release();
+      }
+
+      await storage.createAuditLog({
+        tenantId: user.tenantId, userId: user.id,
+        action: "self_billing_invoice_regenerated", entityType: "invoice",
+        entityId: String(invoiceId),
+        details: {
+          invoiceNumber: invoice.invoiceNumber,
+          supplierId: invoice.supplierId,
+          periodStart,
+          periodEnd,
+          shiftsAutoApproved,
+          shiftCount: lineItemsData.length,
+          totalAmount: totalAmount.toFixed(2),
+        },
+      });
+
+      const updated = await storage.getInvoice(invoiceId, user.tenantId);
+      res.json({
+        ...updated,
+        lineItemCount: lineItemsData.length,
+        shiftsAutoApproved,
+        invoiceNumber: invoice.invoiceNumber,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/self-billing/batch-preview", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "accountant", "payroll_manager"), async (req, res) => {
     try {
       const user = req.user as User;

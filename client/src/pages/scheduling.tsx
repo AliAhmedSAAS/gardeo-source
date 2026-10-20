@@ -25,7 +25,7 @@ import {
   Plus, Calendar, Clock, MapPin, Users, Building2, CalendarDays, Truck,
   ChevronLeft, ChevronRight, Copy, Eye, LayoutList, LayoutGrid,
   Pencil, Trash2, CheckSquare, X, AlertTriangle, Zap, CheckCircle2,
-  BookTemplate, LayoutTemplate, RefreshCw, Search,
+  BookTemplate, LayoutTemplate, RefreshCw, Search, Download,
 } from "lucide-react";
 import type { Site, ShiftTemplate } from "@shared/schema";
 
@@ -254,6 +254,7 @@ export default function SchedulingPage() {
   const [selectedShiftIds, setSelectedShiftIds] = useState<Set<number>>(new Set());
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
+  const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDateFrom, setSearchDateFrom] = useState("");
   const [searchDateTo, setSearchDateTo] = useState("");
@@ -893,7 +894,8 @@ export default function SchedulingPage() {
   }, [searchSupplier, filterInhouseOfficers, filterSupplierOfficers, shifts]);
 
   const hasActiveFilters = !!(
-    searchQuery
+    searchDraft
+    || searchQuery
     || searchDateFrom
     || searchDateTo
     || searchStatus !== "all"
@@ -906,6 +908,7 @@ export default function SchedulingPage() {
   );
 
   const clearAllFilters = () => {
+    setSearchDraft("");
     setSearchQuery("");
     setSearchDateFrom("");
     setSearchDateTo("");
@@ -916,6 +919,75 @@ export default function SchedulingPage() {
     setSearchOfficer("all");
     setSearchAssignment("all");
     setSearchBranch("all");
+  };
+
+  const applySearch = () => {
+    setSearchQuery(searchDraft.trim());
+  };
+
+  const downloadTableCsv = () => {
+    if (filteredShifts.length === 0) {
+      toast({
+        title: "Nothing to export",
+        description: "No shifts match the current filters.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const headers = [
+      "S.no",
+      "Client Name",
+      "Manager Name",
+      "Site",
+      "Shift Date",
+      "Time In",
+      "Time Out",
+      "Guard Detail",
+      "Branch",
+      "Hours",
+      "Status",
+      "Incidents",
+      "User",
+    ];
+    const escape = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const rows = filteredShifts.map((shift, idx) => {
+      const statusConf = STATUS_CONFIG[shift.status || "scheduled"] || STATUS_CONFIG.scheduled;
+      const hours = calcShiftHours(shift.startTime, shift.endTime, shift.breakMinutes);
+      return [
+        idx + 1,
+        shift.clientName || "",
+        shift.managerName || "",
+        siteDisplay(shift),
+        formatShiftDateUk(shift.date),
+        String(shift.startTime || "").slice(0, 5),
+        String(shift.endTime || "").slice(0, 5),
+        guardDisplay(shift),
+        shift.branchCode || "MAIN",
+        hours,
+        statusConf.label,
+        shift.incidentCount || 0,
+        shift.createdByName || "",
+      ].map(escape).join(",");
+    });
+    const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `scheduling-shifts-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "CSV downloaded",
+      description: `${filteredShifts.length} shift(s) exported.`,
+    });
   };
 
   const filteredShifts = useMemo(() => {
@@ -1171,25 +1243,62 @@ export default function SchedulingPage() {
     );
   };
 
-  const renderShiftFilters = () => (
-      <div
-        className="flex items-end gap-2 flex-nowrap overflow-x-auto pb-1"
-        data-testid="list-filters-row"
-      >
-        <div className="relative min-w-[200px] w-[220px] flex-shrink-0">
+  const renderShiftFilters = (opts?: { showCsv?: boolean }) => (
+    <div className="space-y-3 rounded-lg border bg-card p-3" data-testid="list-filters-row">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[220px] max-w-lg">
           <Label className="text-[10px] text-muted-foreground px-0.5">Search</Label>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <Input
               data-testid="input-filter-search"
               placeholder="Search shifts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applySearch();
+              }}
               className="pl-8 h-9"
             />
           </div>
         </div>
-        <div className="flex-shrink-0 w-[138px]">
+        <Button
+          size="sm"
+          className="h-9"
+          onClick={applySearch}
+          data-testid="button-filter-search"
+        >
+          <Search className="w-3.5 h-3.5 mr-1" />
+          Search
+        </Button>
+        {opts?.showCsv && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={downloadTableCsv}
+            disabled={filteredShifts.length === 0}
+            data-testid="button-download-scheduling-csv"
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            CSV ({filteredShifts.length})
+          </Button>
+        )}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9"
+            onClick={clearAllFilters}
+            data-testid="button-clear-filters"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 gap-2">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">From</Label>
           <Input
             data-testid="input-filter-date-from"
@@ -1197,10 +1306,10 @@ export default function SchedulingPage() {
             value={searchDateFrom}
             max={searchDateTo || undefined}
             onChange={(e) => setSearchDateFrom(e.target.value)}
-            className="h-9"
+            className="h-9 w-full"
           />
         </div>
-        <div className="flex-shrink-0 w-[138px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">To</Label>
           <Input
             data-testid="input-filter-date-to"
@@ -1208,10 +1317,10 @@ export default function SchedulingPage() {
             value={searchDateTo}
             min={searchDateFrom || undefined}
             onChange={(e) => setSearchDateTo(e.target.value)}
-            className="h-9"
+            className="h-9 w-full"
           />
         </div>
-        <div className="flex-shrink-0 w-[150px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Client</Label>
           <SearchableSelect
             value={searchClient}
@@ -1227,11 +1336,11 @@ export default function SchedulingPage() {
             noneLabel="All Clients"
             placeholder="All clients"
             searchPlaceholder="Search clients…"
-            triggerClassName="h-9"
+            triggerClassName="h-9 w-full"
             data-testid="select-filter-client"
           />
         </div>
-        <div className="flex-shrink-0 w-[150px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Site</Label>
           <SearchableSelect
             value={searchSite}
@@ -1244,11 +1353,11 @@ export default function SchedulingPage() {
             noneLabel="All Sites"
             placeholder="All sites"
             searchPlaceholder="Search sites…"
-            triggerClassName="h-9"
+            triggerClassName="h-9 w-full"
             data-testid="select-filter-site"
           />
         </div>
-        <div className="flex-shrink-0 w-[170px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Subcontractor</Label>
           <SearchableSelect
             value={searchSupplier}
@@ -1267,11 +1376,11 @@ export default function SchedulingPage() {
             noneLabel="All Subcontractors"
             placeholder="All subcontractors"
             searchPlaceholder="Search subcontractors…"
-            triggerClassName="h-9"
+            triggerClassName="h-9 w-full"
             data-testid="select-filter-supplier"
           />
         </div>
-        <div className="flex-shrink-0 w-[160px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Officer</Label>
           <SearchableSelect
             value={searchOfficer}
@@ -1284,14 +1393,14 @@ export default function SchedulingPage() {
             noneLabel="All Officers"
             placeholder="All officers"
             searchPlaceholder="Search officers…"
-            triggerClassName="h-9"
+            triggerClassName="h-9 w-full"
             data-testid="select-filter-officer"
           />
         </div>
-        <div className="flex-shrink-0 w-[130px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Status</Label>
           <Select value={searchStatus} onValueChange={setSearchStatus}>
-            <SelectTrigger className="h-9" data-testid="select-filter-status">
+            <SelectTrigger className="h-9 w-full" data-testid="select-filter-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -1308,10 +1417,10 @@ export default function SchedulingPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-shrink-0 w-[120px]">
+        <div className="min-w-0">
           <Label className="text-[10px] text-muted-foreground px-0.5">Assignment</Label>
           <Select value={searchAssignment} onValueChange={setSearchAssignment}>
-            <SelectTrigger className="h-9" data-testid="select-filter-assignment">
+            <SelectTrigger className="h-9 w-full" data-testid="select-filter-assignment">
               <SelectValue placeholder="Assignment" />
             </SelectTrigger>
             <SelectContent>
@@ -1321,18 +1430,8 @@ export default function SchedulingPage() {
             </SelectContent>
           </Select>
         </div>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 flex-shrink-0 mb-0"
-            onClick={clearAllFilters}
-            data-testid="button-clear-filters"
-          >
-            Clear
-          </Button>
-        )}
       </div>
+    </div>
   );
 
   const renderEmptyShifts = () => (
@@ -1418,7 +1517,7 @@ export default function SchedulingPage() {
 
   const renderTableView = () => (
     <div className="space-y-4">
-      {renderShiftFilters()}
+      {renderShiftFilters({ showCsv: true })}
       {filteredShifts.length === 0 ? renderEmptyShifts() : (
         <div className="border rounded-lg overflow-auto max-h-[70vh]" data-testid="schedule-table-view">
           <table className="w-full text-xs border-collapse min-w-[1400px]">
