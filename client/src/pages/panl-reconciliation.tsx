@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Download, FileText, PoundSterling, Search, RefreshCw, Filter, ChevronDown } from "lucide-react";
+import { Loader2, Download, FileText, PoundSterling, Search, RefreshCw, Filter, ChevronDown, Pencil } from "lucide-react";
 
 type GroupBy = "account" | "customer" | "location" | "officer";
 
@@ -158,11 +158,22 @@ export default function PanlReconciliationPage() {
   const [bulkHours, setBulkHours] = useState("");
   const [bulkBreak, setBulkBreak] = useState("");
   const [bulkHoliday, setBulkHoliday] = useState("");
-  const [bulkLateMin, setBulkLateMin] = useState("");
+  const [bulkLate, setBulkLate] = useState("");
   const [bulkDeduction, setBulkDeduction] = useState("");
   const [bulkPay, setBulkPay] = useState("");
   const [bulkExpense, setBulkExpense] = useState("");
   const [bulkSell, setBulkSell] = useState("");
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    hours: "",
+    breakMinutes: "",
+    holidayHours: "",
+    lateHours: "",
+    deductionHours: "",
+    payRate: "",
+    expense: "",
+    sellRate: "",
+  });
 
   const [pdfOpen, setPdfOpen] = useState(false);
   const [pdfAccount, setPdfAccount] = useState("all");
@@ -298,12 +309,16 @@ export default function PanlReconciliationPage() {
   };
 
   const bulkMutation = useMutation({
-    mutationFn: async (payload: { field: string; value: string }) => {
-      const res = await apiRequest("POST", "/api/panl/bulk-edit", {
-        shiftIds: Array.from(selectedIds),
-        field: payload.field,
-        value: payload.value,
-      });
+    mutationFn: async (payload: { field?: string; value?: string; fields?: Record<string, number> }) => {
+      const body =
+        payload.fields != null
+          ? { shiftIds: Array.from(selectedIds), fields: payload.fields }
+          : {
+              shiftIds: Array.from(selectedIds),
+              field: payload.field,
+              value: payload.value,
+            };
+      const res = await apiRequest("POST", "/api/panl/bulk-edit", body);
       return res.json();
     },
     onSuccess: (result) => {
@@ -311,11 +326,22 @@ export default function PanlReconciliationPage() {
       setBulkHours("");
       setBulkBreak("");
       setBulkHoliday("");
-      setBulkLateMin("");
+      setBulkLate("");
       setBulkDeduction("");
       setBulkPay("");
       setBulkExpense("");
       setBulkSell("");
+      setBulkForm({
+        hours: "",
+        breakMinutes: "",
+        holidayHours: "",
+        lateHours: "",
+        deductionHours: "",
+        payRate: "",
+        expense: "",
+        sellRate: "",
+      });
+      setBulkEditOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/panl"] });
       reload();
     },
@@ -344,6 +370,51 @@ export default function PanlReconciliationPage() {
       return;
     }
     bulkMutation.mutate({ field, value });
+  };
+
+  const openBulkEdit = () => {
+    if (selectedIds.size === 0) {
+      toast({
+        title: "No rows selected",
+        description: "Tick one or more shift rows, then use Bulk Update.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBulkEditOpen(true);
+  };
+
+  const applyBulkForm = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "No rows selected", description: "Tick shift rows first.", variant: "destructive" });
+      return;
+    }
+    const fields: Record<string, number> = {};
+    const map: Array<[string, string]> = [
+      ["hours", bulkForm.hours],
+      ["breakMinutes", bulkForm.breakMinutes],
+      ["holidayHours", bulkForm.holidayHours],
+      ["lateHours", bulkForm.lateHours],
+      ["deductionHours", bulkForm.deductionHours],
+      ["payRate", bulkForm.payRate],
+      ["expense", bulkForm.expense],
+      ["sellRate", bulkForm.sellRate],
+    ];
+    for (const [key, raw] of map) {
+      const t = raw.trim();
+      if (!t) continue;
+      const n = Number(t);
+      if (!Number.isFinite(n)) {
+        toast({ title: "Invalid value", description: `Check ${key}`, variant: "destructive" });
+        return;
+      }
+      fields[key] = n;
+    }
+    if (Object.keys(fields).length === 0) {
+      toast({ title: "Nothing to update", description: "Fill at least one field.", variant: "destructive" });
+      return;
+    }
+    bulkMutation.mutate({ fields });
   };
 
   const saveCell = (shiftId: number, field: string, value: number) => {
@@ -455,10 +526,20 @@ export default function PanlReconciliationPage() {
               Profit &amp; Loss Reconciliation
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Confirmed shifts only. Edit Break / Holiday / Arrival / Deduction / rates inline, or bulk via header inputs (select rows first).
+              Confirmed shifts only. Select rows → Bulk Update for hours, break, holiday, late, pay rate, expense, sell rate — or edit cells / column headers.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openBulkEdit}
+              disabled={!hasViewed}
+              data-testid="button-panl-bulk-edit"
+            >
+              <Pencil className="w-4 h-4 mr-1" />
+              Bulk Update{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!hasViewed}>
               <Download className="w-4 h-4 mr-1" /> CSV Export
             </Button>
@@ -662,10 +743,31 @@ export default function PanlReconciliationPage() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Bulk edit: tick rows, type in a column header box, press Enter. Or edit cells inline.
+              Bulk edit: tick rows → Bulk Update, or type in a column header box and press Enter. Cells are editable inline.
             </p>
           </CardContent>
         </Card>
+
+        {hasViewed && selectedIds.size > 0 && (
+          <div
+            className="flex items-center gap-3 p-3 bg-muted/40 border rounded-lg flex-wrap"
+            data-testid="panl-bulk-action-bar"
+          >
+            <span className="text-sm font-medium">{selectedIds.size} shift(s) selected</span>
+            <Button size="sm" onClick={openBulkEdit} data-testid="button-panl-bulk-bar">
+              <Pencil className="w-3.5 h-3.5 mr-1" />
+              Bulk Update Fields
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              data-testid="button-panl-clear-selection"
+            >
+              Clear selection
+            </Button>
+          </div>
+        )}
 
         {!hasViewed ? (
           <Card>
@@ -719,16 +821,15 @@ export default function PanlReconciliationPage() {
                         />
                       </th>
                       <th className="p-2 text-right">
-                        <div>Arrival</div>
+                        <div>Late hrs</div>
                         <Input
                           className="h-7 mt-1 text-right"
-                          value={bulkLateMin}
-                          onChange={(e) => setBulkLateMin(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && applyBulk("lateMinutes", bulkLateMin)}
-                          placeholder="min"
+                          value={bulkLate}
+                          onChange={(e) => setBulkLate(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("lateHours", bulkLate)}
+                          placeholder="…"
                         />
                       </th>
-                      <th className="p-2 text-right">Late hrs</th>
                       <th className="p-2 text-right">
                         <div>Deduction</div>
                         <Input
@@ -778,14 +879,14 @@ export default function PanlReconciliationPage() {
                   <tbody>
                     {isFetching && rows.length === 0 ? (
                       <tr>
-                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={18} className="p-8 text-center text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                           Loading…
                         </td>
                       </tr>
                     ) : rows.length === 0 ? (
                       <tr>
-                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={18} className="p-8 text-center text-muted-foreground">
                           No confirmed shifts match these filters.
                         </td>
                       </tr>
@@ -817,7 +918,7 @@ export default function PanlReconciliationPage() {
                                 Subtotal — {row.label}
                               </td>
                               <td className="p-2 text-right">{fmt(row.hours)}</td>
-                              <td className="p-2" colSpan={5} />
+                              <td className="p-2" colSpan={4} />
                               <td className="p-2" />
                               <td className="p-2 text-right">{gbp(row.gWages)}</td>
                               <td className="p-2 text-right">{gbp(row.expense)}</td>
@@ -874,18 +975,12 @@ export default function PanlReconciliationPage() {
                               />
                             </td>
                             <td className="p-2 text-right">
-                              <div className="flex items-center justify-end gap-0.5">
-                                <PanlNumInput
-                                  value={s.lateMinutes ?? 0}
-                                  step="1"
-                                  disabled={busy}
-                                  onSave={(n) => saveCell(s.id, "lateMinutes", n)}
-                                />
-                                <span className="text-[10px] text-muted-foreground">min</span>
-                              </div>
-                            </td>
-                            <td className={`p-2 text-right tabular-nums ${(s.lateHours ?? 0) > 0 ? "text-amber-600" : ""}`}>
-                              {fmt(s.lateHours ?? 0)}
+                              <PanlNumInput
+                                value={s.lateHours ?? 0}
+                                disabled={busy}
+                                className={(s.lateHours ?? 0) > 0 ? "text-amber-600" : ""}
+                                onSave={(n) => saveCell(s.id, "lateHours", n)}
+                              />
                             </td>
                             <td className="p-2 text-right">
                               <PanlNumInput
@@ -961,6 +1056,138 @@ export default function PanlReconciliationPage() {
           </Card>
         )}
       </div>
+
+      <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5" />
+              Bulk update {selectedIds.size} shift{selectedIds.size === 1 ? "" : "s"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Leave a field blank to keep existing values. Only filled fields are applied.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-hours">Hours</Label>
+              <Input
+                id="panl-bulk-hours"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkForm.hours}
+                onChange={(e) => setBulkForm((p) => ({ ...p, hours: e.target.value }))}
+                data-testid="input-panl-bulk-hours"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-break">Break (minutes)</Label>
+              <Input
+                id="panl-bulk-break"
+                type="number"
+                min={0}
+                step={1}
+                value={bulkForm.breakMinutes}
+                onChange={(e) => setBulkForm((p) => ({ ...p, breakMinutes: e.target.value }))}
+                data-testid="input-panl-bulk-break"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-holiday">Holiday hrs</Label>
+              <Input
+                id="panl-bulk-holiday"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkForm.holidayHours}
+                onChange={(e) => setBulkForm((p) => ({ ...p, holidayHours: e.target.value }))}
+                data-testid="input-panl-bulk-holiday"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-late">Late hrs</Label>
+              <Input
+                id="panl-bulk-late"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkForm.lateHours}
+                onChange={(e) => setBulkForm((p) => ({ ...p, lateHours: e.target.value }))}
+                data-testid="input-panl-bulk-late"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-deduction">Deduction hrs</Label>
+              <Input
+                id="panl-bulk-deduction"
+                type="number"
+                step={0.01}
+                value={bulkForm.deductionHours}
+                onChange={(e) => setBulkForm((p) => ({ ...p, deductionHours: e.target.value }))}
+                data-testid="input-panl-bulk-deduction"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-pay">Pay rate (£)</Label>
+              <Input
+                id="panl-bulk-pay"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkForm.payRate}
+                onChange={(e) => setBulkForm((p) => ({ ...p, payRate: e.target.value }))}
+                data-testid="input-panl-bulk-pay"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-expense">Expense (£)</Label>
+              <Input
+                id="panl-bulk-expense"
+                type="number"
+                step={0.01}
+                value={bulkForm.expense}
+                onChange={(e) => setBulkForm((p) => ({ ...p, expense: e.target.value }))}
+                data-testid="input-panl-bulk-expense"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-sell">Sell rate / Charge rate (£)</Label>
+              <Input
+                id="panl-bulk-sell"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkForm.sellRate}
+                onChange={(e) => setBulkForm((p) => ({ ...p, sellRate: e.target.value }))}
+                data-testid="input-panl-bulk-sell"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkEditOpen(false)}
+              data-testid="button-panl-bulk-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={applyBulkForm}
+              disabled={bulkMutation.isPending || selectedIds.size === 0}
+              data-testid="button-panl-bulk-apply"
+            >
+              {bulkMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Applying…
+                </>
+              ) : (
+                `Apply to ${selectedIds.size} shift${selectedIds.size === 1 ? "" : "s"}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
         <DialogContent>

@@ -481,13 +481,6 @@ export function registerPanlRoutes(
         return res.status(400).json({ message: "Select at least one shift" });
       }
 
-      const field = String(req.body?.field || "").toLowerCase().replace(/\s+/g, "");
-      const rawValue = req.body?.value;
-      if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
-        return res.status(400).json({ message: "Value is required" });
-      }
-      const value = num(rawValue);
-
       const colMap: Record<string, string> = {
         hours: "hours_override",
         payrate: "pay_rate",
@@ -507,49 +500,96 @@ export function registerPanlRoutes(
         late_hours: "late_hours",
         lateminutes: "late_minutes",
         late_minutes: "late_minutes",
+        late: "late_minutes",
         arrival: "late_minutes",
         deduction: "deduction_hours",
         deductionhours: "deduction_hours",
         deduction_hours: "deduction_hours",
       };
-      const column = colMap[field];
-      if (!column) {
-        return res.status(400).json({
-          message: "Unsupported field — use hours, payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours",
-        });
+
+      // Accept either { field, value } or { fields: { hours: 8, payRate: 15, ... } }
+      const fieldEntries: Array<{ fieldKey: string; value: number }> = [];
+      if (req.body?.fields && typeof req.body.fields === "object" && !Array.isArray(req.body.fields)) {
+        for (const [k, v] of Object.entries(req.body.fields as Record<string, unknown>)) {
+          if (v === undefined || v === null || String(v).trim() === "") continue;
+          const n = num(v);
+          if (!Number.isFinite(n)) {
+            return res.status(400).json({ message: `Invalid value for ${k}` });
+          }
+          fieldEntries.push({ fieldKey: String(k).toLowerCase().replace(/\s+/g, ""), value: n });
+        }
+      } else {
+        const field = String(req.body?.field || "").toLowerCase().replace(/\s+/g, "");
+        const rawValue = req.body?.value;
+        if (!field || rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
+          return res.status(400).json({ message: "Value is required" });
+        }
+        fieldEntries.push({ fieldKey: field, value: num(rawValue) });
       }
 
-      let rowCount = 0;
-      if (column === "late_minutes") {
-        const lateMinutes = Math.max(0, Math.round(value));
-        const lateHours = money(lateMinutes / 60);
-        const result = await pool.query(
-          `UPDATE shifts
-           SET late_minutes = $1, late_hours = $2, updated_at = NOW()
-           WHERE tenant_id = $3
-             AND id = ANY($4::int[])
-             AND status IN ('verified', 'completed')`,
-          [lateMinutes, lateHours, tenantId, ids],
-        );
-        rowCount = result.rowCount || 0;
-        res.json({ success: true, updated: rowCount, field: column, value: lateMinutes, lateHours });
-        return;
+      if (fieldEntries.length === 0) {
+        return res.status(400).json({ message: "Provide at least one field to update" });
       }
 
-      const storeValue =
-        column === "break_minutes" ? Math.max(0, Math.round(value)) : value;
+      const setParts: string[] = [];
+      const params: unknown[] = [];
+      let p = 1;
+      const applied: Record<string, number> = {};
+
+      for (const { fieldKey, value } of fieldEntries) {
+        const column = colMap[fieldKey];
+        if (!column) {
+          return res.status(400).json({
+            message: `Unsupported field "${fieldKey}" — use hours, payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours`,
+          });
+        }
+
+        if (column === "late_minutes") {
+          const lateMinutes = Math.max(0, Math.round(value));
+          const lateHours = money(lateMinutes / 60);
+          setParts.push(`late_minutes = $${p++}`, `late_hours = $${p++}`);
+          params.push(lateMinutes, lateHours);
+          applied.late_minutes = lateMinutes;
+          applied.late_hours = lateHours;
+          continue;
+        }
+
+        if (column === "late_hours") {
+          const lateHours = money(Math.max(0, value));
+          const lateMinutes = Math.max(0, Math.round(lateHours * 60));
+          setParts.push(`late_hours = $${p++}`, `late_minutes = $${p++}`);
+          params.push(lateHours, lateMinutes);
+          applied.late_hours = lateHours;
+          applied.late_minutes = lateMinutes;
+          continue;
+        }
+
+        const storeValue =
+          column === "break_minutes" ? Math.max(0, Math.round(value)) : value;
+        setParts.push(`${column} = $${p++}`);
+        params.push(storeValue);
+        applied[column] = storeValue;
+      }
+
+      setParts.push("updated_at = NOW()");
+      const tenantParam = p++;
+      const idsParam = p++;
+      params.push(tenantId, ids);
 
       const result = await pool.query(
         `UPDATE shifts
-         SET ${column} = $1, updated_at = NOW()
-         WHERE tenant_id = $2
-           AND id = ANY($3::int[])
+         SET ${setParts.join(", ")}
+         WHERE tenant_id = $${tenantParam}
+           AND id = ANY($${idsParam}::int[])
            AND status IN ('verified', 'completed')`,
-        [storeValue, tenantId, ids],
+        params,
       );
-      rowCount = result.rowCount || 0;
 
-      res.json({ success: true, updated: rowCount, field: column, value: storeValue });
+      res.json({
+        success: true,
+        updated: result.rowCount || 0,
+        fields: applied,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
