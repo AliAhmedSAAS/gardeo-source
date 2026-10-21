@@ -26,6 +26,7 @@ const FINANCE_EDIT_ROLES = new Set([
 ]);
 
 type FinanceEditableField =
+  | "hours"
   | "holidayHours"
   | "deductionHours"
   | "breakMinutes"
@@ -279,6 +280,7 @@ export default function FinanceApprovalPage() {
   const [rejectSingleId, setRejectSingleId] = useState<number | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [bulkEdit, setBulkEdit] = useState({
+    hours: "",
     holidayHours: "",
     deductionHours: "",
     breakMinutes: "",
@@ -474,6 +476,7 @@ export default function FinanceApprovalPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/finance-approval/shifts"] });
       setBulkEditOpen(false);
       setBulkEdit({
+        hours: "",
         holidayHours: "",
         deductionHours: "",
         breakMinutes: "",
@@ -495,6 +498,7 @@ export default function FinanceApprovalPage() {
   const handleBulkEditApply = () => {
     const fields: Partial<Record<FinanceEditableField, number | null>> = {};
     const map: Array<[FinanceEditableField, string]> = [
+      ["hours", bulkEdit.hours],
       ["holidayHours", bulkEdit.holidayHours],
       ["deductionHours", bulkEdit.deductionHours],
       ["breakMinutes", bulkEdit.breakMinutes],
@@ -1031,7 +1035,16 @@ export default function FinanceApprovalPage() {
                           {shift.supplierName?.trim() || inhouseLabel}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-hours-${shift.id}`}>
-                          {fmtNum(shiftDisplayHours(shift))}
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shiftDisplayHours(shift)}
+                              testId={`input-hours-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "hours", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (
+                            fmtNum(shiftDisplayHours(shift))
+                          )}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-break-${shift.id}`}>
                           {canEditFields ? (
@@ -1282,6 +1295,19 @@ export default function FinanceApprovalPage() {
             Leave a field blank to keep existing values. Only filled fields are applied.
           </p>
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="bulk-hours">Hours</Label>
+              <Input
+                id="bulk-hours"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkEdit.hours}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, hours: e.target.value }))}
+                data-testid="input-bulk-hours"
+              />
+              <p className="text-[11px] text-muted-foreground">Overrides calculated duty hours.</p>
+            </div>
             <div className="space-y-1">
               <Label htmlFor="bulk-break">Break (minutes)</Label>
               <Input

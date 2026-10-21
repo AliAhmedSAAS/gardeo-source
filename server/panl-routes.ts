@@ -485,7 +485,9 @@ export function registerPanlRoutes(
       }
 
       const colMap: Record<string, string> = {
-        // hours / hours_override intentionally not editable on P&L
+        hours: "hours_override",
+        hoursoverride: "hours_override",
+        hours_override: "hours_override",
         payrate: "pay_rate",
         pay_rate: "pay_rate",
         expense: "expense",

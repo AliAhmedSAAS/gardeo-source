@@ -5482,6 +5482,12 @@ export async function registerRoutes(
       if (r.error) return { error: r.error };
       patch.travelAllowance = String(r.value);
     }
+    if (body.hours !== undefined || body.hoursOverride !== undefined) {
+      const raw = body.hours !== undefined ? body.hours : body.hoursOverride;
+      const r = numOrNull(raw, true, "hours");
+      if (r.error) return { error: r.error };
+      patch.hoursOverride = r.value == null ? null : String(r.value);
+    }
     if (Object.keys(patch).length === 0) return { error: "No fields to update" };
     return { patch };
   }
