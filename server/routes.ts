@@ -119,20 +119,36 @@ function calcShiftBaseHours(startTime: string, endTime: string, breakMinutes?: n
   return hours;
 }
 
+/** Duty hours for invoices — prefer hours_override (P&L / shift approver) over start/end calc. */
+function resolveInvoiceBaseHours(row: {
+  start_time?: string; startTime?: string;
+  end_time?: string; endTime?: string;
+  break_minutes?: number | null; breakMinutes?: number | null;
+  hours_override?: unknown; hoursOverride?: unknown;
+}): number {
+  const raw = row.hours_override ?? row.hoursOverride;
+  if (raw != null && raw !== "") {
+    const override = parseFloat(String(raw));
+    if (Number.isFinite(override)) return Math.max(0, override);
+  }
+  return calcShiftBaseHours(
+    row.start_time || row.startTime || "00:00",
+    row.end_time || row.endTime || "00:00",
+    row.break_minutes ?? row.breakMinutes,
+  );
+}
+
 /** Supplier pay hours — mirrors P&L wageHours: base + holiday − late + deductionHours. */
 function resolveInvoiceWageHours(row: {
   start_time?: string; startTime?: string;
   end_time?: string; endTime?: string;
   break_minutes?: number | null; breakMinutes?: number | null;
+  hours_override?: unknown; hoursOverride?: unknown;
   holiday_hours?: unknown; holidayHours?: unknown;
   late_hours?: unknown; lateHours?: unknown;
   deduction_hours?: unknown; deductionHours?: unknown;
 }, opts?: { floor?: boolean }): number {
-  const base = calcShiftBaseHours(
-    row.start_time || row.startTime || "00:00",
-    row.end_time || row.endTime || "00:00",
-    row.break_minutes ?? row.breakMinutes,
-  );
+  const base = resolveInvoiceBaseHours(row);
   const wage = Math.max(
     0,
     base
@@ -148,13 +164,10 @@ function resolveInvoiceSellHours(row: {
   start_time?: string; startTime?: string;
   end_time?: string; endTime?: string;
   break_minutes?: number | null; breakMinutes?: number | null;
+  hours_override?: unknown; hoursOverride?: unknown;
   holiday_hours?: unknown; holidayHours?: unknown;
 }, opts?: { floor?: boolean }): number {
-  const base = calcShiftBaseHours(
-    row.start_time || row.startTime || "00:00",
-    row.end_time || row.endTime || "00:00",
-    row.break_minutes ?? row.breakMinutes,
-  );
+  const base = resolveInvoiceBaseHours(row);
   const sell = Math.max(0, base + parseShiftNum(row.holiday_hours ?? row.holidayHours));
   return opts?.floor === false ? roundMoney(sell) : floorHours(sell);
 }
@@ -175,8 +188,14 @@ function resolveInvoiceLineSubtotal(
 function formatInvoiceAdjustmentNote(row: {
   holiday_hours?: unknown; late_hours?: unknown; deduction_hours?: unknown; deduction_amount?: unknown;
   travel_allowance?: unknown; travelAllowance?: unknown;
+  hours_override?: unknown; hoursOverride?: unknown;
 }): string {
   const bits: string[] = [];
+  const overrideRaw = row.hours_override ?? row.hoursOverride;
+  if (overrideRaw != null && overrideRaw !== "") {
+    const override = parseFloat(String(overrideRaw));
+    if (Number.isFinite(override)) bits.push(`hrs ${override.toFixed(2)}`);
+  }
   const holiday = parseShiftNum(row.holiday_hours);
   const late = parseShiftNum(row.late_hours);
   const dedH = parseShiftNum(row.deduction_hours);
@@ -190,8 +209,8 @@ function formatInvoiceAdjustmentNote(row: {
   return bits.length ? ` [${bits.join(", ")}]` : "";
 }
 
-/** SQL fragment: floor wage hours including holiday / late / deduction hours. */
-const INVOICE_WAGE_HOURS_SQL = `GREATEST(0, FLOOR((
+/** SQL: duty hours — hours_override when set, else start/end − break. */
+const INVOICE_BASE_HOURS_SQL = `COALESCE(sh.hours_override,
   CASE
     WHEN EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
        - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
@@ -203,6 +222,11 @@ const INVOICE_WAGE_HOURS_SQL = `GREATEST(0, FLOOR((
        - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
        - COALESCE(sh.break_minutes, 0)) / 60.0
   END
+)`;
+
+/** SQL fragment: floor wage hours including holiday / late / deduction hours. */
+const INVOICE_WAGE_HOURS_SQL = `GREATEST(0, FLOOR((
+  ${INVOICE_BASE_HOURS_SQL}
   + COALESCE(sh.holiday_hours, 0)
   - COALESCE(sh.late_hours, 0)
   + COALESCE(sh.deduction_hours, 0)
@@ -10247,6 +10271,7 @@ export async function registerRoutes(
       const queries: Promise<any>[] = [
         pool.query(
           `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+            sh.hours_override,
             COALESCE(sh.holiday_hours, 0) AS holiday_hours,
             COALESCE(sh.late_hours, 0) AS late_hours,
             COALESCE(sh.deduction_hours, 0) AS deduction_hours,
@@ -10401,6 +10426,7 @@ export async function registerRoutes(
       const genWhereClause = genConditions.join(" AND ");
       const genDataResult = await pool.query(
         `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          sh.hours_override,
           COALESCE(sh.holiday_hours, 0) AS holiday_hours,
           COALESCE(sh.late_hours, 0) AS late_hours,
           COALESCE(sh.deduction_hours, 0) AS deduction_hours,
@@ -10620,6 +10646,7 @@ export async function registerRoutes(
 
       const genDataResult = await pool.query(
         `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          sh.hours_override,
           COALESCE(sh.holiday_hours, 0) AS holiday_hours,
           COALESCE(sh.late_hours, 0) AS late_hours,
           COALESCE(sh.deduction_hours, 0) AS deduction_hours,
@@ -10810,6 +10837,7 @@ export async function registerRoutes(
       const invoiceFilter = allowRecalculate ? "" : "AND NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)";
       const { rows: eligibleShifts } = await pool.query(
         `SELECT sh.id, sh.supplier_id, sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          sh.hours_override,
           COALESCE(sh.holiday_hours, 0) AS holiday_hours,
           COALESCE(sh.late_hours, 0) AS late_hours,
           COALESCE(sh.deduction_hours, 0) AS deduction_hours,
@@ -10971,6 +10999,7 @@ export async function registerRoutes(
       const recalcInvoiceFilter = allowRecalculate ? "" : "AND NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)";
       const { rows: refreshedShifts } = await pool.query(
         `SELECT sh.id, sh.supplier_id, sh.title, sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.status, sh.pay_rate,
+          sh.hours_override,
           COALESCE(sh.holiday_hours, 0) AS holiday_hours,
           COALESCE(sh.late_hours, 0) AS late_hours,
           COALESCE(sh.deduction_hours, 0) AS deduction_hours,
@@ -10987,7 +11016,7 @@ export async function registerRoutes(
         batchGenParams
       );
 
-      type RefreshedShift = { id: number; supplier_id: number; title: string; date: string; start_time: string; end_time: string; break_minutes: number; site_id: number | null; status: string; pay_rate: string | null; holiday_hours: number | string; late_hours: number | string; deduction_hours: number | string; deduction_amount: number | string; travel_allowance: number | string };
+      type RefreshedShift = { id: number; supplier_id: number; title: string; date: string; start_time: string; end_time: string; break_minutes: number; site_id: number | null; status: string; pay_rate: string | null; hours_override: number | string | null; holiday_hours: number | string; late_hours: number | string; deduction_hours: number | string; deduction_amount: number | string; travel_allowance: number | string };
       const shiftsBySupplier = new Map<number, RefreshedShift[]>();
       for (const s of refreshedShifts) {
         if (!shiftsBySupplier.has(s.supplier_id)) shiftsBySupplier.set(s.supplier_id, []);
