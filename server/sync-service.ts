@@ -9,7 +9,7 @@ import {
   findByExternalId, findEmployeeByExtIdOrName, findSiteByExtIdOrFuzzy,
   findClientByNameOrExtId, findSupplierByNameOrExtId,
   applyEmployeeRelatedData,
-  sanitizeDate, empSyncKey,
+  sanitizeDate, empSyncKey, setUserEmailSafe, supplierEmailTag,
 } from "./sync-utils";
 
 interface ExternalPaginatedResponse {
@@ -281,7 +281,7 @@ async function syncRestPhpInhouseShifts(
   tenantId: number,
   shifts: any[],
   siteDecisions?: Record<string, { action: "use_existing" | "create_new"; siteId?: number }>,
-): Promise<EntityBreakdown> {
+): Promise<{ breakdown: EntityBreakdown; employeeIdMap: Map<string, number> }> {
   const inhouseShifts = shifts.filter(isMainInhouseShift);
   const entities = extractEntitiesFromRestPhpShifts(inhouseShifts);
   const breakdown: EntityBreakdown = {
@@ -389,7 +389,7 @@ async function syncRestPhpInhouseShifts(
     }
   }
 
-  return breakdown;
+  return { breakdown, employeeIdMap };
 }
 
 async function dryRunRestPhpInhouseShifts(tenantId: number, shifts: any[]): Promise<DryRunResult[]> {
@@ -1585,12 +1585,17 @@ async function enrichEmployeesFromApi(
       }
 
       if (emp.employeeEmail) {
-        const empRow3 = await pool.query(`SELECT user_id FROM employees WHERE id = $1`, [empId]);
+        const empRow3 = await pool.query(
+          `SELECT user_id, supplier_id FROM employees WHERE id = $1`,
+          [empId],
+        );
         if (empRow3.rows[0]?.user_id) {
           const cleanEmail = emp.employeeEmail.trim().toLowerCase();
-          await pool.query(
-            `UPDATE users SET email = $1, username = $1 WHERE id = $2`,
-            [cleanEmail, empRow3.rows[0].user_id]
+          await setUserEmailSafe(
+            tenantId,
+            empRow3.rows[0].user_id,
+            cleanEmail,
+            supplierEmailTag(empRow3.rows[0].supplier_id ?? null),
           );
         }
       }
@@ -1830,17 +1835,21 @@ export async function runSync(
         if (empId) {
           try {
             if (emp.telephone || emp.employeeEmail) {
-              const empUserRow = await pool.query(`SELECT user_id FROM employees WHERE id = $1`, [empId]);
+              const empUserRow = await pool.query(
+                `SELECT user_id, supplier_id FROM employees WHERE id = $1`,
+                [empId],
+              );
               const empUserId = empUserRow.rows[0]?.user_id;
               if (empUserId) {
                 if (emp.telephone) {
                   await pool.query(`UPDATE users SET phone = $1 WHERE id = $2`, [emp.telephone, empUserId]);
                 }
                 if (emp.employeeEmail) {
-                  const cleanEmail = emp.employeeEmail.trim().toLowerCase();
-                  await pool.query(
-                    `UPDATE users SET email = $1, username = $1 WHERE id = $2`,
-                    [cleanEmail, empUserId]
+                  await setUserEmailSafe(
+                    tenantId,
+                    empUserId,
+                    emp.employeeEmail.trim().toLowerCase(),
+                    supplierEmailTag(empUserRow.rows[0].supplier_id ?? null),
                   );
                 }
               }
@@ -1866,7 +1875,8 @@ export async function runSync(
           `Check shifts-main.php is deployed and Branch_id=1120 has duties with jobdate in range.`
         );
       }
-      const inhouseBreakdown = await syncRestPhpInhouseShifts(tenantId, shifts, siteDecisions);
+      const { breakdown: inhouseBreakdown, employeeIdMap: inhouseEmpMap } =
+        await syncRestPhpInhouseShifts(tenantId, shifts, siteDecisions);
       breakdown.clients = inhouseBreakdown.clients;
       breakdown.sites = inhouseBreakdown.sites;
       breakdown.suppliers = inhouseBreakdown.suppliers;
@@ -1875,6 +1885,29 @@ export async function runSync(
       allErrors.push(
         `[INHOUSE] Synced in-house only — supplier_id forced null (${inhouseOnly.length} of ${shifts.length} shifts)`,
       );
+
+      if (skipEnrichment) {
+        allErrors.push("[ENRICHMENT] Skipped for in-house sync (skipEnrichment=true)");
+      } else {
+        try {
+          // No supplier filter — matches in-house profiles (supplier_id NULL) via employeeIdMap / DB.
+          const enrichResult = await enrichEmployeesFromApi(config, tenantId, inhouseEmpMap);
+          if (enrichResult) {
+            allErrors.push(
+              `[ENRICHMENT] ${enrichResult.enriched} in-house employees enriched: ` +
+              `${enrichResult.bankDetails} bank, ${enrichResult.documents} docs, ` +
+              `${enrichResult.employmentHistory} history, ${enrichResult.passportRecords} passport, ` +
+              `${enrichResult.emergencyContacts} NOK, ${enrichResult.educationHistory} education, ` +
+              `${enrichResult.rightOfWork} ROW`
+            );
+            if (enrichResult.errors.length > 0) {
+              allErrors.push(...enrichResult.errors.map(e => `[ENRICHMENT ERROR] ${e}`));
+            }
+          }
+        } catch (enrichErr: any) {
+          allErrors.push(`In-house employee enrichment failed: ${enrichErr.message}`);
+        }
+      }
     } else if (isRestPhpApi(config)) {
       const apiKey = config.apiKeyEncrypted || process.env.EXTERNAL_SYNC_API_KEY || "";
       let shifts = await fetchFromRestPhpApi(config.apiBaseUrl, apiKey, dateFrom!, dateTo!, supplierId);
@@ -2063,17 +2096,21 @@ export async function runSync(
               if (enrichEmpId) {
                 try {
                   if (item.telephone || item.employeeEmail) {
-                    const empUserRow = await pool.query(`SELECT user_id FROM employees WHERE id = $1`, [enrichEmpId]);
+                    const empUserRow = await pool.query(
+                      `SELECT user_id, supplier_id FROM employees WHERE id = $1`,
+                      [enrichEmpId],
+                    );
                     const empUserId = empUserRow.rows[0]?.user_id;
                     if (empUserId) {
                       if (item.telephone) {
                         await pool.query(`UPDATE users SET phone = $1 WHERE id = $2`, [item.telephone, empUserId]);
                       }
                       if (item.employeeEmail) {
-                        const cleanEmail = item.employeeEmail.trim().toLowerCase();
-                        await pool.query(
-                          `UPDATE users SET email = $1, username = $1 WHERE id = $2`,
-                          [cleanEmail, empUserId]
+                        await setUserEmailSafe(
+                          tenantId,
+                          empUserId,
+                          item.employeeEmail.trim().toLowerCase(),
+                          supplierEmailTag(empUserRow.rows[0].supplier_id ?? null),
                         );
                       }
                     }

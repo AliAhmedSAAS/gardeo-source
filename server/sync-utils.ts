@@ -121,6 +121,73 @@ export function empSyncKey(extId: string, supplierId: number | null): string {
   return `${extId}|${supplierId ?? "inhouse"}`;
 }
 
+export function supplierEmailTag(supplierId: number | null): string {
+  return supplierId == null ? "main" : `sup${supplierId}`;
+}
+
+/** Dual-profile safe: local+main@domain when base email is already used on another user. */
+export function emailWithSupplierTag(email: string, tag: string): string {
+  const clean = email.toLowerCase().trim();
+  const at = clean.lastIndexOf("@");
+  if (at <= 0) return `${clean}+${tag}`;
+  const local = clean.slice(0, at);
+  const domain = clean.slice(at + 1);
+  const baseLocal = local.includes("+") ? local.slice(0, local.indexOf("+")) : local;
+  return `${baseLocal}+${tag}@${domain}`;
+}
+
+export async function allocateUniqueUserEmail(
+  tenantId: number,
+  preferred: string | null | undefined,
+  tag: string,
+  fallbackLocal: string,
+): Promise<{ email: string; username: string }> {
+  if (!preferred) {
+    const email = `${fallbackLocal}@needs-onboarding.local`;
+    return { email, username: fallbackLocal };
+  }
+  const clean = preferred.toLowerCase().trim();
+  const taken = await pool.query(
+    `SELECT 1 FROM users WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) LIMIT 1`,
+    [tenantId, clean],
+  );
+  if (taken.rows.length === 0) return { email: clean, username: clean };
+
+  const aliased = emailWithSupplierTag(clean, tag);
+  const takenAlias = await pool.query(
+    `SELECT 1 FROM users WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) LIMIT 1`,
+    [tenantId, aliased],
+  );
+  if (takenAlias.rows.length === 0) return { email: aliased, username: aliased };
+
+  const email = `${fallbackLocal}@needs-onboarding.local`;
+  return { email, username: fallbackLocal };
+}
+
+/** Set user email; on unique clash use +tag alias (keeps dual MAIN/Aspire profiles). */
+export async function setUserEmailSafe(
+  tenantId: number,
+  userId: string,
+  preferred: string,
+  tag: string,
+): Promise<void> {
+  const clean = preferred.toLowerCase().trim();
+  if (!clean) return;
+  try {
+    await pool.query(`UPDATE users SET email = $1, username = $1 WHERE id = $2`, [clean, userId]);
+    return;
+  } catch (err: any) {
+    if (err.code !== "23505") throw err;
+  }
+  const aliased = emailWithSupplierTag(clean, tag);
+  try {
+    await pool.query(`UPDATE users SET email = $1, username = $1 WHERE id = $2`, [aliased, userId]);
+  } catch (err: any) {
+    if (err.code !== "23505") throw err;
+    // leave existing email (another profile already owns both)
+  }
+}
+
 /**
  * Find employee. When `supplierId` is passed (including `null` for in-house), match is
  * supplier-scoped so Aspire vs MAIN get separate profiles. Omit `supplierId` for legacy
@@ -445,10 +512,7 @@ export async function upsertEmployee(
       }
 
       if (email) {
-        await pool.query(
-          `UPDATE users SET email = $1, username = $1 WHERE id = $2`,
-          [email, existing.userId]
-        );
+        await setUserEmailSafe(tenantId, existing.userId, email, supplierEmailTag(supplierId));
       }
 
       if (existing.empId) {
@@ -503,21 +567,12 @@ export async function upsertEmployee(
 
     const crypto = await import("crypto");
     const userId = crypto.randomUUID();
-    const tag = supplierId == null ? "main" : `sup${supplierId}`;
+    const tag = supplierEmailTag(supplierId);
     const derivedLocal = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, "")}.${extId}.${tag}.${Date.now().toString(36)}`;
-    let emailToUse = email || `${derivedLocal}@needs-onboarding.local`;
-    let username = email || derivedLocal;
-    if (email) {
-      const taken = await pool.query(
-        `SELECT 1 FROM users WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) LIMIT 1`,
-        [tenantId, email],
-      );
-      if (taken.rows.length > 0) {
-        // Same person already has another supplier profile — new user needs unique email.
-        emailToUse = `${derivedLocal}@needs-onboarding.local`;
-        username = derivedLocal;
-      }
-    }
+    // Prefer real API email; if taken by another profile use local+main@domain (not needs-onboarding).
+    const { email: emailToUse, username } = await allocateUniqueUserEmail(
+      tenantId, email || null, tag, derivedLocal,
+    );
 
     await pool.query(
       `INSERT INTO users (id, tenant_id, username, email, password, first_name, last_name, phone, role, is_active)
