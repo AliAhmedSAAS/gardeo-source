@@ -46,6 +46,7 @@ type EnrichedShift = {
   payRate?: string | null;
   chargeRate?: string | null;
   holidayHours?: string | number | null;
+  travelAllowance?: string | number | null;
   breakMinutes?: number | null;
   siteName: string;
   siteAddress?: string | null;
@@ -245,7 +246,7 @@ export default function SchedulingPage() {
   const [editShift, setEditShift] = useState<EnrichedShift | null>(null);
   const [editForm, setEditForm] = useState({
     title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
-    payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "",
+    payRate: "", chargeRate: "", holidayHours: "", travelAllowance: "", breakMinutes: "",
     payRateOptionId: "", chargeRateOptionId: "",
   });
   const [editRatesManual, setEditRatesManual] = useState(false);
@@ -271,7 +272,7 @@ export default function SchedulingPage() {
   const [shiftForm, setShiftForm] = useState({
     title: "", date: "", startTime: "", endTime: "",
     siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "",
-    payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "",
+    payRate: "", chargeRate: "", holidayHours: "", travelAllowance: "", breakMinutes: "",
     payRateOptionId: "", chargeRateOptionId: "",
   });
   const [ratesManual, setRatesManual] = useState(false);
@@ -547,6 +548,7 @@ export default function SchedulingPage() {
         payRate: data.payRate || null,
         chargeRate: data.chargeRate || null,
         holidayHours: holidayHoursPayload(data.holidayHours),
+        travelAllowance: data.travelAllowance ? String(data.travelAllowance) : "0",
         breakMinutes: breakMinutesPayload(data.breakMinutes),
       };
       const res = await apiRequest("POST", "/api/shifts", payload);
@@ -646,7 +648,7 @@ export default function SchedulingPage() {
 
   const closeShiftDialog = useCallback(() => {
     setShiftDialogOpen(false);
-    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "", payRate: "", chargeRate: "", holidayHours: "", breakMinutes: "", payRateOptionId: "", chargeRateOptionId: "" });
+    setShiftForm({ title: "", date: "", startTime: "", endTime: "", siteId: "", employeeId: "", supplierId: "", dutyTypeId: "", notes: "", payRate: "", chargeRate: "", holidayHours: "", travelAllowance: "", breakMinutes: "", payRateOptionId: "", chargeRateOptionId: "" });
     setRatesManual(false);
     setRepeatOption("none");
     setSelectedDay("");
@@ -677,6 +679,7 @@ export default function SchedulingPage() {
         payRate: shiftForm.payRate || null,
         chargeRate: shiftForm.chargeRate || null,
         holidayHours: holidayHoursPayload(shiftForm.holidayHours),
+        travelAllowance: shiftForm.travelAllowance || "0",
         breakMinutes: breakMinutesPayload(shiftForm.breakMinutes),
       }));
       bulkCreateMutation.mutate({ shifts: shiftPayloads });
@@ -753,6 +756,7 @@ export default function SchedulingPage() {
       payRate: shift.payRate != null ? String(shift.payRate) : "",
       chargeRate: shift.chargeRate != null ? String(shift.chargeRate) : "",
       holidayHours: shift.holidayHours != null && Number(shift.holidayHours) !== 0 ? String(shift.holidayHours) : "",
+      travelAllowance: shift.travelAllowance != null && Number(shift.travelAllowance) !== 0 ? String(shift.travelAllowance) : "",
       breakMinutes: shift.breakMinutes ? String(shift.breakMinutes) : "",
       payRateOptionId: "",
       chargeRateOptionId: "",
@@ -776,6 +780,7 @@ export default function SchedulingPage() {
         payRate: editForm.payRate || null,
         chargeRate: editForm.chargeRate || null,
         holidayHours: holidayHoursPayload(editForm.holidayHours),
+        travelAllowance: editForm.travelAllowance || "0",
         breakMinutes: breakMinutesPayload(editForm.breakMinutes),
       },
     });
@@ -1474,6 +1479,9 @@ export default function SchedulingPage() {
                           )}
                           {Number(shift.holidayHours) > 0 && (
                             <span data-testid={`text-shift-holiday-${shift.id}`}>Holiday {Number(shift.holidayHours)}h</span>
+                          )}
+                          {Number(shift.travelAllowance) > 0 && (
+                            <span data-testid={`text-shift-travel-${shift.id}`}>Travel £{Number(shift.travelAllowance).toFixed(2)}</span>
                           )}
                         </div>
                       </div>
@@ -2206,6 +2214,20 @@ export default function SchedulingPage() {
               <p className="text-[11px] text-muted-foreground">Extra paid hours on top of the shift length. Leave blank for none.</p>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="shift-travel-allowance">Travel allowance (£)</Label>
+              <Input
+                id="shift-travel-allowance"
+                data-testid="input-shift-travel-allowance"
+                type="number"
+                min="0"
+                step="0.01"
+                value={shiftForm.travelAllowance}
+                onChange={(e) => setShiftForm((f) => ({ ...f, travelAllowance: e.target.value }))}
+                placeholder="0.00"
+              />
+              <p className="text-[11px] text-muted-foreground">Paid in G.Wages for officers and on supplier invoices. Separate from expense.</p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="shift-break-minutes">Break deduction (minutes)</Label>
               <Input
                 id="shift-break-minutes"
@@ -2281,6 +2303,10 @@ export default function SchedulingPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Holiday hours</p>
                     <p className="font-medium" data-testid="text-detail-holiday-hours">{Number(detailShift.holidayHours) > 0 ? Number(detailShift.holidayHours) : "0"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Travel allowance</p>
+                    <p className="font-medium" data-testid="text-detail-travel">£{Number(detailShift.travelAllowance) > 0 ? Number(detailShift.travelAllowance).toFixed(2) : "0.00"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Break deduction</p>
@@ -2425,6 +2451,19 @@ export default function SchedulingPage() {
                 value={editForm.holidayHours}
                 onChange={(e) => setEditForm((f) => ({ ...f, holidayHours: e.target.value }))}
                 placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-travel-allowance">Travel allowance (£)</Label>
+              <Input
+                id="edit-travel-allowance"
+                data-testid="input-edit-travel-allowance"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editForm.travelAllowance}
+                onChange={(e) => setEditForm((f) => ({ ...f, travelAllowance: e.target.value }))}
+                placeholder="0.00"
               />
             </div>
             <div className="space-y-2">

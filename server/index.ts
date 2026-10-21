@@ -580,6 +580,7 @@ app.use((req, res, next) => {
     await pool.query(`
       ALTER TABLE shifts
         ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS travel_allowance numeric(12, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0,
         ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,

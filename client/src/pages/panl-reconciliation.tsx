@@ -33,6 +33,7 @@ type ShiftRow = {
   lateMinutes?: number;
   deductionHours?: number;
   payRate: number;
+  travelAllowance?: number;
   gWages: number;
   expense: number;
   nWages: number;
@@ -160,6 +161,7 @@ export default function PanlReconciliationPage() {
   const [bulkLate, setBulkLate] = useState("");
   const [bulkDeduction, setBulkDeduction] = useState("");
   const [bulkPay, setBulkPay] = useState("");
+  const [bulkTravel, setBulkTravel] = useState("");
   const [bulkExpense, setBulkExpense] = useState("");
   const [bulkSell, setBulkSell] = useState("");
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
@@ -169,6 +171,7 @@ export default function PanlReconciliationPage() {
     lateHours: "",
     deductionHours: "",
     payRate: "",
+    travelAllowance: "",
     expense: "",
     sellRate: "",
   });
@@ -326,6 +329,7 @@ export default function PanlReconciliationPage() {
       setBulkLate("");
       setBulkDeduction("");
       setBulkPay("");
+      setBulkTravel("");
       setBulkExpense("");
       setBulkSell("");
       setBulkForm({
@@ -334,6 +338,7 @@ export default function PanlReconciliationPage() {
         lateHours: "",
         deductionHours: "",
         payRate: "",
+        travelAllowance: "",
         expense: "",
         sellRate: "",
       });
@@ -392,6 +397,7 @@ export default function PanlReconciliationPage() {
       ["lateHours", bulkForm.lateHours],
       ["deductionHours", bulkForm.deductionHours],
       ["payRate", bulkForm.payRate],
+      ["travelAllowance", bulkForm.travelAllowance],
       ["expense", bulkForm.expense],
       ["sellRate", bulkForm.sellRate],
     ];
@@ -836,6 +842,16 @@ export default function PanlReconciliationPage() {
                           placeholder="…"
                         />
                       </th>
+                      <th className="p-2 text-right">
+                        <div>Travel £</div>
+                        <Input
+                          className="h-7 mt-1 text-right"
+                          value={bulkTravel}
+                          onChange={(e) => setBulkTravel(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && applyBulk("travelAllowance", bulkTravel)}
+                          placeholder="…"
+                        />
+                      </th>
                       <th className="p-2 text-right">G.Wages</th>
                       <th className="p-2 text-right">
                         <div>Expense</div>
@@ -865,14 +881,14 @@ export default function PanlReconciliationPage() {
                   <tbody>
                     {isFetching && rows.length === 0 ? (
                       <tr>
-                        <td colSpan={18} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                           Loading…
                         </td>
                       </tr>
                     ) : rows.length === 0 ? (
                       <tr>
-                        <td colSpan={18} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={19} className="p-8 text-center text-muted-foreground">
                           No confirmed shifts match these filters.
                         </td>
                       </tr>
@@ -905,6 +921,7 @@ export default function PanlReconciliationPage() {
                               </td>
                               <td className="p-2 text-right">{fmt(row.hours)}</td>
                               <td className="p-2" colSpan={4} />
+                              <td className="p-2" />
                               <td className="p-2" />
                               <td className="p-2 text-right">{gbp(row.gWages)}</td>
                               <td className="p-2 text-right">{gbp(row.expense)}</td>
@@ -977,6 +994,13 @@ export default function PanlReconciliationPage() {
                                 onSave={(n) => saveCell(s.id, "payRate", n)}
                               />
                             </td>
+                            <td className="p-2 text-right">
+                              <PanlNumInput
+                                value={s.travelAllowance ?? 0}
+                                disabled={busy}
+                                onSave={(n) => saveCell(s.id, "travelAllowance", n)}
+                              />
+                            </td>
                             <td className="p-2 text-right">{gbp(s.gWages)}</td>
                             <td className="p-2 text-right">
                               <PanlNumInput
@@ -1010,6 +1034,7 @@ export default function PanlReconciliationPage() {
                       </td>
                       <td className="p-2 text-right">{fmt(totals.hours)}</td>
                       <td className="p-2" colSpan={5} />
+                      <td className="p-2" />
                       <td className="p-2" />
                       <td className="p-2 text-right">{gbp(totals.gWages)}</td>
                       <td className="p-2 text-right">{gbp(totals.expense)}</td>
@@ -1106,6 +1131,18 @@ export default function PanlReconciliationPage() {
                 value={bulkForm.payRate}
                 onChange={(e) => setBulkForm((p) => ({ ...p, payRate: e.target.value }))}
                 data-testid="input-panl-bulk-pay"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="panl-bulk-travel">Travel allowance (£)</Label>
+              <Input
+                id="panl-bulk-travel"
+                type="number"
+                step={0.01}
+                min={0}
+                value={bulkForm.travelAllowance}
+                onChange={(e) => setBulkForm((p) => ({ ...p, travelAllowance: e.target.value }))}
+                data-testid="input-panl-bulk-travel"
               />
             </div>
             <div className="space-y-1">

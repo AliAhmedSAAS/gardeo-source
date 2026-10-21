@@ -168,6 +168,7 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
         s.pay_rate,
         s.charge_rate,
         s.expense,
+        s.travel_allowance,
         s.holiday_hours,
         s.late_hours,
         s.deduction_hours,
@@ -208,9 +209,10 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
     const payRate = num(r.pay_rate);
     const sellRate = num(r.charge_rate);
     const expense = num(r.expense);
+    const travelAllowance = Math.max(0, num(r.travel_allowance));
     const wageHours = money(Math.max(0, hours + holidayHours - lateHours + deductionHours));
     const sellHours = money(Math.max(0, hours + holidayHours));
-    const gWages = money(wageHours * payRate);
+    const gWages = money(wageHours * payRate + travelAllowance);
     const nWages = money(gWages + expense);
     const selling = money(sellHours * sellRate);
     const pnl = money(selling - gWages - expense);
@@ -243,6 +245,7 @@ async function fetchPanlRows(tenantId: number, filters: PanlFilters) {
       wageHours,
       sellHours,
       payRate,
+      travelAllowance,
       gWages,
       expense,
       nWages,
@@ -486,6 +489,9 @@ export function registerPanlRoutes(
         payrate: "pay_rate",
         pay_rate: "pay_rate",
         expense: "expense",
+        travel: "travel_allowance",
+        travelallowance: "travel_allowance",
+        travel_allowance: "travel_allowance",
         sellrate: "charge_rate",
         sell_rate: "charge_rate",
         chargerate: "charge_rate",
@@ -540,7 +546,7 @@ export function registerPanlRoutes(
         const column = colMap[fieldKey];
         if (!column) {
           return res.status(400).json({
-            message: `Unsupported field "${fieldKey}" — use payRate, expense, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours (hours are not editable)`,
+            message: `Unsupported field "${fieldKey}" — use payRate, expense, travelAllowance, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours (hours are not editable)`,
           });
         }
 
@@ -761,6 +767,7 @@ export function registerPanlRoutes(
         "Deduction hrs",
         "Charge rate",
         "Pay rate",
+        "Travel",
         "Wages",
         "Selling",
         "Gross profit",
@@ -773,7 +780,7 @@ export function registerPanlRoutes(
         const day = new Date(`${r.date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short" });
         const wageHours = r.hours + r.holidayHours - (r.lateHours || 0) + r.deductionHours;
         const sellHours = r.hours + r.holidayHours;
-        const wages = money(wageHours * r.payRate);
+        const wages = money(wageHours * r.payRate + (r.travelAllowance || 0));
         const selling = money(sellHours * r.sellRate);
         const gross = money(selling - wages);
         // Net profit = Selling − wages ± expense (negative expense subtracts; positive adds)
@@ -797,6 +804,7 @@ export function registerPanlRoutes(
             r.deductionHours,
             r.sellRate,
             r.payRate,
+            r.travelAllowance || 0,
             wages,
             selling,
             gross,

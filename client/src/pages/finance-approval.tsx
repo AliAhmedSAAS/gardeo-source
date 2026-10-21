@@ -31,7 +31,8 @@ type FinanceEditableField =
   | "breakMinutes"
   | "payRate"
   | "chargeRate"
-  | "lateHours";
+  | "lateHours"
+  | "travelAllowance";
 
 function FinanceNumInput({
   value,
@@ -129,6 +130,7 @@ interface EnrichedShift {
   chargeRate?: number | null;
   hours?: number | null;
   holidayHours?: number | null;
+  travelAllowance?: number | null;
   lateHours?: number | null;
   breakMinutes?: number | null;
   deductionHours?: number | null;
@@ -190,6 +192,7 @@ const FINANCE_CSV_HEADERS = [
   "Late hrs",
   "Deduction hrs",
   "Deduction £",
+  "Travel £",
   "Pay rate",
   "Charge rate",
   "Shift status",
@@ -282,6 +285,7 @@ export default function FinanceApprovalPage() {
     payRate: "",
     chargeRate: "",
     lateHours: "",
+    travelAllowance: "",
   });
   const [csvExporting, setCsvExporting] = useState(false);
   const limit = 50;
@@ -476,6 +480,7 @@ export default function FinanceApprovalPage() {
         payRate: "",
         chargeRate: "",
         lateHours: "",
+        travelAllowance: "",
       });
     },
     onError: (err: any) => {
@@ -494,6 +499,7 @@ export default function FinanceApprovalPage() {
       ["deductionHours", bulkEdit.deductionHours],
       ["breakMinutes", bulkEdit.breakMinutes],
       ["payRate", bulkEdit.payRate],
+      ["travelAllowance", bulkEdit.travelAllowance],
       ["chargeRate", bulkEdit.chargeRate],
       ["lateHours", bulkEdit.lateHours],
     ];
@@ -630,6 +636,7 @@ export default function FinanceApprovalPage() {
         s.lateHours ?? 0,
         s.deductionHours ?? 0,
         s.deductionAmount ?? 0,
+        s.travelAllowance ?? 0,
         s.payRate ?? "",
         s.chargeRate ?? "",
         s.status || "",
@@ -975,6 +982,7 @@ export default function FinanceApprovalPage() {
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Holiday hrs</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Late hrs</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Deduction</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Travel £</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Shift Status</th>
@@ -1076,6 +1084,19 @@ export default function FinanceApprovalPage() {
                           ) : (shift.deductionAmount ?? 0) > 0
                             ? `£${fmtNum(shift.deductionAmount)}`
                             : fmtNum(shift.deductionHours ?? 0)}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-travel-${shift.id}`}>
+                          {canEditFields ? (
+                            <FinanceNumInput
+                              value={shift.travelAllowance ?? 0}
+                              prefix="£"
+                              testId={`input-travel-${shift.id}`}
+                              onSave={(n) => saveField(shift.id, "travelAllowance", n ?? 0)}
+                              disabled={updateFieldsMutation.isPending}
+                            />
+                          ) : (
+                            `£${fmtNum(shift.travelAllowance ?? 0)}`
+                          )}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-pay-rate-${shift.id}`}>
                           {canEditFields ? (
@@ -1196,7 +1217,7 @@ export default function FinanceApprovalPage() {
               <li>Only shifts that have been booked on and booked off (or verified/completed) appear for finance review</li>
               <li>Shifts with no book-on remain as "scheduled" or "missed" and are not eligible for invoicing</li>
               <li>Late shifts are highlighted when Late hrs is greater than zero</li>
-              <li>Account/admin can edit Break, Holiday hrs, Late hrs, Deduction, Pay rate, and Charge rate</li>
+              <li>Account/admin can edit Break, Holiday hrs, Late hrs, Deduction, Travel £, Pay rate, and Charge rate</li>
               <li>Select multiple shifts and use Bulk Update Fields to apply the same values</li>
               <li>Rejected shifts require a reason and will not be included in invoices or payroll</li>
               <li>Only approved shifts can be invoiced to clients or paid to officers</li>
@@ -1306,6 +1327,18 @@ export default function FinanceApprovalPage() {
                 value={bulkEdit.lateHours}
                 onChange={(e) => setBulkEdit((p) => ({ ...p, lateHours: e.target.value }))}
                 data-testid="input-bulk-late-hours"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bulk-travel">Travel allowance (£)</Label>
+              <Input
+                id="bulk-travel"
+                type="number"
+                min={0}
+                step={0.01}
+                value={bulkEdit.travelAllowance}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, travelAllowance: e.target.value }))}
+                data-testid="input-bulk-travel"
               />
             </div>
             <div className="space-y-1">

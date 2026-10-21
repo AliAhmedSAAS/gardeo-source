@@ -97,6 +97,117 @@ function resolveInvoiceShiftRate(
   return applicableRate ? parseFloat(applicableRate.hourlyRate) : defaultRate;
 }
 
+function parseShiftNum(v: unknown): number {
+  const n = parseFloat(String(v ?? 0));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function roundMoney(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function floorHours(n: number): number {
+  return Math.floor(n * 100) / 100;
+}
+
+function calcShiftBaseHours(startTime: string, endTime: string, breakMinutes?: number | null): number {
+  const [startH, startM] = String(startTime || "00:00").substring(0, 5).split(":").map(Number);
+  const [endH, endM] = String(endTime || "00:00").substring(0, 5).split(":").map(Number);
+  let hours = (endH + endM / 60) - (startH + startM / 60);
+  if (hours < 0) hours += 24;
+  hours -= (breakMinutes || 0) / 60;
+  return hours;
+}
+
+/** Supplier pay hours — mirrors P&L wageHours: base + holiday − late + deductionHours. */
+function resolveInvoiceWageHours(row: {
+  start_time?: string; startTime?: string;
+  end_time?: string; endTime?: string;
+  break_minutes?: number | null; breakMinutes?: number | null;
+  holiday_hours?: unknown; holidayHours?: unknown;
+  late_hours?: unknown; lateHours?: unknown;
+  deduction_hours?: unknown; deductionHours?: unknown;
+}, opts?: { floor?: boolean }): number {
+  const base = calcShiftBaseHours(
+    row.start_time || row.startTime || "00:00",
+    row.end_time || row.endTime || "00:00",
+    row.break_minutes ?? row.breakMinutes,
+  );
+  const wage = Math.max(
+    0,
+    base
+      + parseShiftNum(row.holiday_hours ?? row.holidayHours)
+      - parseShiftNum(row.late_hours ?? row.lateHours)
+      + parseShiftNum(row.deduction_hours ?? row.deductionHours),
+  );
+  return opts?.floor === false ? roundMoney(wage) : floorHours(wage);
+}
+
+/** Client charge hours — mirrors P&L sellHours: base + holiday (late/£ deductions not applied). */
+function resolveInvoiceSellHours(row: {
+  start_time?: string; startTime?: string;
+  end_time?: string; endTime?: string;
+  break_minutes?: number | null; breakMinutes?: number | null;
+  holiday_hours?: unknown; holidayHours?: unknown;
+}, opts?: { floor?: boolean }): number {
+  const base = calcShiftBaseHours(
+    row.start_time || row.startTime || "00:00",
+    row.end_time || row.endTime || "00:00",
+    row.break_minutes ?? row.breakMinutes,
+  );
+  const sell = Math.max(0, base + parseShiftNum(row.holiday_hours ?? row.holidayHours));
+  return opts?.floor === false ? roundMoney(sell) : floorHours(sell);
+}
+
+/** Pay line subtotal: (wage hours × rate) + travel £, minus £ deduction_amount. */
+function resolveInvoiceLineSubtotal(
+  hours: number,
+  rate: number,
+  deductionAmount?: unknown,
+  travelAllowance?: unknown,
+): number {
+  const travel = Math.max(0, parseShiftNum(travelAllowance));
+  const gross = roundMoney(hours * rate + travel);
+  const ded = Math.max(0, parseShiftNum(deductionAmount));
+  return Math.max(0, roundMoney(gross - ded));
+}
+
+function formatInvoiceAdjustmentNote(row: {
+  holiday_hours?: unknown; late_hours?: unknown; deduction_hours?: unknown; deduction_amount?: unknown;
+  travel_allowance?: unknown; travelAllowance?: unknown;
+}): string {
+  const bits: string[] = [];
+  const holiday = parseShiftNum(row.holiday_hours);
+  const late = parseShiftNum(row.late_hours);
+  const dedH = parseShiftNum(row.deduction_hours);
+  const dedAmt = parseShiftNum(row.deduction_amount);
+  const travel = parseShiftNum(row.travel_allowance ?? row.travelAllowance);
+  if (holiday) bits.push(`HP +${holiday.toFixed(2)}h`);
+  if (late) bits.push(`late −${late.toFixed(2)}h`);
+  if (dedH) bits.push(`ded ${dedH > 0 ? "+" : ""}${dedH.toFixed(2)}h`);
+  if (travel) bits.push(`travel +£${travel.toFixed(2)}`);
+  if (dedAmt) bits.push(`ded −£${dedAmt.toFixed(2)}`);
+  return bits.length ? ` [${bits.join(", ")}]` : "";
+}
+
+/** SQL fragment: floor wage hours including holiday / late / deduction hours. */
+const INVOICE_WAGE_HOURS_SQL = `GREATEST(0, FLOOR((
+  CASE
+    WHEN EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
+       - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
+       - COALESCE(sh.break_minutes, 0) < 0
+    THEN (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
+       - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
+       - COALESCE(sh.break_minutes, 0) + 1440) / 60.0
+    ELSE (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
+       - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
+       - COALESCE(sh.break_minutes, 0)) / 60.0
+  END
+  + COALESCE(sh.holiday_hours, 0)
+  - COALESCE(sh.late_hours, 0)
+  + COALESCE(sh.deduction_hours, 0)
+) * 100) / 100.0)`;
+
 function getClientMeta(req: Request): { ipAddress: string | null; userAgent: string | null } {
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null;
   const userAgent = (req.headers["user-agent"] as string) || null;
@@ -5109,11 +5220,12 @@ export async function registerRoutes(
           LEFT JOIN suppliers su ON sh.supplier_id = su.id`;
 
       // Optional PANL columns may not exist until bootstrap/migration runs.
-      let panlSelect = `0::numeric AS holiday_hours, 0::numeric AS late_hours, 0::numeric AS deduction_hours, 0::numeric AS deduction_amount, NULL::numeric AS hours_override, 0::numeric AS expense`;
+      let panlSelect = `0::numeric AS holiday_hours, 0::numeric AS late_hours, 0::numeric AS deduction_hours, 0::numeric AS deduction_amount, NULL::numeric AS hours_override, 0::numeric AS expense, 0::numeric AS travel_allowance`;
       try {
         await pool.query(`
           ALTER TABLE shifts
             ADD COLUMN IF NOT EXISTS expense numeric(12, 2) DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS travel_allowance numeric(12, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS holiday_hours numeric(10, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS late_hours numeric(10, 2) DEFAULT 0,
             ADD COLUMN IF NOT EXISTS deduction_hours numeric(10, 2) DEFAULT 0,
@@ -5124,6 +5236,7 @@ export async function registerRoutes(
             COALESCE(sh.late_hours, 0) AS late_hours,
             COALESCE(sh.deduction_hours, 0) AS deduction_hours,
             COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
             sh.hours_override,
             COALESCE(sh.expense, 0) AS expense`;
       } catch {
@@ -5289,6 +5402,7 @@ export async function registerRoutes(
           deductionHours: parseFloat(String(r.deduction_hours ?? 0)) || 0,
           deductionAmount: parseFloat(String(r.deduction_amount ?? 0)) || 0,
           expense: parseFloat(String(r.expense ?? 0)) || 0,
+          travelAllowance: parseFloat(String(r.travel_allowance ?? 0)) || 0,
         };
       });
 
@@ -5362,6 +5476,11 @@ export async function registerRoutes(
       const lateMinutes = Math.round(v);
       patch.lateMinutes = lateMinutes;
       patch.lateHours = (Math.round((lateMinutes / 60) * 100) / 100).toFixed(2);
+    }
+    if (body.travelAllowance !== undefined) {
+      const r = numOrNull(body.travelAllowance, false, "travel allowance");
+      if (r.error) return { error: r.error };
+      patch.travelAllowance = String(r.value);
     }
     if (Object.keys(patch).length === 0) return { error: "No fields to update" };
     return { patch };
@@ -5579,6 +5698,7 @@ export async function registerRoutes(
           payRate: r.pay_rate ?? null,
           chargeRate: r.charge_rate ?? null,
           holidayHours: r.holiday_hours != null ? parseFloat(String(r.holiday_hours)) || 0 : 0,
+          travelAllowance: r.travel_allowance != null ? parseFloat(String(r.travel_allowance)) || 0 : 0,
           createdBy: r.created_by,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
@@ -10121,6 +10241,11 @@ export async function registerRoutes(
       const queries: Promise<any>[] = [
         pool.query(
           `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+            COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+            COALESCE(sh.late_hours, 0) AS late_hours,
+            COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+            COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
             COALESCE(si.name, 'N/A') AS site_name,
             COALESCE(u.first_name || ' ' || u.last_name, 'N/A') AS employee_name
           FROM shifts sh
@@ -10134,19 +10259,7 @@ export async function registerRoutes(
         ),
         pool.query(
           `SELECT COUNT(*)::int AS total,
-            SUM(
-              TRUNC(CASE
-                WHEN EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-                   - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-                   - COALESCE(sh.break_minutes, 0) < 0
-                THEN (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-                   - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-                   - COALESCE(sh.break_minutes, 0) + 1440) / 60.0
-                ELSE (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-                   - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-                   - COALESCE(sh.break_minutes, 0)) / 60.0
-              END, 2)
-            ) AS total_hours
+            SUM(${INVOICE_WAGE_HOURS_SQL}) AS total_hours
           FROM shifts sh
           WHERE ${whereClause}`,
           params
@@ -10176,19 +10289,13 @@ export async function registerRoutes(
       const estimatedSubtotal = Math.round(totalHoursAll * defaultRate * 100) / 100;
       const estimatedVat = Math.round(estimatedSubtotal * (vatRate / 100) * 100) / 100;
 
-      const shifts: Array<{ shiftId: number; date: string; siteName: string; employeeName: string; startTime: string; endTime: string; breakMinutes: number; hours: number; rate: number; amount: number; title: string }> = [];
+      const shifts: Array<{ shiftId: number; date: string; siteName: string; employeeName: string; startTime: string; endTime: string; breakMinutes: number; hours: number; rate: number; amount: number; title: string; holidayHours: number; lateHours: number; deductionHours: number; deductionAmount: number; travelAllowance: number }> = [];
 
       for (const row of dataResult.rows) {
-        const [startH, startM] = row.start_time.split(":").map(Number);
-        const [endH, endM] = row.end_time.split(":").map(Number);
-        let hours = (endH + endM / 60) - (startH + startM / 60);
-        if (hours < 0) hours += 24;
-        hours -= (row.break_minutes || 0) / 60;
-        hours = Math.floor(hours * 100) / 100;
-
+        const hours = resolveInvoiceWageHours(row);
         const shiftDate = new Date(row.date);
         const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
-        const amount = Math.round(hours * rate * 100) / 100;
+        const amount = resolveInvoiceLineSubtotal(hours, rate, row.deduction_amount, row.travel_allowance);
 
         shifts.push({
           shiftId: row.id,
@@ -10202,6 +10309,11 @@ export async function registerRoutes(
           rate,
           amount,
           title: row.title || "",
+          holidayHours: parseShiftNum(row.holiday_hours),
+          lateHours: parseShiftNum(row.late_hours),
+          deductionHours: parseShiftNum(row.deduction_hours),
+          deductionAmount: parseShiftNum(row.deduction_amount),
+          travelAllowance: parseShiftNum(row.travel_allowance),
         });
       }
 
@@ -10283,6 +10395,11 @@ export async function registerRoutes(
       const genWhereClause = genConditions.join(" AND ");
       const genDataResult = await pool.query(
         `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+          COALESCE(sh.late_hours, 0) AS late_hours,
+          COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+          COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
           COALESCE(si.name, 'N/A') AS site_name,
           si.client_id
         FROM shifts sh
@@ -10313,15 +10430,11 @@ export async function registerRoutes(
       );
 
       let totalHours = 0;
-      const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number }> = [];
+      const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number; lineSubtotal: number }> = [];
 
       for (const row of genDataResult.rows) {
-        const [startH, startM] = row.start_time.split(":").map(Number);
-        const [endH, endM] = row.end_time.split(":").map(Number);
-        let hours = (endH + endM / 60) - (startH + startM / 60);
-        if (hours < 0) hours += 24;
-        hours -= (row.break_minutes || 0) / 60;
-
+        const roundedHours = resolveInvoiceWageHours(row);
+        const sellHours = resolveInvoiceSellHours(row);
         const shiftDate = new Date(row.date);
         const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
 
@@ -10337,11 +10450,10 @@ export async function registerRoutes(
           });
           if (applicableChargeRate) chargeRate = parseFloat(applicableChargeRate.hourly_charge_rate);
         }
-        const roundedHours = Math.floor(hours * 100) / 100;
-        const chargeAmount = chargeRate !== null ? Math.round(roundedHours * chargeRate * 100) / 100 : null;
+        const chargeAmount = chargeRate !== null ? roundMoney(sellHours * chargeRate) : null;
 
-        const lineSubtotal = Math.round(roundedHours * rate * 100) / 100;
-        const lineVatAmount = Math.round(lineSubtotal * (vatRate / 100) * 100) / 100;
+        const lineSubtotal = resolveInvoiceLineSubtotal(roundedHours, rate, row.deduction_amount, row.travel_allowance);
+        const lineVatAmount = roundMoney(lineSubtotal * (vatRate / 100));
         totalHours += roundedHours;
         lineItemsData.push({
           shiftId: row.id,
@@ -10349,14 +10461,15 @@ export async function registerRoutes(
           rate,
           chargeRate,
           chargeAmount,
-          description: `${shiftDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${row.site_name || row.title} @ £${rate.toFixed(2)}/hr`,
+          description: `${shiftDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${row.site_name || row.title} @ £${rate.toFixed(2)}/hr${formatInvoiceAdjustmentNote(row)}`,
           lineVatRate: vatRate,
           lineVatAmount,
           lineTotal: lineSubtotal + lineVatAmount,
+          lineSubtotal,
         });
       }
 
-      const subtotal = lineItemsData.reduce((sum, item) => sum + (item.hours * item.rate), 0);
+      const subtotal = lineItemsData.reduce((sum, item) => sum + item.lineSubtotal, 0);
       const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100;
       const totalAmount = Math.round((subtotal + vatAmount) * 100) / 100;
 
@@ -10366,7 +10479,7 @@ export async function registerRoutes(
         const ex = genRateMap.get(key) || { rate: item.rate, shifts: 0, hours: 0, amount: 0 };
         ex.shifts++;
         ex.hours = Math.round((ex.hours + item.hours) * 100) / 100;
-        ex.amount = Math.round((ex.amount + item.hours * item.rate) * 100) / 100;
+        ex.amount = Math.round((ex.amount + item.lineSubtotal) * 100) / 100;
         genRateMap.set(key, ex);
       }
       const genRateBreakdown = Array.from(genRateMap.values()).sort((a, b) => a.rate - b.rate);
@@ -10415,7 +10528,7 @@ export async function registerRoutes(
           [
             invoice.id, item.shiftId, item.description,
             String(item.hours), String(item.rate),
-            String(Math.round(item.hours * item.rate * 100) / 100),
+            String(item.lineSubtotal),
             String(item.lineVatRate), String(item.lineVatAmount),
             String(item.lineTotal),
             item.chargeRate !== null ? String(item.chargeRate) : null,
@@ -10501,6 +10614,11 @@ export async function registerRoutes(
 
       const genDataResult = await pool.query(
         `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+          COALESCE(sh.late_hours, 0) AS late_hours,
+          COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+          COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
           COALESCE(si.name, 'N/A') AS site_name,
           si.client_id
         FROM shifts sh
@@ -10539,15 +10657,11 @@ export async function registerRoutes(
       );
 
       let totalHours = 0;
-      const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number }> = [];
+      const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number; lineSubtotal: number }> = [];
 
       for (const row of genDataResult.rows) {
-        const [startH, startM] = row.start_time.split(":").map(Number);
-        const [endH, endM] = row.end_time.split(":").map(Number);
-        let hours = (endH + endM / 60) - (startH + startM / 60);
-        if (hours < 0) hours += 24;
-        hours -= (row.break_minutes || 0) / 60;
-
+        const roundedHours = resolveInvoiceWageHours(row);
+        const sellHours = resolveInvoiceSellHours(row);
         const shiftDate = new Date(row.date);
         const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, shiftDate, row.site_id, row.employee_id, defaultRate);
 
@@ -10563,11 +10677,10 @@ export async function registerRoutes(
           });
           if (applicableChargeRate) chargeRate = parseFloat(applicableChargeRate.hourly_charge_rate);
         }
-        const roundedHours = Math.floor(hours * 100) / 100;
-        const chargeAmount = chargeRate !== null ? Math.round(roundedHours * chargeRate * 100) / 100 : null;
+        const chargeAmount = chargeRate !== null ? roundMoney(sellHours * chargeRate) : null;
 
-        const lineSubtotal = Math.round(roundedHours * rate * 100) / 100;
-        const lineVatAmount = Math.round(lineSubtotal * (vatRate / 100) * 100) / 100;
+        const lineSubtotal = resolveInvoiceLineSubtotal(roundedHours, rate, row.deduction_amount, row.travel_allowance);
+        const lineVatAmount = roundMoney(lineSubtotal * (vatRate / 100));
         totalHours += roundedHours;
         lineItemsData.push({
           shiftId: row.id,
@@ -10575,14 +10688,15 @@ export async function registerRoutes(
           rate,
           chargeRate,
           chargeAmount,
-          description: `${shiftDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${row.site_name || row.title} @ £${rate.toFixed(2)}/hr`,
+          description: `${shiftDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${row.site_name || row.title} @ £${rate.toFixed(2)}/hr${formatInvoiceAdjustmentNote(row)}`,
           lineVatRate: vatRate,
           lineVatAmount,
           lineTotal: lineSubtotal + lineVatAmount,
+          lineSubtotal,
         });
       }
 
-      const subtotal = lineItemsData.reduce((sum, item) => sum + (item.hours * item.rate), 0);
+      const subtotal = lineItemsData.reduce((sum, item) => sum + item.lineSubtotal, 0);
       const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100;
       const totalAmount = Math.round((subtotal + vatAmount) * 100) / 100;
 
@@ -10592,7 +10706,7 @@ export async function registerRoutes(
         const ex = genRateMap.get(key) || { rate: item.rate, shifts: 0, hours: 0, amount: 0 };
         ex.shifts++;
         ex.hours = Math.round((ex.hours + item.hours) * 100) / 100;
-        ex.amount = Math.round((ex.amount + item.hours * item.rate) * 100) / 100;
+        ex.amount = Math.round((ex.amount + item.lineSubtotal) * 100) / 100;
         genRateMap.set(key, ex);
       }
       const genRateBreakdown = Array.from(genRateMap.values()).sort((a, b) => a.rate - b.rate);
@@ -10614,7 +10728,7 @@ export async function registerRoutes(
             [
               invoiceId, item.shiftId, item.description,
               String(item.hours), String(item.rate),
-              String(Math.round(item.hours * item.rate * 100) / 100),
+              String(item.lineSubtotal),
               String(item.lineVatRate), String(item.lineVatAmount),
               String(item.lineTotal),
               item.chargeRate !== null ? String(item.chargeRate) : null,
@@ -10690,6 +10804,11 @@ export async function registerRoutes(
       const invoiceFilter = allowRecalculate ? "" : "AND NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)";
       const { rows: eligibleShifts } = await pool.query(
         `SELECT sh.id, sh.supplier_id, sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+          COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+          COALESCE(sh.late_hours, 0) AS late_hours,
+          COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+          COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
           sh.supplier_approval_status
         FROM shifts sh
         WHERE sh.tenant_id = $1
@@ -10729,13 +10848,8 @@ export async function registerRoutes(
         const defaultRate = rateCards.length > 0 ? parseFloat(rateCards[0].hourlyRate) : 12.50;
         const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, new Date(row.date), row.site_id, row.employee_id, defaultRate);
 
-        const [startH, startM] = row.start_time.split(":").map(Number);
-        const [endH, endM] = row.end_time.split(":").map(Number);
-        let hours = (endH + endM / 60) - (startH + startM / 60);
-        if (hours < 0) hours += 24;
-        hours -= (row.break_minutes || 0) / 60;
-        const roundedHours = Math.round(hours * 100) / 100;
-        const shiftAmount = Math.round(roundedHours * rate * 100) / 100;
+        const roundedHours = resolveInvoiceWageHours(row, { floor: false });
+        const shiftAmount = resolveInvoiceLineSubtotal(roundedHours, rate, row.deduction_amount, row.travel_allowance);
         entry.calculatedTotal += shiftAmount;
 
         const rateKey = rate.toFixed(2);
@@ -10850,7 +10964,12 @@ export async function registerRoutes(
 
       const recalcInvoiceFilter = allowRecalculate ? "" : "AND NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)";
       const { rows: refreshedShifts } = await pool.query(
-        `SELECT sh.id, sh.supplier_id, sh.title, sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.status, sh.pay_rate
+        `SELECT sh.id, sh.supplier_id, sh.title, sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.status, sh.pay_rate,
+          COALESCE(sh.holiday_hours, 0) AS holiday_hours,
+          COALESCE(sh.late_hours, 0) AS late_hours,
+          COALESCE(sh.deduction_hours, 0) AS deduction_hours,
+          COALESCE(sh.deduction_amount, 0) AS deduction_amount,
+          COALESCE(sh.travel_allowance, 0) AS travel_allowance
         FROM shifts sh
         WHERE sh.tenant_id = $1
           AND sh.date >= $2 AND sh.date <= $3
@@ -10862,7 +10981,7 @@ export async function registerRoutes(
         batchGenParams
       );
 
-      type RefreshedShift = { id: number; supplier_id: number; title: string; date: string; start_time: string; end_time: string; break_minutes: number; site_id: number | null; status: string; pay_rate: string | null };
+      type RefreshedShift = { id: number; supplier_id: number; title: string; date: string; start_time: string; end_time: string; break_minutes: number; site_id: number | null; status: string; pay_rate: string | null; holiday_hours: number | string; late_hours: number | string; deduction_hours: number | string; deduction_amount: number | string; travel_allowance: number | string };
       const shiftsBySupplier = new Map<number, RefreshedShift[]>();
       for (const s of refreshedShifts) {
         if (!shiftsBySupplier.has(s.supplier_id)) shiftsBySupplier.set(s.supplier_id, []);
@@ -10934,16 +11053,13 @@ export async function registerRoutes(
           for (const sr of siteRows) siteMap.set(sr.id, sr);
         }
 
-        interface ShiftCalc { shift: RefreshedShift; hours: number; rate: number; site: any; chargeRate: number | null; }
+        interface ShiftCalc { shift: RefreshedShift; hours: number; sellHours: number; rate: number; site: any; chargeRate: number | null; lineSubtotal: number; }
         const allShiftCalcs: ShiftCalc[] = [];
         for (const shift of supplierShifts) {
           const rate = resolveInvoiceShiftRate(shift.pay_rate, rateCards, new Date(shift.date), shift.site_id, shift.employee_id, defaultRate);
-          const [startH, startM] = shift.start_time.split(":").map(Number);
-          const [endH, endM] = shift.end_time.split(":").map(Number);
-          let hours = (endH + endM / 60) - (startH + startM / 60);
-          if (hours < 0) hours += 24;
-          hours -= (shift.break_minutes || 0) / 60;
-          hours = Math.floor(hours * 100) / 100;
+          const hours = resolveInvoiceWageHours(shift);
+          const sellHours = resolveInvoiceSellHours(shift);
+          const lineSubtotal = resolveInvoiceLineSubtotal(hours, rate, shift.deduction_amount, shift.travel_allowance);
           const site = shift.site_id ? siteMap.get(shift.site_id) : null;
           const clientId = site?.client_id;
           let chargeRate: number | null = null;
@@ -10958,10 +11074,10 @@ export async function registerRoutes(
             });
             if (applicableCR) chargeRate = parseFloat(applicableCR.hourly_charge_rate);
           }
-          allShiftCalcs.push({ shift, hours: Math.round(hours * 100) / 100, rate, site, chargeRate });
+          allShiftCalcs.push({ shift, hours, sellHours, rate, site, chargeRate, lineSubtotal });
         }
 
-        let calculatedTotal = allShiftCalcs.reduce((sum, sc) => sum + sc.hours * sc.rate, 0);
+        let calculatedTotal = allShiftCalcs.reduce((sum, sc) => sum + sc.lineSubtotal, 0);
         calculatedTotal = Math.round(calculatedTotal * 100) / 100;
 
         if (allowAdjustments && targetPayment !== undefined && targetPayment !== null && Math.abs(targetPayment - calculatedTotal) > 0.01) {
@@ -10976,7 +11092,7 @@ export async function registerRoutes(
             let deletedValue = 0;
             for (const sc of shuffled) {
               if (remainingMoney - deletedValue < 0.01) break;
-              const shiftValue = Math.round(sc.hours * sc.rate * 100) / 100;
+              const shiftValue = sc.lineSubtotal;
               if (sc.hours >= 6 && (deletedValue + shiftValue) <= remainingMoney) {
                 shiftsToDelete.push(sc);
                 deletedValue = Math.round((deletedValue + shiftValue) * 100) / 100;
@@ -11022,7 +11138,9 @@ export async function registerRoutes(
                   [newStartTime, sc.shift.id]
                 );
                 sc.shift.start_time = newStartTime;
-                sc.hours = Math.round((sc.hours - actualAdjustHours) * 100) / 100;
+                sc.hours = Math.max(0, Math.round((sc.hours - actualAdjustHours) * 100) / 100);
+                sc.sellHours = Math.max(0, Math.round((sc.sellHours - actualAdjustHours) * 100) / 100);
+                sc.lineSubtotal = resolveInvoiceLineSubtotal(sc.hours, sc.rate, sc.shift.deduction_amount, sc.shift.travel_allowance);
                 const adjustedValue = Math.round(actualAdjustHours * sc.rate * 100) / 100;
                 remainingMoney = Math.round((remainingMoney - adjustedValue) * 100) / 100;
                 shiftsAdjusted++;
@@ -11033,7 +11151,7 @@ export async function registerRoutes(
               }
             }
 
-            calculatedTotal = allShiftCalcs.reduce((sum, sc) => sum + sc.hours * sc.rate, 0);
+            calculatedTotal = allShiftCalcs.reduce((sum, sc) => sum + sc.lineSubtotal, 0);
             calculatedTotal = Math.round(calculatedTotal * 100) / 100;
           } else {
             warnings.push(`${supplier.companyName}: Payment (${targetPayment.toFixed(2)}) exceeds calculated total (${calculatedTotal.toFixed(2)})`);
@@ -11060,12 +11178,12 @@ export async function registerRoutes(
           if (periodShifts.length === 0) continue;
 
           let totalHours = 0;
-          const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number }> = [];
+          const lineItemsData: Array<{ shiftId: number; hours: number; rate: number; chargeRate: number | null; chargeAmount: number | null; description: string; lineVatRate: number; lineVatAmount: number; lineTotal: number; lineSubtotal: number }> = [];
 
           for (const sc of periodShifts) {
-            const chargeAmount = sc.chargeRate !== null ? Math.round(sc.hours * sc.chargeRate * 100) / 100 : null;
-            const lineSubtotal = Math.round(sc.hours * sc.rate * 100) / 100;
-            const lineVatAmount = Math.round(lineSubtotal * (vatRate / 100) * 100) / 100;
+            const chargeAmount = sc.chargeRate !== null ? roundMoney(sc.sellHours * sc.chargeRate) : null;
+            const lineSubtotal = sc.lineSubtotal;
+            const lineVatAmount = roundMoney(lineSubtotal * (vatRate / 100));
             totalHours += sc.hours;
             lineItemsData.push({
               shiftId: sc.shift.id,
@@ -11073,10 +11191,11 @@ export async function registerRoutes(
               rate: sc.rate,
               chargeRate: sc.chargeRate,
               chargeAmount,
-              description: `${new Date(sc.shift.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${sc.site?.name || sc.shift.title} @ £${sc.rate.toFixed(2)}/hr`,
+              description: `${new Date(sc.shift.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${sc.site?.name || sc.shift.title} @ £${sc.rate.toFixed(2)}/hr${formatInvoiceAdjustmentNote(sc.shift)}`,
               lineVatRate: vatRate,
               lineVatAmount,
               lineTotal: lineSubtotal + lineVatAmount,
+              lineSubtotal,
             });
           }
 
@@ -11086,7 +11205,7 @@ export async function registerRoutes(
             const ex = batchRateMap.get(key) || { rate: item.rate, shifts: 0, hours: 0, amount: 0 };
             ex.shifts++;
             ex.hours = Math.round((ex.hours + item.hours) * 100) / 100;
-            ex.amount = Math.round((ex.amount + item.hours * item.rate) * 100) / 100;
+            ex.amount = Math.round((ex.amount + item.lineSubtotal) * 100) / 100;
             batchRateMap.set(key, ex);
           }
           const batchRateBreakdown = Array.from(batchRateMap.values()).sort((a, b) => a.rate - b.rate);
@@ -11097,7 +11216,7 @@ export async function registerRoutes(
             ? `Rate breakdown: ${batchRateNotesLines.join("; ")}`
             : undefined;
 
-          const subtotal = lineItemsData.reduce((sum, item) => sum + (item.hours * item.rate), 0);
+          const subtotal = lineItemsData.reduce((sum, item) => sum + item.lineSubtotal, 0);
           const roundedSubtotal = Math.round(subtotal * 100) / 100;
           const periodVatAmount = Math.round(roundedSubtotal * (vatRate / 100) * 100) / 100;
           const totalAmount = Math.round((roundedSubtotal + periodVatAmount) * 100) / 100;
@@ -11144,7 +11263,7 @@ export async function registerRoutes(
               [
                 invoice.id, item.shiftId, item.description,
                 String(item.hours), String(item.rate),
-                String(Math.round(item.hours * item.rate * 100) / 100),
+                String(item.lineSubtotal),
                 String(item.lineVatRate), String(item.lineVatAmount),
                 String(item.lineTotal),
                 item.chargeRate !== null ? String(item.chargeRate) : null,

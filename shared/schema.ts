@@ -831,8 +831,10 @@ export const shifts = pgTable("shifts", {
   lateMinutes: integer("late_minutes").default(0),
   payRate: numeric("pay_rate", { precision: 10, scale: 2 }),
   chargeRate: numeric("charge_rate", { precision: 10, scale: 2 }),
-  /** PANL: expense adjustment on the shift (±) */
+  /** PANL: expense adjustment on the shift (±) — not travel; applied after G.Wages */
   expense: numeric("expense", { precision: 12, scale: 2 }).default("0"),
+  /** Travel allowance (£) included in G.Wages for officers and supplier invoices */
+  travelAllowance: numeric("travel_allowance", { precision: 12, scale: 2 }).default("0"),
   holidayHours: numeric("holiday_hours", { precision: 10, scale: 2 }).default("0"),
   /** Chargeable late hours after book-on grace (positive; subtracted from paid wages) */
   lateHours: numeric("late_hours", { precision: 10, scale: 2 }).default("0"),

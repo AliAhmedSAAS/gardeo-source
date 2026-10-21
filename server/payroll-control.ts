@@ -314,7 +314,8 @@ export async function applyRulesForOfficer(opts: {
     const dutyHours = shiftHours(shift.start_time, shift.end_time, shift.break_minutes);
     const holiday = money(Math.max(0, num(shift.holiday_hours)));
     const late = money(Math.max(0, num(shift.late_hours)));
-    if (dutyHours <= 0 && holiday <= 0) continue;
+    const travelPay = Math.max(0, money(num(shift.travel_allowance)));
+    if (dutyHours <= 0 && holiday <= 0 && travelPay <= 0) continue;
     const selfRate = await selfRateForShift(opts.tenantId, opts.employeeId, shift);
     const hoursForRules = dutyHours > 0 ? dutyHours : holiday;
 
@@ -344,6 +345,7 @@ export async function applyRulesForOfficer(opts: {
     let shiftDeduction = 0;
     let holidayLeft = dutyHours > 0 ? holiday : 0;
     let lateLeft = late;
+    let travelLeft = Math.max(0, money(num(shift.travel_allowance)));
     for (const piece of pieces) {
       const holidayOnly = dutyHours <= 0;
       const lineHoliday = holidayOnly ? piece.hours : holidayLeft;
@@ -352,8 +354,11 @@ export async function applyRulesForOfficer(opts: {
       const lineLate = lateLeft;
       lateLeft = 0;
       const paidHours = money(Math.max(0, lineHours + lineHoliday - lineLate));
-      if (paidHours <= 0 && lineLate <= 0) continue;
-      const wages = money(paidHours * piece.rate - (piece.expense || 0));
+      if (paidHours <= 0 && lineLate <= 0 && travelLeft <= 0) continue;
+      // Travel £ is part of G.Wages; add once on the first applied line for this shift
+      const travelOnce = travelLeft;
+      travelLeft = 0;
+      const wages = money(paidHours * piece.rate - (piece.expense || 0) + travelOnce);
       shiftDeduction = money(shiftDeduction + (piece.expense || 0));
       await pool.query(
         `INSERT INTO payroll_applied_lines
