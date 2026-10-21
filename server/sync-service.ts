@@ -9,7 +9,7 @@ import {
   findByExternalId, findEmployeeByExtIdOrName, findSiteByExtIdOrFuzzy,
   findClientByNameOrExtId, findSupplierByNameOrExtId,
   applyEmployeeRelatedData,
-  sanitizeDate,
+  sanitizeDate, empSyncKey,
 } from "./sync-utils";
 
 interface ExternalPaginatedResponse {
@@ -309,17 +309,20 @@ async function syncRestPhpInhouseShifts(
   breakdown.suppliers.skipped = entities.suppliers.size;
 
   const employeeIdMap = new Map<string, number>();
-  for (const [extId, info] of entities.employees) {
+  for (const [, info] of entities.employees) {
+    const empExtId = info.empExtId;
     const empData: Record<string, any> = { fullName: info.name };
     if (info.email) empData.email = info.email;
-    const { empId } = await upsertEmployee(tenantId, extId, empData, null, breakdown.employees);
-    if (empId) employeeIdMap.set(extId, empId);
+    const { empId } = await upsertEmployee(tenantId, empExtId, empData, null, breakdown.employees);
+    if (empId) employeeIdMap.set(empSyncKey(empExtId, null), empId);
   }
 
   for (const item of inhouseShifts) {
     try {
       const extId = stripEntityPrefix(item.id);
-      const employeeId = item.employeeId ? (employeeIdMap.get(stripEntityPrefix(item.employeeId)) || null) : null;
+      const employeeId = item.employeeId
+        ? (employeeIdMap.get(empSyncKey(stripEntityPrefix(item.employeeId), null)) || null)
+        : null;
       const siteId = item.siteId ? (siteIdMap.get(stripEntityPrefix(item.siteId)) || null) : null;
       const supplierId = null; // in-house
       const apiStatus = mapShiftStatus(item.status);
@@ -440,17 +443,18 @@ async function dryRunRestPhpInhouseShifts(tenantId: number, shifts: any[]): Prom
   });
 
   const empResult: DryRunResult = { entityType: "employees", totalFetched: entities.employees.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
-  for (const [extId, info] of entities.employees) {
+  for (const [, info] of entities.employees) {
+    const empExtId = info.empExtId;
     const nameParts = (info.name || "").trim().split(/\s+/);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
-    const existing = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName, info.email);
+    const existing = await findEmployeeByExtIdOrName(tenantId, empExtId, firstName, lastName, info.email, null);
     if (existing?.empId) {
       empResult.toSkip++;
-      empResult.records.push({ action: "skip", entity: "employee", externalId: extId, name: info.name, reason: "Already exists (in-house)" });
+      empResult.records.push({ action: "skip", entity: "employee", externalId: empExtId, name: info.name, reason: "Already exists (in-house)" });
     } else {
       empResult.toCreate++;
-      empResult.records.push({ action: "create", entity: "employee", externalId: extId, name: info.name, reason: "Will create as in-house (no supplier)" });
+      empResult.records.push({ action: "create", entity: "employee", externalId: empExtId, name: info.name, reason: "Will create as in-house (no supplier)" });
     }
   }
   results.push(empResult);
@@ -477,12 +481,12 @@ function extractEntitiesFromRestPhpShifts(shifts: any[]): {
   suppliers: Map<string, string>;
   clients: Map<string, string>;
   sites: Map<string, { name: string; clientExtId: string }>;
-  employees: Map<string, { name: string; email: string; supplierExtId: string }>;
+  employees: Map<string, { empExtId: string; name: string; email: string; supplierExtId: string }>;
 } {
   const suppliers = new Map<string, string>();
   const clients = new Map<string, string>();
   const sites = new Map<string, { name: string; clientExtId: string }>();
-  const employees = new Map<string, { name: string; email: string; supplierExtId: string }>();
+  const employees = new Map<string, { empExtId: string; name: string; email: string; supplierExtId: string }>();
 
   for (const s of shifts) {
     if (s.supplierId) suppliers.set(stripEntityPrefix(s.supplierId), s.supplierName || stripEntityPrefix(s.supplierId));
@@ -490,10 +494,17 @@ function extractEntitiesFromRestPhpShifts(shifts: any[]): {
     if (s.siteId) sites.set(stripEntityPrefix(s.siteId), { name: s.siteName || stripEntityPrefix(s.siteId), clientExtId: stripEntityPrefix(s.clientId || "") });
     if (s.employeeId) {
       const empExtId = stripEntityPrefix(s.employeeId);
-      const existing = employees.get(empExtId);
+      const supplierExtId = stripEntityPrefix(s.supplierId || "");
+      const mapKey = `${empExtId}|${supplierExtId || "inhouse"}`;
+      const existing = employees.get(mapKey);
       const email = (s.employeeEmail || "").trim();
       if (!existing || (!existing.email && email)) {
-        employees.set(empExtId, { name: s.employeeName || empExtId, email, supplierExtId: stripEntityPrefix(s.supplierId || "") });
+        employees.set(mapKey, {
+          empExtId,
+          name: s.employeeName || empExtId,
+          email,
+          supplierExtId,
+        });
       }
     }
   }
@@ -523,9 +534,11 @@ async function syncRestPhpShifts(
   for (const item of shifts) {
     try {
       const extId = stripEntityPrefix(item.id);
-      const employeeId = item.employeeId ? (employeeMap.get(stripEntityPrefix(item.employeeId)) || null) : null;
       const siteId = item.siteId ? (siteMap.get(stripEntityPrefix(item.siteId)) || null) : null;
       const supplierId = item.supplierId ? (supplierMap.get(stripEntityPrefix(item.supplierId)) || null) : null;
+      const employeeId = item.employeeId
+        ? (employeeMap.get(empSyncKey(stripEntityPrefix(item.employeeId), supplierId)) || null)
+        : null;
       const payRateFromCard = await getPayRateFromSupplierRateCard(
         tenantId, rateCardCache, supplierId, item.date, siteId, employeeId,
       );
@@ -667,18 +680,26 @@ function extractEntitiesFromPhpShifts(shifts: any[]): {
   suppliers: Map<string, string>;
   clients: Map<string, string>;
   sites: Map<string, { name: string; clientExtId: string }>;
-  employees: Map<string, { name: string; supplierExtId: string }>;
+  employees: Map<string, { empExtId: string; name: string; supplierExtId: string }>;
 } {
   const suppliers = new Map<string, string>();
   const clients = new Map<string, string>();
   const sites = new Map<string, { name: string; clientExtId: string }>();
-  const employees = new Map<string, { name: string; supplierExtId: string }>();
+  const employees = new Map<string, { empExtId: string; name: string; supplierExtId: string }>();
 
   for (const s of shifts) {
     if (s.SupplierID && s.Supplier) suppliers.set(String(s.SupplierID), s.Supplier);
     if (s.ClientID && s.Client) clients.set(String(s.ClientID), s.Client);
     if (s.LocationID && s.location) sites.set(String(s.LocationID), { name: s.location, clientExtId: String(s.ClientID || "") });
-    if (s.officer_id && s.officer_name) employees.set(String(s.officer_id), { name: s.officer_name, supplierExtId: String(s.SupplierID || "") });
+    if (s.officer_id && s.officer_name) {
+      const empExtId = String(s.officer_id);
+      const supplierExtId = String(s.SupplierID || "");
+      employees.set(`${empExtId}|${supplierExtId || "inhouse"}`, {
+        empExtId,
+        name: s.officer_name,
+        supplierExtId,
+      });
+    }
   }
 
   return { suppliers, clients, sites, employees };
@@ -803,21 +824,34 @@ async function ensureSiteFromPhp(
 }
 
 async function ensureEmployeeFromPhp(tenantId: number, extId: string, fullName: string, supplierId: number | null): Promise<number | null> {
-  const existing = await pool.query(
-    `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-    [tenantId, extId]
-  );
+  const existing = supplierId == null
+    ? await pool.query(
+        `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id IS NULL LIMIT 1`,
+        [tenantId, extId],
+      )
+    : await pool.query(
+        `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id = $3 LIMIT 1`,
+        [tenantId, extId, supplierId],
+      );
   if (existing.rows.length > 0) return existing.rows[0].id;
 
   const nameParts = fullName.trim().split(/\s+/);
   const firstName = nameParts[0] || "Unknown";
   const lastName = nameParts.slice(1).join(" ") || "Unknown";
 
-  const existingByName = await pool.query(
-    `SELECT e.id AS emp_id FROM users u JOIN employees e ON e.user_id = u.id
-     WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3) LIMIT 1`,
-    [tenantId, firstName, lastName]
-  );
+  const existingByName = supplierId == null
+    ? await pool.query(
+        `SELECT e.id AS emp_id FROM users u JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
+           AND e.supplier_id IS NULL LIMIT 1`,
+        [tenantId, firstName, lastName],
+      )
+    : await pool.query(
+        `SELECT e.id AS emp_id FROM users u JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
+           AND e.supplier_id = $4 LIMIT 1`,
+        [tenantId, firstName, lastName, supplierId],
+      );
   if (existingByName.rows.length > 0) {
     const empId = existingByName.rows[0].emp_id;
     // Do not set/change supplier_id — keeps in-house and agency tags locked across syncs.
@@ -870,9 +904,11 @@ async function syncPhpShifts(
   for (const item of shifts) {
     try {
       const extId = String(item.shift_id);
-      const employeeId = employeeMap.get(String(item.officer_id)) || null;
       const siteId = siteMap.get(String(item.LocationID)) || null;
       const supplierId = supplierMap.get(String(item.SupplierID)) || null;
+      const employeeId = item.officer_id
+        ? (employeeMap.get(empSyncKey(String(item.officer_id), supplierId)) || null)
+        : null;
       const payRate = await getPayRateFromSupplierRateCard(
         tenantId, rateCardCache, supplierId, item.shift_date, siteId, employeeId,
       );
@@ -1288,25 +1324,6 @@ async function syncEmployees(tenantId: number, data: any[]): Promise<SyncResult>
         continue;
       }
 
-      const existingByExtId = await pool.query(
-        `SELECT user_id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-        [tenantId, extId]
-      );
-
-      let existingUser = existingByExtId.rows.length > 0
-        ? await pool.query(`SELECT id FROM users WHERE id = $1 LIMIT 1`, [existingByExtId.rows[0].user_id])
-        : await pool.query(
-            `SELECT id FROM users WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) LIMIT 1`,
-            [tenantId, email]
-          );
-
-      if (existingUser.rows.length === 0 && item.firstName && item.lastName) {
-        existingUser = await pool.query(
-          `SELECT u.id FROM users u JOIN employees e ON e.user_id = u.id WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3) LIMIT 1`,
-          [tenantId, item.firstName.trim(), item.lastName.trim()]
-        );
-      }
-
       let supplierId: number | null = null;
       if (item.supplierId) {
         const supplierResult = await pool.query(
@@ -1316,95 +1333,58 @@ async function syncEmployees(tenantId: number, data: any[]): Promise<SyncResult>
         if (supplierResult.rows.length > 0) supplierId = supplierResult.rows[0].id;
       }
 
-      if (existingUser.rows.length > 0) {
-        const userId = existingUser.rows[0].id;
-        const userUpdates: string[] = [];
-        const userValues: any[] = [];
-        let paramIdx = 1;
+      const matched = await findEmployeeByExtIdOrName(
+        tenantId, extId, item.firstName, item.lastName, email || undefined, supplierId,
+      );
 
+      if (matched.empId && matched.userId) {
+        const userId = matched.userId;
         if (item.phone) {
-          userUpdates.push(`phone = $${paramIdx}`);
-          userValues.push(item.phone);
-          paramIdx++;
+          await pool.query(`UPDATE users SET phone = $1 WHERE id = $2`, [item.phone, userId]);
         }
 
-        if (userUpdates.length > 0) {
-          userValues.push(userId);
-          await pool.query(
-            `UPDATE users SET ${userUpdates.join(", ")} WHERE id = $${paramIdx}`,
-            userValues
-          );
-        }
+        const empUpdates: string[] = [];
+        const empValues: any[] = [];
+        let eidx = 1;
 
-        const empResult = await pool.query(
-          `SELECT id FROM employees WHERE user_id = $1 LIMIT 1`,
-          [userId]
-        );
+        const empFieldMap: Record<string, string> = {
+          dateOfBirth: "date_of_birth",
+          nationalInsurance: "national_insurance",
+          addressLine1: "address_line_1",
+          city: "city",
+          postcode: "postcode",
+          jobTitle: "job_title",
+          siaLicenseNumber: "sia_license_number",
+          siaExpiryDate: "sia_expiry_date",
+          dbsCertificateNumber: "dbs_certificate_number",
+          employeeNumber: "employee_number",
+        };
 
-        if (empResult.rows.length > 0) {
-          const empId = empResult.rows[0].id;
-          const empUpdates: string[] = [];
-          const empValues: any[] = [];
-          let eidx = 1;
-
-          const empFieldMap: Record<string, string> = {
-            dateOfBirth: "date_of_birth",
-            nationalInsurance: "national_insurance",
-            addressLine1: "address_line_1",
-            city: "city",
-            postcode: "postcode",
-            jobTitle: "job_title",
-            siaLicenseNumber: "sia_license_number",
-            siaExpiryDate: "sia_expiry_date",
-            dbsCertificateNumber: "dbs_certificate_number",
-            employeeNumber: "employee_number",
-          };
-
-          for (const [extField, dbField] of Object.entries(empFieldMap)) {
-            if (item[extField]) {
-              empUpdates.push(`${dbField} = COALESCE(${dbField}, $${eidx})`);
-              empValues.push(item[extField]);
-              eidx++;
-            }
+        for (const [extField, dbField] of Object.entries(empFieldMap)) {
+          if (item[extField]) {
+            empUpdates.push(`${dbField} = COALESCE(${dbField}, $${eidx})`);
+            empValues.push(item[extField]);
+            eidx++;
           }
-
-          // supplier_id locked on existing employees — never fill/transfer across agencies or in-house.
-
-          empUpdates.push(`external_id = $${eidx}`);
-          empValues.push(extId);
-          eidx++;
-
-          empUpdates.push(`last_synced_at = NOW()`);
-
-          empValues.push(empId);
-          await pool.query(
-            `UPDATE employees SET ${empUpdates.join(", ")} WHERE id = $${eidx}`,
-            empValues
-          );
         }
 
+        empUpdates.push(`external_id = $${eidx}`);
+        empValues.push(extId);
+        eidx++;
+        empUpdates.push(`last_synced_at = NOW()`);
+        empValues.push(matched.empId);
+        await pool.query(
+          `UPDATE employees SET ${empUpdates.join(", ")} WHERE id = $${eidx}`,
+          empValues,
+        );
         result.updated++;
       } else {
-        const userId = crypto.randomUUID();
-        await pool.query(
-          `INSERT INTO users (id, tenant_id, username, email, password, first_name, last_name, phone, role, is_active)
-           VALUES ($1, $2, $3, $4, 'NEEDS_ONBOARDING', $5, $6, $7, 'employee', false)`,
-          [userId, tenantId, email, email, item.firstName, item.lastName, item.phone || null]
-        );
-
-        await pool.query(
-          `INSERT INTO employees (user_id, tenant_id, date_of_birth, national_insurance, address_line_1, city, postcode, job_title, sia_license_number, sia_expiry_date, dbs_certificate_number, employee_number, supplier_id, external_id, last_synced_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())`,
-          [
-            userId, tenantId, item.dateOfBirth || null,
-            item.nationalInsurance || null, item.addressLine1 || null,
-            item.city || null, item.postcode || null,
-            item.jobTitle || null, item.siaLicenseNumber || null,
-            item.siaExpiryDate || null, item.dbsCertificateNumber || null,
-            item.employeeNumber || null, supplierId, extId,
-          ]
-        );
-        result.created++;
+        const dummy = newEntitySyncResult();
+        const { empId } = await upsertEmployee(tenantId, extId, item, supplierId, dummy);
+        if (empId) result.created++;
+        else if (dummy.skipped) result.skipped++;
+        else result.failed += dummy.failed;
+        result.errors.push(...dummy.errors);
       }
     } catch (err: any) {
       result.failed++;
@@ -1422,21 +1402,9 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
     try {
       const extId = String(item.id);
 
-      let employeeId: string | null = null;
-      let employeePk: number | null = null;
+      let employeeId: number | null = null;
       let siteId: number | null = null;
       let supplierId: number | null = null;
-
-      if (item.employeeId) {
-        const empResult = await pool.query(
-          `SELECT id, user_id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-          [tenantId, String(item.employeeId)]
-        );
-        if (empResult.rows.length > 0) {
-          employeePk = empResult.rows[0].id;
-          employeeId = empResult.rows[0].user_id;
-        }
-      }
 
       if (item.siteId) {
         const siteResult = await pool.query(
@@ -1454,8 +1422,21 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
         if (supResult.rows.length > 0) supplierId = supResult.rows[0].id;
       }
 
+      if (item.employeeId) {
+        const empResult = supplierId == null
+          ? await pool.query(
+              `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id IS NULL LIMIT 1`,
+              [tenantId, String(item.employeeId)],
+            )
+          : await pool.query(
+              `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id = $3 LIMIT 1`,
+              [tenantId, String(item.employeeId), supplierId],
+            );
+        if (empResult.rows.length > 0) employeeId = empResult.rows[0].id;
+      }
+
       const payRate = await getPayRateFromSupplierRateCard(
-        tenantId, rateCardCache, supplierId, item.date, siteId, employeePk,
+        tenantId, rateCardCache, supplierId, item.date, siteId, employeeId,
       );
 
       const apiStatus = mapShiftStatus(item.status);
@@ -1571,12 +1552,27 @@ async function enrichEmployeesFromApi(
       const extId = stripEntityPrefix(String(emp.id || emp.employeeId || ""));
       if (!extId) continue;
 
-      let empId = employeeIdMap.get(extId);
-      if (!empId) {
-        const empRow = await pool.query(
-          `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-          [tenantId, extId]
+      let supplierPk: number | null = null;
+      if (supplierId) {
+        const supRow = await pool.query(
+          `SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+          [tenantId, stripEntityPrefix(String(supplierId))],
         );
+        supplierPk = supRow.rows[0]?.id ?? null;
+      }
+      let empId =
+        employeeIdMap.get(empSyncKey(extId, supplierPk)) ||
+        employeeIdMap.get(empSyncKey(extId, null));
+      if (!empId) {
+        const empRow = supplierPk == null
+          ? await pool.query(
+              `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id IS NULL LIMIT 1`,
+              [tenantId, extId],
+            )
+          : await pool.query(
+              `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id = $3 LIMIT 1`,
+              [tenantId, extId, supplierPk],
+            );
         if (empRow.rows.length > 0) empId = empRow.rows[0].id;
       }
       if (!empId) continue;
@@ -1918,12 +1914,13 @@ export async function runSync(
 
       breakdown.employees = newEntitySyncResult();
       const employeeIdMap = new Map<string, number>();
-      for (const [extId, info] of entities.employees) {
+      for (const [, info] of entities.employees) {
+        const empExtId = info.empExtId;
         const supId = supplierIdMap.get(info.supplierExtId) || null;
         const empData: Record<string, any> = { fullName: info.name };
         if (info.email) empData.email = info.email;
-        const { empId } = await upsertEmployee(tenantId, extId, empData, supId, breakdown.employees);
-        if (empId) employeeIdMap.set(extId, empId);
+        const { empId } = await upsertEmployee(tenantId, empExtId, empData, supId, breakdown.employees);
+        if (empId) employeeIdMap.set(empSyncKey(empExtId, supId), empId);
       }
 
       breakdown.shifts = newEntitySyncResult();
@@ -1983,10 +1980,11 @@ export async function runSync(
 
       breakdown.employees = newEntitySyncResult();
       const employeeIdMap = new Map<string, number>();
-      for (const [extId, info] of entities.employees) {
+      for (const [, info] of entities.employees) {
+        const empExtId = info.empExtId;
         const supId = supplierIdMap.get(info.supplierExtId) || null;
-        const { empId } = await upsertEmployee(tenantId, extId, { fullName: info.name }, supId, breakdown.employees);
-        if (empId) employeeIdMap.set(extId, empId);
+        const { empId } = await upsertEmployee(tenantId, empExtId, { fullName: info.name }, supId, breakdown.employees);
+        if (empId) employeeIdMap.set(empSyncKey(empExtId, supId), empId);
       }
 
       breakdown.shifts = newEntitySyncResult();
@@ -2408,22 +2406,27 @@ async function dryRunRestPhpShifts(tenantId: number, shifts: any[]): Promise<Dry
   results.push(supplierResult);
 
   const employeeResult: DryRunResult = { entityType: "employees", totalFetched: entities.employees.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
-  for (const [extId, info] of entities.employees) {
+  for (const [, info] of entities.employees) {
+    const empExtId = info.empExtId;
     const nameParts = info.name.trim().split(/\s+/);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
-    const existing = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName);
+    const supRow = info.supplierExtId
+      ? await pool.query(`SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`, [tenantId, info.supplierExtId])
+      : { rows: [] as { id: number }[] };
+    const supPk = supRow.rows[0]?.id ?? null;
+    const existing = await findEmployeeByExtIdOrName(tenantId, empExtId, firstName, lastName, undefined, supPk);
     if (existing.userId) {
       if (existing.empId) {
         employeeResult.toUpdate++;
-        employeeResult.records.push({ action: "update", entity: "employee", externalId: extId, name: info.name, fieldsToUpdate: ["externalId", "supplierId"] });
+        employeeResult.records.push({ action: "update", entity: "employee", externalId: empExtId, name: info.name, fieldsToUpdate: ["externalId", "supplierId"] });
       } else {
         employeeResult.toSkip++;
-        employeeResult.records.push({ action: "skip", entity: "employee", externalId: extId, name: info.name, reason: "Already exists" });
+        employeeResult.records.push({ action: "skip", entity: "employee", externalId: empExtId, name: info.name, reason: "Already exists" });
       }
     } else {
       employeeResult.toCreate++;
-      employeeResult.records.push({ action: "create", entity: "employee", externalId: extId, name: info.name });
+      employeeResult.records.push({ action: "create", entity: "employee", externalId: empExtId, name: info.name });
     }
   }
   results.push(employeeResult);
@@ -2435,14 +2438,19 @@ async function dryRunRestPhpShifts(tenantId: number, shifts: any[]): Promise<Dry
 
     const empExtId = stripEntityPrefix(item.employeeId || "");
     const siteExtId = stripEntityPrefix(item.siteId || "");
+    const shiftSupExt = stripEntityPrefix(item.supplierId || "");
+    const shiftSup = shiftSupExt
+      ? await pool.query(`SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`, [tenantId, shiftSupExt])
+      : { rows: [] as { id: number }[] };
+    const shiftSupPk = shiftSup.rows[0]?.id ?? null;
 
     let resolvedEmpId: number | null = null;
-    const empMatch = await findEmployeeByExtIdOrName(tenantId, empExtId, "", "");
+    const empMatch = await findEmployeeByExtIdOrName(tenantId, empExtId, "", "", undefined, shiftSupPk);
     if (empMatch.empId) {
       resolvedEmpId = empMatch.empId;
     } else if (item.employeeName) {
       const np = item.employeeName.trim().split(/\s+/);
-      const nameMatch = await findEmployeeByExtIdOrName(tenantId, "", np[0] || "", np.slice(1).join(" ") || "");
+      const nameMatch = await findEmployeeByExtIdOrName(tenantId, "", np[0] || "", np.slice(1).join(" ") || "", undefined, shiftSupPk);
       if (nameMatch.empId) resolvedEmpId = nameMatch.empId;
     }
 
@@ -2527,22 +2535,27 @@ async function dryRunPhpShifts(tenantId: number, shifts: any[]): Promise<DryRunR
   results.push(supplierResult);
 
   const employeeResult: DryRunResult = { entityType: "employees", totalFetched: entities.employees.size, toCreate: 0, toUpdate: 0, toSkip: 0, records: [] };
-  for (const [extId, info] of entities.employees) {
+  for (const [, info] of entities.employees) {
+    const empExtId = info.empExtId;
     const nameParts = info.name.trim().split(/\s+/);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
-    const existing = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName);
+    const supRow = info.supplierExtId
+      ? await pool.query(`SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`, [tenantId, info.supplierExtId])
+      : { rows: [] as { id: number }[] };
+    const supPk = supRow.rows[0]?.id ?? null;
+    const existing = await findEmployeeByExtIdOrName(tenantId, empExtId, firstName, lastName, undefined, supPk);
     if (existing.userId) {
       if (existing.empId) {
         employeeResult.toUpdate++;
-        employeeResult.records.push({ action: "update", entity: "employee", externalId: extId, name: info.name, fieldsToUpdate: ["externalId", "supplierId"] });
+        employeeResult.records.push({ action: "update", entity: "employee", externalId: empExtId, name: info.name, fieldsToUpdate: ["externalId", "supplierId"] });
       } else {
         employeeResult.toSkip++;
-        employeeResult.records.push({ action: "skip", entity: "employee", externalId: extId, name: info.name, reason: "Already exists" });
+        employeeResult.records.push({ action: "skip", entity: "employee", externalId: empExtId, name: info.name, reason: "Already exists" });
       }
     } else {
       employeeResult.toCreate++;
-      employeeResult.records.push({ action: "create", entity: "employee", externalId: extId, name: info.name });
+      employeeResult.records.push({ action: "create", entity: "employee", externalId: empExtId, name: info.name });
     }
   }
   results.push(employeeResult);
@@ -2553,15 +2566,20 @@ async function dryRunPhpShifts(tenantId: number, shifts: any[]): Promise<DryRunR
     const name = `Shift on ${item.shift_date || "?"} (${item.time_start || "?"}-${item.time_finish || "?"})`;
 
     const empExtId = String(item.officer_id || "");
+    const shiftSupExt = String(item.SupplierID || "");
+    const shiftSup = shiftSupExt
+      ? await pool.query(`SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`, [tenantId, shiftSupExt])
+      : { rows: [] as { id: number }[] };
+    const shiftSupPk = shiftSup.rows[0]?.id ?? null;
     let resolvedEmpId: number | null = null;
-    const empMatch = await findEmployeeByExtIdOrName(tenantId, empExtId, "", "");
+    const empMatch = await findEmployeeByExtIdOrName(tenantId, empExtId, "", "", undefined, shiftSupPk);
     if (empMatch.empId) {
       resolvedEmpId = empMatch.empId;
     } else {
       const officerName = `${item.officer_first_name || ""} ${item.officer_last_name || ""}`.trim();
       if (officerName) {
         const np = officerName.split(/\s+/);
-        const nameMatch = await findEmployeeByExtIdOrName(tenantId, "", np[0] || "", np.slice(1).join(" ") || "");
+        const nameMatch = await findEmployeeByExtIdOrName(tenantId, "", np[0] || "", np.slice(1).join(" ") || "", undefined, shiftSupPk);
         if (nameMatch.empId) resolvedEmpId = nameMatch.empId;
       }
     }
@@ -2923,17 +2941,22 @@ export async function backfillUnassignedShifts(
       continue;
     }
 
-    let empResult = await pool.query(
-      `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-      [tenantId, empInfo.empExtId]
+    const supResult = await pool.query(
+      `SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+      [tenantId, empInfo.supplierExtId]
     );
+    const supplierId = supResult.rows[0]?.id || null;
+    let empResult = supplierId == null
+      ? await pool.query(
+          `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id IS NULL LIMIT 1`,
+          [tenantId, empInfo.empExtId],
+        )
+      : await pool.query(
+          `SELECT id FROM employees WHERE tenant_id = $1 AND external_id = $2 AND supplier_id = $3 LIMIT 1`,
+          [tenantId, empInfo.empExtId, supplierId],
+        );
 
     if (empResult.rows.length === 0 && !dryRun) {
-      const supResult = await pool.query(
-        `SELECT id FROM suppliers WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-        [tenantId, empInfo.supplierExtId]
-      );
-      const supplierId = supResult.rows[0]?.id || null;
       const empData: Record<string, any> = { fullName: empInfo.empName };
       if (empInfo.empEmail) empData.email = empInfo.empEmail;
       const { empId } = await upsertEmployee(tenantId, empInfo.empExtId, empData, supplierId, dummyResult);

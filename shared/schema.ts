@@ -207,7 +207,13 @@ export const employees = pgTable("employees", {
   index("idx_employees_tenant_user").on(table.tenantId, table.userId),
   index("idx_employees_tenant_supplier").on(table.tenantId, table.supplierId),
   index("idx_employees_tenant_external").on(table.tenantId, table.externalId),
-  uniqueIndex("uq_employees_tenant_external").on(table.tenantId, table.externalId).where(sql`external_id IS NOT NULL`),
+  // Same GS officer may exist as in-house (supplier_id NULL) and per agency supplier.
+  uniqueIndex("uq_employees_tenant_external_inhouse")
+    .on(table.tenantId, table.externalId)
+    .where(sql`external_id IS NOT NULL AND supplier_id IS NULL`),
+  uniqueIndex("uq_employees_tenant_external_supplier")
+    .on(table.tenantId, table.externalId, table.supplierId)
+    .where(sql`external_id IS NOT NULL AND supplier_id IS NOT NULL`),
 ]);
 
 export const onboardingRecords = pgTable("onboarding_records", {

@@ -116,27 +116,105 @@ export async function findSiteByExtIdOrFuzzy(
   return { row: null };
 }
 
-export async function findEmployeeByExtIdOrName(tenantId: number, extId: string, firstName: string, lastName: string, email?: string): Promise<{ userId: string | null; empId: number | null }> {
-  const byExt = await pool.query(
-    `SELECT user_id, id FROM employees WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
-    [tenantId, extId]
-  );
-  if (byExt.rows.length > 0) return { userId: byExt.rows[0].user_id, empId: byExt.rows[0].id };
+/** Map key for employee sync caches: same GS id may exist per supplier / in-house. */
+export function empSyncKey(extId: string, supplierId: number | null): string {
+  return `${extId}|${supplierId ?? "inhouse"}`;
+}
+
+/**
+ * Find employee. When `supplierId` is passed (including `null` for in-house), match is
+ * supplier-scoped so Aspire vs MAIN get separate profiles. Omit `supplierId` for legacy
+ * unscoped lookup (CSV / imports).
+ */
+export async function findEmployeeByExtIdOrName(
+  tenantId: number,
+  extId: string,
+  firstName: string,
+  lastName: string,
+  email?: string,
+  supplierId?: number | null,
+): Promise<{ userId: string | null; empId: number | null }> {
+  // 6th arg present (even null) → supplier-scoped dual profiles; omitted → legacy any-match
+  const scoped = arguments.length >= 6;
+
+  if (extId) {
+    if (scoped && supplierId != null) {
+      const byExt = await pool.query(
+        `SELECT user_id, id FROM employees e WHERE e.tenant_id = $1 AND e.external_id = $2 AND e.supplier_id = $3 LIMIT 1`,
+        [tenantId, extId, supplierId],
+      );
+      if (byExt.rows.length > 0) return { userId: byExt.rows[0].user_id, empId: byExt.rows[0].id };
+    } else if (scoped && supplierId == null) {
+      const byExt = await pool.query(
+        `SELECT user_id, id FROM employees e WHERE e.tenant_id = $1 AND e.external_id = $2 AND e.supplier_id IS NULL LIMIT 1`,
+        [tenantId, extId],
+      );
+      if (byExt.rows.length > 0) return { userId: byExt.rows[0].user_id, empId: byExt.rows[0].id };
+    } else {
+      const byExt = await pool.query(
+        `SELECT user_id, id FROM employees e WHERE e.tenant_id = $1 AND e.external_id = $2 LIMIT 1`,
+        [tenantId, extId],
+      );
+      if (byExt.rows.length > 0) return { userId: byExt.rows[0].user_id, empId: byExt.rows[0].id };
+    }
+  }
 
   if (email) {
-    const byEmail = await pool.query(
-      `SELECT u.id as user_id, e.id as emp_id FROM users u LEFT JOIN employees e ON e.user_id = u.id WHERE u.tenant_id = $1 AND LOWER(u.email) = LOWER($2) LIMIT 1`,
-      [tenantId, email]
-    );
-    if (byEmail.rows.length > 0) return { userId: byEmail.rows[0].user_id, empId: byEmail.rows[0].emp_id };
+    if (scoped && supplierId != null) {
+      const byEmail = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.email) = LOWER($2) AND e.supplier_id = $3 LIMIT 1`,
+        [tenantId, email, supplierId],
+      );
+      if (byEmail.rows.length > 0) return { userId: byEmail.rows[0].user_id, empId: byEmail.rows[0].emp_id };
+    } else if (scoped && supplierId == null) {
+      const byEmail = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.email) = LOWER($2) AND e.supplier_id IS NULL LIMIT 1`,
+        [tenantId, email],
+      );
+      if (byEmail.rows.length > 0) return { userId: byEmail.rows[0].user_id, empId: byEmail.rows[0].emp_id };
+    } else {
+      const byEmail = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         LEFT JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.email) = LOWER($2) LIMIT 1`,
+        [tenantId, email],
+      );
+      if (byEmail.rows.length > 0) return { userId: byEmail.rows[0].user_id, empId: byEmail.rows[0].emp_id };
+    }
   }
 
   if (firstName && lastName) {
-    const byName = await pool.query(
-      `SELECT u.id as user_id, e.id as emp_id FROM users u JOIN employees e ON e.user_id = u.id WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3) LIMIT 1`,
-      [tenantId, firstName.trim(), lastName.trim()]
-    );
-    if (byName.rows.length > 0) return { userId: byName.rows[0].user_id, empId: byName.rows[0].emp_id };
+    if (scoped && supplierId != null) {
+      const byName = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
+           AND e.supplier_id = $4 LIMIT 1`,
+        [tenantId, firstName.trim(), lastName.trim(), supplierId],
+      );
+      if (byName.rows.length > 0) return { userId: byName.rows[0].user_id, empId: byName.rows[0].emp_id };
+    } else if (scoped && supplierId == null) {
+      const byName = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
+           AND e.supplier_id IS NULL LIMIT 1`,
+        [tenantId, firstName.trim(), lastName.trim()],
+      );
+      if (byName.rows.length > 0) return { userId: byName.rows[0].user_id, empId: byName.rows[0].emp_id };
+    } else {
+      const byName = await pool.query(
+        `SELECT u.id as user_id, e.id as emp_id FROM users u
+         JOIN employees e ON e.user_id = u.id
+         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3) LIMIT 1`,
+        [tenantId, firstName.trim(), lastName.trim()],
+      );
+      if (byName.rows.length > 0) return { userId: byName.rows[0].user_id, empId: byName.rows[0].emp_id };
+    }
   }
 
   return { userId: null, empId: null };
@@ -353,7 +431,10 @@ export async function upsertEmployee(
       return { userId: null, empId: null };
     }
 
-    const existing = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName, email || undefined);
+    // Scoped by supplierId (null = in-house) so same GS officer can have MAIN + Aspire profiles.
+    const existing = await findEmployeeByExtIdOrName(
+      tenantId, extId, firstName, lastName, email || undefined, supplierId,
+    );
 
     if (existing.userId) {
       if (data.phone || data.telephone) {
@@ -372,7 +453,7 @@ export async function upsertEmployee(
 
       if (existing.empId) {
         // Never change supplier_id on existing employees (Aspire↔Xtreme↔in-house lock).
-        // supplierId is only applied on INSERT below.
+        // Different supplier → separate profile created via INSERT path below (no match above).
         const update = buildFillBlanksUpdate("employees", {
           dateOfBirth: { dbField: "date_of_birth", value: sanitizeDate(data.dateOfBirth || data.dob) },
           nationalInsurance: { dbField: "national_insurance", value: data.nationalInsurance || data.ni_number },
@@ -422,8 +503,21 @@ export async function upsertEmployee(
 
     const crypto = await import("crypto");
     const userId = crypto.randomUUID();
-    const emailToUse = email || `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, "")}.${extId}.${Date.now().toString(36)}@needs-onboarding.local`;
-    const username = email || `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, "")}.${extId}.${Date.now().toString(36)}`;
+    const tag = supplierId == null ? "main" : `sup${supplierId}`;
+    const derivedLocal = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, "")}.${extId}.${tag}.${Date.now().toString(36)}`;
+    let emailToUse = email || `${derivedLocal}@needs-onboarding.local`;
+    let username = email || derivedLocal;
+    if (email) {
+      const taken = await pool.query(
+        `SELECT 1 FROM users WHERE tenant_id = $1 AND LOWER(email) = LOWER($2) LIMIT 1`,
+        [tenantId, email],
+      );
+      if (taken.rows.length > 0) {
+        // Same person already has another supplier profile — new user needs unique email.
+        emailToUse = `${derivedLocal}@needs-onboarding.local`;
+        username = derivedLocal;
+      }
+    }
 
     await pool.query(
       `INSERT INTO users (id, tenant_id, username, email, password, first_name, last_name, phone, role, is_active)
@@ -446,7 +540,9 @@ export async function upsertEmployee(
     return { userId, empId: empResult.rows[0]?.id || null };
   } catch (err: any) {
     if (err.code === "23505") {
-      const retryResult = await findEmployeeByExtIdOrName(tenantId, extId, firstName, lastName, email || undefined);
+      const retryResult = await findEmployeeByExtIdOrName(
+        tenantId, extId, firstName, lastName, email || undefined, supplierId,
+      );
       if (retryResult.userId || retryResult.empId) {
         result.skipped++;
         return retryResult;
