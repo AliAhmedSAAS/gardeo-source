@@ -546,8 +546,16 @@ export function registerPanlRoutes(
         const column = colMap[fieldKey];
         if (!column) {
           return res.status(400).json({
-            message: `Unsupported field "${fieldKey}" — use payRate, expense, travelAllowance, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours (hours are not editable)`,
+            message: `Unsupported field "${fieldKey}" — use hours, payRate, expense, travelAllowance, sellRate, breakMinutes, holidayHours, lateHours, lateMinutes, or deductionHours`,
           });
+        }
+
+        if (column === "hours_override") {
+          const hours = money(Math.max(0, value));
+          setParts.push(`hours_override = $${p++}`);
+          params.push(hours);
+          applied.hours_override = hours;
+          continue;
         }
 
         if (column === "late_minutes") {
