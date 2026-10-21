@@ -44,6 +44,7 @@ import {
   money,
   shiftHours,
   sqlEmployeeIsInhouse,
+  sqlShiftIsInhouse,
 } from "./payroll-control";
 import { generatePayslipPdf, generateRemittanceAdvicePdf } from "./payroll-control-pdf";
 
@@ -212,20 +213,24 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const from = monthStart(month);
       const to = monthEnd(month);
 
-      // Fast path: eligible employees = those with verified/completed shifts in month
-      // OR an existing payroll_control_months row (no correlated EXISTS per employee).
+      // Eligible = in-house / MAIN officers only (employees.supplier_id null/MAIN/1120).
+      // Agency-tagged officers (Aspire/Xtreme/…) stay on their supplier — not in MAIN payroll.
       const { rows } = await pool.query(
         `WITH eligible AS (
            SELECT DISTINCT sh.employee_id
            FROM shifts sh
+           JOIN employees e ON e.id = sh.employee_id AND e.tenant_id = sh.tenant_id
            WHERE sh.tenant_id = $1
              AND sh.date >= $2 AND sh.date <= $3
              AND sh.status IN ('verified','completed')
              AND sh.employee_id IS NOT NULL
+             AND ${sqlEmployeeIsInhouse("e")}
            UNION
            SELECT m.employee_id
            FROM payroll_control_months m
+           JOIN employees e ON e.id = m.employee_id
            WHERE m.tenant_id = $1 AND m.period_month = $2
+             AND ${sqlEmployeeIsInhouse("e")}
          )
          SELECT e.id AS employee_id, e.employee_number, e.external_id, e.employment_type, e.officer_step,
                 e.national_insurance, e.supplier_id, e.hourly_rate,
@@ -244,7 +249,6 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
            ON m.employee_id = e.id AND m.tenant_id = e.tenant_id AND m.period_month = $2
          WHERE e.tenant_id = $1
            AND COALESCE(e.is_merged, false) = false
-           AND ${sqlEmployeeIsInhouse("e")}
          ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
         [ctx.tenantId, from, to],
       );
@@ -304,7 +308,8 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
            WHERE sh.tenant_id = $1
              AND sh.date >= $2 AND sh.date <= $3
              AND sh.status IN ('verified','completed')
-             AND sh.employee_id = ANY($4::int[])`,
+             AND sh.employee_id = ANY($4::int[])
+             AND ${sqlShiftIsInhouse("sh")}`,
           [ctx.tenantId, from, to, needCoveredIds],
         );
         for (const sh of covered.rows) {
@@ -360,9 +365,8 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
           sortCode: r.sort_code || null,
           accountNumber: r.account_number || null,
           empType: r.employment_type || "—",
-          agent: (!r.supplier_id || /^(main|in[- ]?house)$/i.test(String(r.agent_name || "")))
-            ? "In-house"
-            : (r.agent_name || "In-house"),
+          // MAIN payroll list is employee-supplier filtered — all rows are in-house officers.
+          agent: "In-house",
           hrStatus: r.hr_status || "approved",
           rulesOfPayment: r.rules_of_payment || "full_paye",
           payrollSource: r.payroll_source || "first4_paye",
@@ -450,14 +454,18 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
         `WITH eligible AS (
            SELECT DISTINCT sh.employee_id
            FROM shifts sh
+           JOIN employees e ON e.id = sh.employee_id AND e.tenant_id = sh.tenant_id
            WHERE sh.tenant_id = $1
              AND sh.date >= $2 AND sh.date < ($2::date + interval '1 month')
              AND sh.status IN ('verified','completed')
              AND sh.employee_id IS NOT NULL
+             AND ${sqlEmployeeIsInhouse("e")}
            UNION
            SELECT m.employee_id
            FROM payroll_control_months m
+           JOIN employees e ON e.id = m.employee_id
            WHERE m.tenant_id = $1 AND m.period_month = $2
+             AND ${sqlEmployeeIsInhouse("e")}
          )
          SELECT e.id AS employee_id, e.employee_number, e.external_id,
                 e.date_of_birth, e.national_insurance, e.marital_status, e.gender,
@@ -485,7 +493,6 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
          ) ec ON true
          WHERE e.tenant_id = $1
            AND COALESCE(e.is_merged, false) = false
-           AND ${sqlEmployeeIsInhouse("e")}
            ${idFilter}
          ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,
         params,
@@ -730,8 +737,10 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const month = String(req.body.month || currentPayrollMonth());
       const employeeIds: number[] = Array.isArray(req.body.employeeIds) ? req.body.employeeIds.map(Number) : [];
       if (!employeeIds.length) return res.status(400).json({ message: "Tick officers first" });
+      // Strict: only employees tagged in-house / MAIN (not Aspire/Xtreme via MAIN shifts)
       const inhouseCheck = await pool.query(
-        `SELECT id FROM employees e
+        `SELECT DISTINCT e.id
+         FROM employees e
          WHERE e.tenant_id = $1 AND e.id = ANY($2::int[])
            AND COALESCE(e.is_merged, false) = false
            AND ${sqlEmployeeIsInhouse("e")}`,

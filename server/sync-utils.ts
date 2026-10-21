@@ -371,6 +371,8 @@ export async function upsertEmployee(
       }
 
       if (existing.empId) {
+        // Never change supplier_id on existing employees (Aspire↔Xtreme↔in-house lock).
+        // supplierId is only applied on INSERT below.
         const update = buildFillBlanksUpdate("employees", {
           dateOfBirth: { dbField: "date_of_birth", value: sanitizeDate(data.dateOfBirth || data.dob) },
           nationalInsurance: { dbField: "national_insurance", value: data.nationalInsurance || data.ni_number },
@@ -388,7 +390,6 @@ export async function upsertEmployee(
           employeeNumber: { dbField: "employee_number", value: data.employeeNumber },
           placeOfBirth: { dbField: "place_of_birth", value: data.placeOfBirth || data.place_of_birth },
           startDate: { dbField: "start_date", value: sanitizeDate(data.startDate || data.joinDate || data.contract_start_date) },
-          supplierId: { dbField: "supplier_id", value: supplierId },
         }, { external_id: extId }, existing.empId);
 
         if (update) {

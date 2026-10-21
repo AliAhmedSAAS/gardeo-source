@@ -12,22 +12,31 @@ export function money(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
-/**
- * In-house / MAIN officers: no supplier, or linked to MAIN / SUP-1120.
- * (GFMTrack often tags in-house staff to supplier MAIN-1120 while shift.supplier_id is null.)
- */
-export function sqlEmployeeIsInhouse(empAlias = "e"): string {
+function sqlSupplierIsMain(supplierIdExpr: string): string {
   return `(
-    ${empAlias}.supplier_id IS NULL
+    ${supplierIdExpr} IS NULL
     OR EXISTS (
       SELECT 1 FROM suppliers _inh_sup
-      WHERE _inh_sup.id = ${empAlias}.supplier_id
+      WHERE _inh_sup.id = ${supplierIdExpr}
         AND (
           LOWER(TRIM(_inh_sup.company_name)) IN ('main', 'in house', 'in-house', 'inhouse')
           OR LOWER(REGEXP_REPLACE(TRIM(COALESCE(_inh_sup.external_id, '')), '^sup-', '', 'i')) = '1120'
         )
     )
   )`;
+}
+
+/**
+ * In-house / MAIN officers: no supplier, or linked to MAIN / SUP-1120.
+ * (GFMTrack often tags in-house staff to supplier MAIN-1120 while shift.supplier_id is null.)
+ */
+export function sqlEmployeeIsInhouse(empAlias = "e"): string {
+  return sqlSupplierIsMain(`${empAlias}.supplier_id`);
+}
+
+/** In-house / MAIN shifts: shift.supplier_id null or MAIN / SUP-1120 (schedule BRANCH = MAIN). */
+export function sqlShiftIsInhouse(shiftAlias = "sh"): string {
+  return sqlSupplierIsMain(`${shiftAlias}.supplier_id`);
 }
 
 export function isInhouseEmployeeRow(r: {
@@ -235,6 +244,7 @@ async function eligibleShifts(tenantId: number, employeeId: number, month: strin
      WHERE s.tenant_id = $1 AND s.employee_id = $2
        AND s.date >= $3 AND s.date <= $4
        AND s.status IN ('verified', 'completed')
+       AND ${sqlShiftIsInhouse("s")}
      ORDER BY s.date ASC, s.start_time ASC`,
     [tenantId, employeeId, from, to],
   );
@@ -594,6 +604,7 @@ export async function listClaimable(opts: {
   const accountPurpose = payeeToClaim ? "payee" : "self";
   const params: any[] = [opts.tenantId, opts.claimFrom, opts.claimTo, payeeToClaim, accountPurpose];
   let branchSql = "";
+  // Strict: branch = employee.supplier_id (agency officers stay on their supplier, not MAIN).
   if (opts.branch === "MAIN") branchSql = `AND ${sqlEmployeeIsInhouse("e")}`;
   if (opts.branch === "Contractor") branchSql = `AND NOT ${sqlEmployeeIsInhouse("e")}`;
   let providerSql = "";
@@ -609,7 +620,11 @@ export async function listClaimable(opts: {
     `SELECT l.*, s.date AS shift_date, s.start_time, s.end_time, s.title,
             st.name AS site_name,
             e.employee_number, e.external_id, e.national_insurance, e.officer_step, e.supplier_id,
-            sup.company_name AS supplier_name, sup.external_id AS supplier_external_id,
+            s.supplier_id AS shift_supplier_id,
+            COALESCE(ssup.company_name, sup.company_name) AS supplier_name,
+            COALESCE(ssup.external_id, sup.external_id) AS supplier_external_id,
+            sup.company_name AS emp_supplier_name,
+            sup.external_id AS emp_supplier_external_id,
             u.first_name, u.last_name,
             COALESCE(bp.account_name, bd.account_name) AS account_name,
             COALESCE(bp.account_number, bd.account_number) AS account_number,
@@ -624,6 +639,7 @@ export async function listClaimable(opts: {
      LEFT JOIN sites st ON st.id = s.site_id
      JOIN employees e ON e.id = l.employee_id
      LEFT JOIN suppliers sup ON sup.id = e.supplier_id
+     LEFT JOIN suppliers ssup ON ssup.id = s.supplier_id
      LEFT JOIN users u ON u.id = e.user_id
      LEFT JOIN bank_details bp ON bp.employee_id = e.id AND bp.account_purpose = $5
      LEFT JOIN bank_details bd ON bd.employee_id = e.id AND bd.account_purpose = 'default'
@@ -641,13 +657,18 @@ export async function listClaimable(opts: {
     const empId = Number(r.employee_id);
     let group = byEmp.get(empId);
     if (!group) {
+      const empInhouse = isInhouseEmployeeRow({
+        supplier_id: r.supplier_id,
+        supplier_name: r.emp_supplier_name,
+        supplier_external_id: r.emp_supplier_external_id,
+      });
       group = {
         employeeId: empId,
         payeeName: `${r.first_name || ""} ${r.last_name || ""}`.trim() || `Officer ${empId}`,
         shiftCount: 0,
         amount: 0,
         source: r.payroll_source,
-        branchType: isInhouseEmployeeRow(r) ? "MAIN" : "Contractor",
+        branchType: empInhouse ? "MAIN" : "Contractor",
         accountTitle: r.account_name,
         accountNumber: r.account_number,
         sortCode: r.sort_code,

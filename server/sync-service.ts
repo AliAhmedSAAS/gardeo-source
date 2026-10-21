@@ -820,9 +820,10 @@ async function ensureEmployeeFromPhp(tenantId: number, extId: string, fullName: 
   );
   if (existingByName.rows.length > 0) {
     const empId = existingByName.rows[0].emp_id;
+    // Do not set/change supplier_id — keeps in-house and agency tags locked across syncs.
     await pool.query(
-      `UPDATE employees SET external_id = COALESCE(external_id, $1), supplier_id = COALESCE(supplier_id, $2) WHERE id = $3`,
-      [extId, supplierId, empId]
+      `UPDATE employees SET external_id = COALESCE(external_id, $1) WHERE id = $2`,
+      [extId, empId]
     );
     return empId;
   }
@@ -1367,11 +1368,7 @@ async function syncEmployees(tenantId: number, data: any[]): Promise<SyncResult>
             }
           }
 
-          if (supplierId) {
-            empUpdates.push(`supplier_id = COALESCE(supplier_id, $${eidx})`);
-            empValues.push(supplierId);
-            eidx++;
-          }
+          // supplier_id locked on existing employees — never fill/transfer across agencies or in-house.
 
           empUpdates.push(`external_id = $${eidx}`);
           empValues.push(extId);
