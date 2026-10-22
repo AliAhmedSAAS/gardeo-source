@@ -501,8 +501,8 @@ export async function upsertEmployee(
       result.skipped++;
       return { userId: null, empId: null };
     }
-    if (!firstName) firstName = "Unknown";
-    if (!lastName) lastName = "Unknown";
+    if (!firstName) firstName = "-";
+    if (!lastName) lastName = "-";
 
     // Scoped by supplierId (null = in-house) so same GS officer can have MAIN + Aspire profiles.
     const existing = await findEmployeeByExtIdOrName(

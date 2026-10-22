@@ -837,8 +837,8 @@ async function ensureEmployeeFromPhp(tenantId: number, extId: string, fullName: 
 
   // PIN is identity — do not reuse another officer with the same name.
   const nameParts = fullName.trim().split(/\s+/);
-  const firstName = nameParts[0] || "Unknown";
-  const lastName = nameParts.slice(1).join(" ") || "Unknown";
+  const firstName = nameParts[0] || "-";
+  const lastName = nameParts.slice(1).join(" ") || "-";
 
   const { v4: uuidv4 } = await import("uuid");
   const userId = uuidv4();
@@ -2313,8 +2313,8 @@ async function dryRunEntity(
         result.records.push({ action: "skip", entity: "employee", externalId: extId.replace(/^(EMP)-/i, ""), name: "(unnamed)", reason: "Missing required fields (name)" });
         continue;
       }
-      if (!firstName) firstName = "Unknown";
-      if (!lastName) lastName = "Unknown";
+      if (!firstName) firstName = "-";
+      if (!lastName) lastName = "-";
       const name = `${firstName} ${lastName}`.trim();
       const email = (item.email || item.employeeEmail || "").toLowerCase().trim();
       const cleanExtId = extId.replace(/^(EMP)-/i, "");
