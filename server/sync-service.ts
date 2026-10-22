@@ -835,32 +835,10 @@ async function ensureEmployeeFromPhp(tenantId: number, extId: string, fullName: 
       );
   if (existing.rows.length > 0) return existing.rows[0].id;
 
+  // PIN is identity — do not reuse another officer with the same name.
   const nameParts = fullName.trim().split(/\s+/);
   const firstName = nameParts[0] || "Unknown";
   const lastName = nameParts.slice(1).join(" ") || "Unknown";
-
-  const existingByName = supplierId == null
-    ? await pool.query(
-        `SELECT e.id AS emp_id FROM users u JOIN employees e ON e.user_id = u.id
-         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
-           AND e.supplier_id IS NULL LIMIT 1`,
-        [tenantId, firstName, lastName],
-      )
-    : await pool.query(
-        `SELECT e.id AS emp_id FROM users u JOIN employees e ON e.user_id = u.id
-         WHERE u.tenant_id = $1 AND LOWER(u.first_name) = LOWER($2) AND LOWER(u.last_name) = LOWER($3)
-           AND e.supplier_id = $4 LIMIT 1`,
-        [tenantId, firstName, lastName, supplierId],
-      );
-  if (existingByName.rows.length > 0) {
-    const empId = existingByName.rows[0].emp_id;
-    // Do not set/change supplier_id — keeps in-house and agency tags locked across syncs.
-    await pool.query(
-      `UPDATE employees SET external_id = COALESCE(external_id, $1) WHERE id = $2`,
-      [extId, empId]
-    );
-    return empId;
-  }
 
   const { v4: uuidv4 } = await import("uuid");
   const userId = uuidv4();
@@ -2328,16 +2306,18 @@ async function dryRunEntity(
     }
 
     if (entityType === "employees") {
-      const firstName = item.firstName || (item.fullName ? item.fullName.trim().split(/\s+/)[0] : null) || (item.employeeName ? item.employeeName.trim().split(/\s+/)[0] : null);
-      const lastName = item.lastName || (item.fullName ? item.fullName.trim().split(/\s+/).slice(1).join(" ") : null) || (item.employeeName ? item.employeeName.trim().split(/\s+/).slice(1).join(" ") : null);
-      const name = `${firstName || ""} ${lastName || ""}`.trim() || "(unnamed)";
-      const email = (item.email || item.employeeEmail || "").toLowerCase().trim();
-      const cleanExtId = extId.replace(/^(EMP)-/i, "");
-      if (!firstName || !lastName) {
+      let firstName = item.firstName || (item.fullName ? item.fullName.trim().split(/\s+/)[0] : null) || (item.employeeName ? item.employeeName.trim().split(/\s+/)[0] : null);
+      let lastName = item.lastName || (item.fullName ? item.fullName.trim().split(/\s+/).slice(1).join(" ") : null) || (item.employeeName ? item.employeeName.trim().split(/\s+/).slice(1).join(" ") : null);
+      if (!firstName && !lastName) {
         result.toSkip++;
-        result.records.push({ action: "skip", entity: "employee", externalId: cleanExtId, name, reason: "Missing required fields (name/email)" });
+        result.records.push({ action: "skip", entity: "employee", externalId: extId.replace(/^(EMP)-/i, ""), name: "(unnamed)", reason: "Missing required fields (name)" });
         continue;
       }
+      if (!firstName) firstName = "Unknown";
+      if (!lastName) lastName = "Unknown";
+      const name = `${firstName} ${lastName}`.trim();
+      const email = (item.email || item.employeeEmail || "").toLowerCase().trim();
+      const cleanExtId = extId.replace(/^(EMP)-/i, "");
 
       const { userId, empId } = await findEmployeeByExtIdOrName(tenantId, cleanExtId, firstName, lastName, email || undefined);
 

@@ -224,6 +224,9 @@ export async function findEmployeeByExtIdOrName(
       );
       if (byExt.rows.length > 0) return { userId: byExt.rows[0].user_id, empId: byExt.rows[0].id };
     }
+    // PIN / external_id is identity. Do NOT fall back to email/name — common names
+    // (e.g. two "MUHAMMAD ABDULLAH" with different PINs) must create separate profiles.
+    return { userId: null, empId: null };
   }
 
   if (email) {
@@ -488,15 +491,18 @@ export async function upsertEmployee(
   supplierId: number | null,
   result: EntitySyncResult
 ): Promise<{ userId: string | null; empId: number | null }> {
-  const firstName = data.firstName || (data.fullName ? data.fullName.trim().split(/\s+/)[0] : null) || (data.employeeName ? data.employeeName.trim().split(/\s+/)[0] : null);
-  const lastName = data.lastName || (data.fullName ? data.fullName.trim().split(/\s+/).slice(1).join(" ") : null) || (data.employeeName ? data.employeeName.trim().split(/\s+/).slice(1).join(" ") : null);
+  let firstName = data.firstName || (data.fullName ? data.fullName.trim().split(/\s+/)[0] : null) || (data.employeeName ? data.employeeName.trim().split(/\s+/)[0] : null);
+  let lastName = data.lastName || (data.fullName ? data.fullName.trim().split(/\s+/).slice(1).join(" ") : null) || (data.employeeName ? data.employeeName.trim().split(/\s+/).slice(1).join(" ") : null);
   const email = (data.email || data.employeeEmail || "").toLowerCase().trim();
   try {
 
-    if (!firstName || !lastName) {
+    // Single-word names (e.g. "RIMSHA") — still create; pad missing part.
+    if (!firstName && !lastName) {
       result.skipped++;
       return { userId: null, empId: null };
     }
+    if (!firstName) firstName = "Unknown";
+    if (!lastName) lastName = "Unknown";
 
     // Scoped by supplierId (null = in-house) so same GS officer can have MAIN + Aspire profiles.
     const existing = await findEmployeeByExtIdOrName(
