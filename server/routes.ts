@@ -9011,7 +9011,7 @@ export async function registerRoutes(
 
       const dataResult = await pool.query(
         `SELECT sh.date::text AS date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time,
-          sh.break_minutes, sh.status, sh.supplier_approval_status,
+          sh.break_minutes, sh.hours_override, sh.status, sh.supplier_approval_status,
           COALESCE(si.name, sh.title, 'Unknown Site') AS site_name,
           COALESCE(u.first_name || ' ' || u.last_name, 'Unassigned') AS employee_name
         FROM shifts sh
@@ -9025,12 +9025,7 @@ export async function registerRoutes(
       );
 
       const rows = dataResult.rows.map((r: any) => {
-        const [sh, sm] = (r.start_time || "00:00").split(":").map(Number);
-        const [eh, em] = (r.end_time || "00:00").split(":").map(Number);
-        let totalMins = (eh * 60 + em) - (sh * 60 + sm);
-        if (totalMins < 0) totalMins += 24 * 60;
-        totalMins -= r.break_minutes || 0;
-        const hours = (totalMins / 60).toFixed(2);
+        const hours = resolveInvoiceBaseHours(r).toFixed(2);
         return {
           date: r.date,
           startTime: r.start_time?.substring(0, 5) || "",
@@ -15193,11 +15188,7 @@ export async function registerRoutes(
         const emp = s.employeeId ? await storage.getEmployee(s.employeeId) : null;
         const empUser = emp?.userId ? await storage.getUser(emp.userId) : null;
         const site = s.siteId ? await storage.getSite(s.siteId) : null;
-        const startH = parseInt(s.startTime.split(":")[0]) + parseInt(s.startTime.split(":")[1]) / 60;
-        const endH = parseInt(s.endTime.split(":")[0]) + parseInt(s.endTime.split(":")[1]) / 60;
-        let hours = endH - startH;
-        if (hours < 0) hours += 24;
-        hours -= (s.breakMinutes || 0) / 60;
+        let hours = resolveInvoiceBaseHours(s as any);
         // Prefer the pay rate stored on the shift (auto-populated on verify), then check pay rates history, then fall back to employee default
         let hourlyRate = emp?.hourlyRate ? parseFloat(emp.hourlyRate) : 0;
         if (s.payRate) {
@@ -15319,11 +15310,7 @@ export async function registerRoutes(
         if (s.payrollRunId) continue;
         const emp = s.employeeId ? await storage.getEmployee(s.employeeId) : null;
         if (!emp) continue;
-        const startH = parseInt(s.startTime.split(":")[0]) + parseInt(s.startTime.split(":")[1]) / 60;
-        const endH = parseInt(s.endTime.split(":")[0]) + parseInt(s.endTime.split(":")[1]) / 60;
-        let hours = endH - startH;
-        if (hours < 0) hours += 24;
-        hours -= (s.breakMinutes || 0) / 60;
+        let hours = resolveInvoiceBaseHours(s as any);
         // Prefer the pay rate stored on the shift (auto-populated on verify), then look up pay rate history, then fall back to employee default
         let rate = emp.hourlyRate ? parseFloat(emp.hourlyRate) : 0;
         if (s.payRate) {
@@ -15613,11 +15600,7 @@ export async function registerRoutes(
         let totalHours = 0;
         let totalGross = 0;
         for (const s of shiftsArr) {
-          const startH = parseInt(s.startTime.split(":")[0]) + parseInt(s.startTime.split(":")[1]) / 60;
-          const endH = parseInt(s.endTime.split(":")[0]) + parseInt(s.endTime.split(":")[1]) / 60;
-          let hours = endH - startH;
-          if (hours < 0) hours += 24;
-          hours -= (s.breakMinutes || 0) / 60;
+          const hours = resolveInvoiceBaseHours(s as any);
           totalHours += hours;
           // Use stored payRate if available, otherwise look up from pay rates
           if (s.payRate) {
@@ -18918,8 +18901,8 @@ Respond in JSON format:
         const vatRate = getVatRateForPeriod(periodStart);
 
         const shiftsResult = await pool.query(
-          `SELECT sh.id, sh.date, sh.start_time, sh.end_time, sh.break_minutes, sh.title, sh.site_id,
-            COALESCE(si.name, sh.title, 'N/A') AS site_name
+          `SELECT sh.id, sh.date, sh.start_time, sh.end_time, sh.break_minutes, sh.hours_override,
+            sh.title, sh.site_id, COALESCE(si.name, sh.title, 'N/A') AS site_name
            FROM shifts sh
            LEFT JOIN sites si ON sh.site_id = si.id
            WHERE sh.tenant_id = $1 AND sh.supplier_id = $2
@@ -18932,11 +18915,7 @@ Respond in JSON format:
         const lineItems: any[] = [];
 
         for (const sh of shiftsResult.rows) {
-          const [startH, startM] = sh.start_time.split(":").map(Number);
-          const [endH, endM] = sh.end_time.split(":").map(Number);
-          let hours = (endH + endM / 60) - (startH + startM / 60);
-          if (hours < 0) hours += 24;
-          hours -= (sh.break_minutes || 0) / 60;
+          let hours = resolveInvoiceBaseHours(sh);
           hours = Math.floor(hours * 100) / 100;
 
           const lineSubtotal = Math.round(hours * rate * 100) / 100;
@@ -19673,11 +19652,7 @@ Respond in JSON format:
               const vatRate = (tenantHasValidVat && liSupplierVatActive) ? parseFloat(supplier.defaultVatRate || "20") : 0;
 
               for (const shift of invoiceShifts) {
-                const [startH, startM] = shift.startTime.split(":").map(Number);
-                const [endH, endM] = shift.endTime.split(":").map(Number);
-                let hours = (endH + endM / 60) - (startH + startM / 60);
-                if (hours < 0) hours += 24;
-                hours -= (shift.breakMinutes || 0) / 60;
+                let hours = resolveInvoiceBaseHours(shift as any);
                 hours = Math.round(hours * 100) / 100;
 
                 const rate = resolveInvoiceShiftRate((shift as any).payRate, rateCards, new Date(shift.date), shift.siteId, shift.employeeId, defaultRate);
@@ -24601,10 +24576,7 @@ Respond in JSON format:
         const chargeRate = parseFloat(shift.hourly_charge_rate || '0');
         if (chargeRate <= 0) continue;
 
-        const startParts = shift.start_time?.split(':') || [0, 0];
-        const endParts = shift.end_time?.split(':') || [0, 0];
-        let hours = (parseInt(endParts[0]) * 60 + parseInt(endParts[1]) - parseInt(startParts[0]) * 60 - parseInt(startParts[1])) / 60;
-        if (hours <= 0) hours += 24;
+        let hours = resolveInvoiceBaseHours(shift);
         hours = Math.floor(hours * 100) / 100;
 
         const lineSubtotal = Math.floor(hours * chargeRate * 100) / 100;
@@ -30709,38 +30681,14 @@ Respond in JSON format:
     const rTimesheetHours = await pool.query(
       `SELECT i.invoice_number, s.company_name AS supplier,
         SUM(li.hours::numeric) AS invoice_total_hours,
-        SUM(
-          TRUNC(CASE
-            WHEN EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0) < 0
-            THEN (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0) + 1440) / 60.0
-            ELSE (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0)) / 60.0
-          END, 2)
-        ) AS shift_total_hours
+        SUM(TRUNC((${INVOICE_BASE_HOURS_SQL})::numeric, 2)) AS shift_total_hours
        FROM invoices i
        JOIN suppliers s ON s.id = i.supplier_id
        JOIN invoice_line_items li ON li.invoice_id = i.id
        JOIN shifts sh ON sh.id = li.shift_id
        WHERE i.tenant_id = $1 AND i.supplier_id IN (${idPlaceholders})
        GROUP BY i.id, i.invoice_number, s.company_name
-       HAVING ABS(SUM(
-          TRUNC(CASE
-            WHEN EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0) < 0
-            THEN (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0) + 1440) / 60.0
-            ELSE (EXTRACT(HOUR FROM sh.end_time::time) * 60 + EXTRACT(MINUTE FROM sh.end_time::time)
-               - EXTRACT(HOUR FROM sh.start_time::time) * 60 - EXTRACT(MINUTE FROM sh.start_time::time)
-               - COALESCE(sh.break_minutes, 0)) / 60.0
-          END, 2)
-        ) - SUM(li.hours::numeric)) > 0.1`,
+       HAVING ABS(SUM(TRUNC((${INVOICE_BASE_HOURS_SQL})::numeric, 2)) - SUM(li.hours::numeric)) > 0.1`,
       idParams
     );
     addCheck("Timesheet / Shift Data", "Timesheet hours vs invoice hours", "Invoices where the sum of linked shift hours (via line item shift references) does not match the invoice total hours (tolerance ±0.1 hours)", rTimesheetHours.rows.map(r => ({ invoice: r.invoice_number, supplier: r.supplier, invoiceTotalHours: parseFloat(r.invoice_total_hours).toFixed(2), shiftTotalHours: parseFloat(r.shift_total_hours).toFixed(2), difference: (parseFloat(r.shift_total_hours) - parseFloat(r.invoice_total_hours)).toFixed(2) })));

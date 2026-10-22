@@ -114,6 +114,21 @@ export function shiftHours(startTime: string, endTime: string, breakMinutes?: nu
   return money(Math.max(0, hours));
 }
 
+/** Prefer API/P&L hours_override (hoursWorked); else clock start/end − break. */
+export function dutyHoursFromShift(shift: {
+  start_time?: string | null;
+  end_time?: string | null;
+  break_minutes?: number | null;
+  hours_override?: unknown;
+}): number {
+  const raw = shift.hours_override;
+  if (raw != null && raw !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0) return money(n);
+  }
+  return shiftHours(String(shift.start_time || "00:00"), String(shift.end_time || "00:00"), shift.break_minutes);
+}
+
 export async function nextBillNumber(tenantId: number): Promise<string> {
   const { rows } = await pool.query(
     `SELECT bill_number FROM payroll_bills WHERE tenant_id = $1 AND bill_number IS NOT NULL ORDER BY id DESC LIMIT 1`,
@@ -321,7 +336,7 @@ export async function applyRulesForOfficer(opts: {
   const wageBucketHint = sourceRow.rows[0]?.wage_bucket as string | undefined;
 
   for (const shift of shifts) {
-    const dutyHours = shiftHours(shift.start_time, shift.end_time, shift.break_minutes);
+    const dutyHours = dutyHoursFromShift(shift);
     const holiday = money(Math.max(0, num(shift.holiday_hours)));
     const late = money(Math.max(0, num(shift.late_hours)));
     const travelPay = Math.max(0, money(num(shift.travel_allowance)));

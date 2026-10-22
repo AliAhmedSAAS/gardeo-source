@@ -42,7 +42,7 @@ import {
   openSelfSourceRequest,
   num,
   money,
-  shiftHours,
+  dutyHoursFromShift,
   sqlEmployeeIsInhouse,
   sqlShiftIsInhouse,
 } from "./payroll-control";
@@ -302,7 +302,8 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
       const coveredByEmp = new Map<number, { hours: number; wages: number }>();
       if (needCoveredIds.length > 0) {
         const covered = await pool.query(
-          `SELECT sh.employee_id, sh.start_time, sh.end_time, sh.break_minutes, sh.pay_rate, e.hourly_rate
+          `SELECT sh.employee_id, sh.start_time, sh.end_time, sh.break_minutes, sh.hours_override,
+                  sh.pay_rate, e.hourly_rate
            FROM shifts sh
            INNER JOIN employees e ON e.id = sh.employee_id
            WHERE sh.tenant_id = $1
@@ -313,7 +314,7 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
           [ctx.tenantId, from, to, needCoveredIds],
         );
         for (const sh of covered.rows) {
-          const hours = shiftHours(sh.start_time, sh.end_time, sh.break_minutes);
+          const hours = dutyHoursFromShift(sh);
           if (hours <= 0) continue;
           const rate = num(sh.pay_rate) || num(sh.hourly_rate) || PAYE_RATE;
           const cur = coveredByEmp.get(Number(sh.employee_id)) || { hours: 0, wages: 0 };
