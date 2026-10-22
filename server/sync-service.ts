@@ -344,11 +344,26 @@ async function syncRestPhpInhouseShifts(
         [tenantId, extId],
       );
       if (existingResult.rows.length > 0) {
+        // Full resync overwrite — employee/site/date/times/status (fixes wrong PIN links)
         await pool.query(
-          `UPDATE shifts SET status = $1, supplier_id = NULL, start_time = $2, end_time = $3,
-             notes = COALESCE($4, notes), pay_rate = COALESCE($5, pay_rate),
-             last_synced_at = NOW(), updated_at = NOW() WHERE id = $6`,
-          [apiStatus, startTime, endTime, item.notes || null, payRate, existingResult.rows[0].id],
+          `UPDATE shifts SET
+             status = $1,
+             employee_id = COALESCE($2, employee_id),
+             site_id = COALESCE($3, site_id),
+             supplier_id = NULL,
+             title = $4,
+             date = $5::date,
+             start_time = $6,
+             end_time = $7,
+             notes = COALESCE($8, notes),
+             pay_rate = COALESCE($9, pay_rate),
+             last_synced_at = NOW(),
+             updated_at = NOW()
+           WHERE id = $10`,
+          [
+            apiStatus, employeeId, siteId, title, item.date,
+            startTime, endTime, item.notes || null, payRate, existingResult.rows[0].id,
+          ],
         );
         breakdown.shifts.updated++;
         continue;
@@ -364,9 +379,25 @@ async function syncRestPhpInhouseShifts(
           const rowExt = row.external_id ? stripEntityPrefix(String(row.external_id)) : "";
           if (!rowExt || rowExt === extId) {
             await pool.query(
-              `UPDATE shifts SET external_id = $1, status = $2, supplier_id = NULL,
-                 start_time = $3, end_time = $4, last_synced_at = NOW(), updated_at = NOW() WHERE id = $5`,
-              [extId, apiStatus, startTime, endTime, row.id],
+              `UPDATE shifts SET
+                 external_id = $1,
+                 status = $2,
+                 employee_id = COALESCE($3, employee_id),
+                 site_id = COALESCE($4, site_id),
+                 supplier_id = NULL,
+                 title = $5,
+                 date = $6::date,
+                 start_time = $7,
+                 end_time = $8,
+                 notes = COALESCE($9, notes),
+                 pay_rate = COALESCE($10, pay_rate),
+                 last_synced_at = NOW(),
+                 updated_at = NOW()
+               WHERE id = $11`,
+              [
+                extId, apiStatus, employeeId, siteId, title, item.date,
+                startTime, endTime, item.notes || null, payRate, row.id,
+              ],
             );
             breakdown.shifts.updated++;
             continue;
@@ -609,19 +640,22 @@ async function syncRestPhpShifts(
               `UPDATE shifts SET
                  external_id = $1,
                  status = $2,
-                 supplier_id = COALESCE($3, supplier_id),
-                 duty_type_id = COALESCE($4, duty_type_id),
-                 title = $5,
-                 start_time = $6,
-                 end_time = $7,
-                 notes = COALESCE($8, notes),
-                 pay_rate = COALESCE($9, pay_rate),
+                 employee_id = COALESCE($3, employee_id),
+                 site_id = COALESCE($4, site_id),
+                 supplier_id = COALESCE($5, supplier_id),
+                 duty_type_id = COALESCE($6, duty_type_id),
+                 title = $7,
+                 date = $8::date,
+                 start_time = $9,
+                 end_time = $10,
+                 notes = COALESCE($11, notes),
+                 pay_rate = COALESCE($12, pay_rate),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $10`,
+               WHERE id = $13`,
               [
-                extId, apiStatus, supplierId, dutyTypeId, title,
-                startTime, endTime, item.notes || null, payRate, row.id,
+                extId, apiStatus, employeeId, siteId, supplierId, dutyTypeId, title,
+                item.date, startTime, endTime, item.notes || null, payRate, row.id,
               ],
             );
             result.updated++;
@@ -903,23 +937,38 @@ async function syncPhpShifts(
         `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
         [tenantId, extId]
       );
+      const startTime = item.time_start || "00:00";
+      const endTime = item.time_finish || "00:00";
+      const title = `${item.location || "Shift"} - ${item.shift_date}`;
+
       if (existingResult.rows.length > 0) {
         await pool.query(
           `UPDATE shifts SET
-             pay_rate = COALESCE(pay_rate, $1),
-             status = COALESCE(status, 'completed'),
+             status = COALESCE($1, status, 'completed'),
+             employee_id = COALESCE($2, employee_id),
+             site_id = COALESCE($3, site_id),
+             supplier_id = COALESCE($4, supplier_id),
+             title = $5,
+             date = $6::date,
+             start_time = $7,
+             end_time = $8,
+             pay_rate = COALESCE($9, pay_rate),
              last_synced_at = NOW(),
              updated_at = NOW()
-           WHERE id = $2`,
-          [payRate, existingResult.rows[0].id],
+           WHERE id = $10`,
+          [
+            item.status ? mapShiftStatus(item.status) : "completed",
+            employeeId, siteId, supplierId, title, item.shift_date,
+            startTime, endTime, payRate, existingResult.rows[0].id,
+          ],
         );
         result.updated++;
         continue;
       }
 
       if (employeeId && siteId && item.shift_date && item.time_start && item.time_finish) {
-        const startNorm = (item.time_start || "").substring(0, 5);
-        const endNorm = (item.time_finish || "").substring(0, 5);
+        const startNorm = String(startTime).substring(0, 5);
+        const endNorm = String(endTime).substring(0, 5);
         const compositeKey = `${employeeId}|${siteId}|${item.shift_date}|${startNorm}|${endNorm}`;
         const compositeCheck = await pool.query(SHIFT_COMPOSITE_SQL, [tenantId, compositeKey]);
         if (compositeCheck.rows.length > 0) {
@@ -929,11 +978,24 @@ async function syncPhpShifts(
             await pool.query(
               `UPDATE shifts SET
                  external_id = $1,
-                 pay_rate = COALESCE(pay_rate, $2),
+                 status = COALESCE($2, status, 'completed'),
+                 employee_id = COALESCE($3, employee_id),
+                 site_id = COALESCE($4, site_id),
+                 supplier_id = COALESCE($5, supplier_id),
+                 title = $6,
+                 date = $7::date,
+                 start_time = $8,
+                 end_time = $9,
+                 pay_rate = COALESCE($10, pay_rate),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $3`,
-              [extId, payRate, row.id]
+               WHERE id = $11`,
+              [
+                extId,
+                item.status ? mapShiftStatus(item.status) : "completed",
+                employeeId, siteId, supplierId, title, item.shift_date,
+                startTime, endTime, payRate, row.id,
+              ],
             );
             result.updated++;
             continue;
@@ -941,8 +1003,6 @@ async function syncPhpShifts(
           // Different external_id → INSERT
         }
       }
-
-      const title = `${item.location || "Shift"} - ${item.shift_date}`;
 
       await pool.query(
         `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, pay_rate, external_id, last_synced_at)
@@ -1431,18 +1491,38 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
         [tenantId, extId]
       );
 
+      const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
+      const startTime = item.startTime || "00:00";
+      const endTime = item.endTime || "00:00";
+
       if (existingResult.rows.length > 0) {
         await pool.query(
-          `UPDATE shifts SET status = $1, pay_rate = COALESCE(pay_rate, $2), last_synced_at = NOW(), updated_at = NOW() WHERE id = $3`,
-          [apiStatus, payRate, existingResult.rows[0].id],
+          `UPDATE shifts SET
+             status = $1,
+             employee_id = COALESCE($2, employee_id),
+             site_id = COALESCE($3, site_id),
+             supplier_id = COALESCE($4, supplier_id),
+             title = $5,
+             date = $6::date,
+             start_time = $7,
+             end_time = $8,
+             notes = COALESCE($9, notes),
+             pay_rate = COALESCE($10, pay_rate),
+             last_synced_at = NOW(),
+             updated_at = NOW()
+           WHERE id = $11`,
+          [
+            apiStatus, employeeId, siteId, supplierId, title, item.date,
+            startTime, endTime, item.notes || null, payRate, existingResult.rows[0].id,
+          ],
         );
         result.updated++;
         continue;
       }
 
       if (employeeId && siteId && item.date && item.startTime && item.endTime) {
-        const startNorm = (item.startTime || "").substring(0, 5);
-        const endNorm = (item.endTime || "").substring(0, 5);
+        const startNorm = String(startTime).substring(0, 5);
+        const endNorm = String(endTime).substring(0, 5);
         const compositeKey = `${employeeId}|${siteId}|${item.date}|${startNorm}|${endNorm}`;
         const compositeCheck = await pool.query(SHIFT_COMPOSITE_SQL, [tenantId, compositeKey]);
         if (compositeCheck.rows.length > 0) {
@@ -1453,11 +1533,22 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
               `UPDATE shifts SET
                  external_id = $1,
                  status = $2,
-                 pay_rate = COALESCE(pay_rate, $3),
+                 employee_id = COALESCE($3, employee_id),
+                 site_id = COALESCE($4, site_id),
+                 supplier_id = COALESCE($5, supplier_id),
+                 title = $6,
+                 date = $7::date,
+                 start_time = $8,
+                 end_time = $9,
+                 notes = COALESCE($10, notes),
+                 pay_rate = COALESCE($11, pay_rate),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $4`,
-              [extId, apiStatus, payRate, row.id]
+               WHERE id = $12`,
+              [
+                extId, apiStatus, employeeId, siteId, supplierId, title, item.date,
+                startTime, endTime, item.notes || null, payRate, row.id,
+              ],
             );
             result.updated++;
             continue;
@@ -1471,8 +1562,8 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
-          `Shift ${extId}`,
-          item.date, item.startTime, item.endTime,
+          title,
+          item.date, startTime, endTime,
           apiStatus,
           item.notes || null, payRate, extId,
         ]
