@@ -182,6 +182,16 @@ async function getPayRateFromSupplierRateCard(
   return String(rc.hourlyRate);
 }
 
+/** MAIN / in-house supplier external id or display name (Branch 1120). */
+function isMainInhouseSupplierExt(extId?: string | null, name?: string | null): boolean {
+  const id = stripEntityPrefix(String(extId || "")).toLowerCase();
+  if (id === "1120") return true;
+  const n = String(name || "").trim().toLowerCase();
+  if (n === "main" || n === "in house" || n === "in-house" || n === "inhouse") return true;
+  if (n.includes("in-house") || n.includes("inhouse")) return true;
+  return false;
+}
+
 /** MAIN / in-house branch rows from GFMTrack (shifts-main.php). */
 function isMainInhouseShift(item: any): boolean {
   if (item?.isInhouse === true || item?.is_inhouse === true) return true;
@@ -190,9 +200,7 @@ function isMainInhouseShift(item: any): boolean {
   const name = String(item.supplierName || "").trim().toLowerCase();
   const id = stripEntityPrefix(String(item.supplierId || "")).toLowerCase();
   if (!item.supplierId && !item.supplierName) return true;
-  if (name === "in-house" || name === "inhouse" || name === "in house" || name === "main") return true;
-  if (name.includes("in-house") || name.includes("inhouse")) return true;
-  if (id === "1120") return true; // known MAIN / in-house external id
+  if (isMainInhouseSupplierExt(id, name)) return true;
   return false;
 }
 
@@ -1798,14 +1806,22 @@ export async function runSync(
       for (const emp of allEmployees) {
         const extId = stripEntityPrefix(String(emp.id));
         let empSupplierId: number | null = null;
-        if (emp.supplierId || emp.SupplierID) {
-          const supExtId = stripEntityPrefix(String(emp.supplierId || emp.SupplierID));
-          const sr = await findByExternalId(tenantId, "suppliers", supExtId);
+        const empSupExt = stripEntityPrefix(String(emp.supplierId || emp.SupplierID || ""));
+        const empSupName = emp.supplierName || emp.SupplierName || "";
+        // MAIN / Branch 1120 = in-house → supplier_id NULL (same as shifts-main).
+        // Never create a parallel "MAIN" supplier-tagged employee profile.
+        if (
+          isMainInhouseSupplierExt(supplierFilter, null) ||
+          isMainInhouseSupplierExt(empSupExt, empSupName)
+        ) {
+          empSupplierId = null;
+        } else if (emp.supplierId || emp.SupplierID) {
+          const sr = await findByExternalId(tenantId, "suppliers", empSupExt);
           if (sr) {
             empSupplierId = sr.id;
-          } else if (emp.supplierName || emp.SupplierName) {
+          } else if (empSupName) {
             if (!breakdown.suppliers) breakdown.suppliers = newEntitySyncResult();
-            empSupplierId = await upsertSupplier(tenantId, supExtId, { companyName: emp.supplierName || emp.SupplierName }, breakdown.suppliers);
+            empSupplierId = await upsertSupplier(tenantId, empSupExt, { companyName: empSupName }, breakdown.suppliers);
           }
         }
 
@@ -2062,12 +2078,16 @@ export async function runSync(
               let supplierId: number | null = null;
               if (item.supplierId) {
                 const supExtId = stripEntityPrefix(String(item.supplierId));
-                const sr = await findByExternalId(tenantId, "suppliers", supExtId);
-                if (sr) {
-                  supplierId = sr.id;
-                } else if (item.supplierName) {
-                  const supplierResult = newEntitySyncResult();
-                  supplierId = await upsertSupplier(tenantId, supExtId, { companyName: item.supplierName }, supplierResult);
+                if (isMainInhouseSupplierExt(supExtId, item.supplierName)) {
+                  supplierId = null;
+                } else {
+                  const sr = await findByExternalId(tenantId, "suppliers", supExtId);
+                  if (sr) {
+                    supplierId = sr.id;
+                  } else if (item.supplierName) {
+                    const supplierResult = newEntitySyncResult();
+                    supplierId = await upsertSupplier(tenantId, supExtId, { companyName: item.supplierName }, supplierResult);
+                  }
                 }
               }
               const { empId: enrichEmpId } = await upsertEmployee(tenantId, extId, item, supplierId, entityResult);
