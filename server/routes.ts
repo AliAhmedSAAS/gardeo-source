@@ -14935,6 +14935,71 @@ export async function registerRoutes(
     }
   });
 
+  /** Public: request a password reset link by username or email (login "Forgot password" flow). */
+  app.post("/api/auth/request-password-reset", async (req, res) => {
+    try {
+      const identifier = String(req.body?.identifier || req.body?.username || req.body?.email || "").trim();
+      if (!identifier) {
+        return res.status(400).json({ message: "Enter your username or email" });
+      }
+      const isEmail = identifier.includes("@");
+      let candidates = isEmail
+        ? await storage.getUsersByEmail(identifier.toLowerCase())
+        : await storage.getUsersByUsername(identifier);
+      candidates = candidates.filter((u) => u.isActive !== false && u.password !== "NEEDS_ONBOARDING");
+
+      // Always return a generic success shape to avoid account enumeration when nothing matches.
+      if (candidates.length === 0) {
+        return res.json({
+          message: "If an account exists, a reset link has been created. Check your email or use the link shown.",
+        });
+      }
+      if (candidates.length > 1) {
+        return res.status(400).json({
+          message: "Multiple accounts found for this email. Use your username instead (e.g. guardian...fm).",
+        });
+      }
+
+      const target = candidates[0];
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.deletePasswordResetTokensByUserId(target.id);
+      await storage.createPasswordResetToken({ userId: target.id, token, expiresAt });
+
+      const resetLink = `${req.protocol}://${req.get("host") || "localhost"}/reset-password?token=${token}`;
+      const emailResult = await emailService.sendSupplierPasswordReset({
+        to: target.email,
+        resetLink,
+        contactName: `${target.firstName} ${target.lastName}`.trim() || target.username,
+      });
+
+      if (target.tenantId != null) {
+        const meta = getClientMeta(req);
+        await storage.createAuditLog({
+          tenantId: target.tenantId,
+          userId: target.id,
+          action: "password_reset_requested",
+          entityType: "user",
+          entityId: target.id,
+          details: { via: "request-password-reset" },
+          ipAddress: meta.ipAddress,
+        });
+      }
+
+      res.json({
+        message: emailResult.ok
+          ? "Password reset link sent. Check your email (or use the link below)."
+          : "Password reset link created. Email was not sent — use the link below.",
+        resetLink,
+        emailSent: emailResult.ok,
+        emailVia: emailResult.via || null,
+        ...(emailResult.error && { emailError: emailResult.error }),
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.post("/api/auth/supplier-reset-password", async (req, res) => {
     try {
       const { token, newPassword } = req.body;

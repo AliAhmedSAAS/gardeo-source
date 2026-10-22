@@ -1,9 +1,16 @@
 /**
- * Email service using Resend API.
+ * Email service: SMTP (env) preferred, then Resend.
  * Used for supplier invitations, reminders, password resets, and admin notifications.
- * Set RESEND_API_KEY and RESEND_FROM in .env to enable sending; otherwise emails are no-op (invite/reset links still returned in API response).
+ *
+ * SMTP (.env):
+ *   SMTP_HOST, SMTP_PORT (default 587), SMTP_SECURE (true/false),
+ *   SMTP_USER, SMTP_PASS (or SMTP_PASSWORD), SMTP_FROM (or MAIL_FROM)
+ *
+ * Resend (.env): RESEND_API_KEY, RESEND_FROM
+ * If neither is configured, sends are skipped (invite/reset links still returned in API response).
  */
 
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
@@ -11,8 +18,85 @@ const fromAddress = process.env.RESEND_FROM || "Guardosmart <onboarding@resend.d
 
 const resend = apiKey ? new Resend(apiKey) : null;
 
+function envFlag(name: string, fallback = false): boolean {
+  const v = String(process.env[name] ?? "").trim().toLowerCase();
+  if (!v) return fallback;
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function getSmtpConfig() {
+  const host = String(process.env.SMTP_HOST || "").trim();
+  if (!host) return null;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = envFlag("SMTP_SECURE", port === 465);
+  const user = String(process.env.SMTP_USER || "").trim() || undefined;
+  const pass =
+    String(process.env.SMTP_PASS || process.env.SMTP_PASSWORD || "").trim() || undefined;
+  const from =
+    String(process.env.SMTP_FROM || process.env.MAIL_FROM || "").trim() || fromAddress;
+  return { host, port: Number.isFinite(port) ? port : 587, secure, user, pass, from };
+}
+
+function isSmtpConfigured(): boolean {
+  return !!getSmtpConfig()?.host;
+}
+
 function isConfigured(): boolean {
-  return !!resend;
+  return isSmtpConfigured() || !!resend;
+}
+
+/** Prefer env SMTP, then Resend. */
+async function sendMail(params: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
+  const smtp = getSmtpConfig();
+  if (smtp) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtp.host,
+        port: smtp.port,
+        secure: smtp.secure,
+        auth: smtp.user && smtp.pass ? { user: smtp.user, pass: smtp.pass } : undefined,
+      });
+      await transporter.sendMail({
+        from: params.from || smtp.from,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+      });
+      return { ok: true, via: "smtp" };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[email] SMTP send failed:", message);
+      return { ok: false, error: message, via: "smtp" };
+    }
+  }
+
+  if (!resend) {
+    console.warn(
+      "[email] Neither SMTP (SMTP_HOST) nor Resend (RESEND_API_KEY) configured. Email not sent to",
+      params.to,
+    );
+    return { ok: false, error: "Email not configured (set SMTP_* or RESEND_API_KEY)" };
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from: params.from || fromAddress,
+      to: [params.to],
+      subject: params.subject,
+      html: params.html,
+    });
+    if (error) return { ok: false, error: error.message, via: "resend" };
+    return { ok: true, via: "resend" };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] Resend send failed:", message);
+    return { ok: false, error: message, via: "resend" };
+  }
 }
 
 export async function sendSupplierInvitation(params: {
@@ -20,19 +104,13 @@ export async function sendSupplierInvitation(params: {
   inviteLink: string;
   companyName?: string;
   contactName?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
   const { to, inviteLink, companyName = "Supplier", contactName } = params;
   const name = contactName || companyName;
-  if (!resend) {
-    console.warn("[email] Resend not configured (RESEND_API_KEY missing). Invitation email not sent to", to);
-    return { ok: true };
-  }
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject: "You're invited to the Guardosmart Supplier Portal",
-      html: `
+  return sendMail({
+    to,
+    subject: "You're invited to the Guardosmart Supplier Portal",
+    html: `
         <p>Hi ${escapeHtml(name)},</p>
         <p>You have been invited to access the Guardosmart Supplier Portal.</p>
         <p>Click the link below to set your password and sign in. This link expires in 7 days.</p>
@@ -40,14 +118,7 @@ export async function sendSupplierInvitation(params: {
         <p>If you did not expect this email, you can ignore it.</p>
         <p>— Guardosmart</p>
       `,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[email] sendSupplierInvitation failed:", message);
-    return { ok: false, error: message };
-  }
+  });
 }
 
 export async function sendSupplierReminder(params: {
@@ -55,65 +126,39 @@ export async function sendSupplierReminder(params: {
   inviteLink: string;
   companyName?: string;
   contactName?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
   const { to, inviteLink, companyName = "Supplier", contactName } = params;
   const name = contactName || companyName;
-  if (!resend) {
-    console.warn("[email] Resend not configured. Reminder email not sent to", to);
-    return { ok: true };
-  }
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject: "Reminder: Set up your Guardosmart Supplier Portal access",
-      html: `
+  return sendMail({
+    to,
+    subject: "Reminder: Set up your Guardosmart Supplier Portal access",
+    html: `
         <p>Hi ${escapeHtml(name)},</p>
         <p>This is a reminder that you have been invited to the Guardosmart Supplier Portal.</p>
         <p>Use the link below to set your password and sign in. This link expires in 7 days.</p>
         <p><a href="${escapeHtml(inviteLink)}">Set password and access portal</a></p>
         <p>— Guardosmart</p>
       `,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[email] sendSupplierReminder failed:", message);
-    return { ok: false, error: message };
-  }
+  });
 }
 
 export async function sendSupplierPasswordReset(params: {
   to: string;
   resetLink: string;
   contactName?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
   const { to, resetLink, contactName = "there" } = params;
-  if (!resend) {
-    console.warn("[email] Resend not configured. Password reset email not sent to", to);
-    return { ok: true };
-  }
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject: "Reset your Guardosmart Supplier Portal password",
-      html: `
+  return sendMail({
+    to,
+    subject: "Reset your Guardosmart password",
+    html: `
         <p>Hi ${escapeHtml(contactName)},</p>
-        <p>A password reset was requested for your Guardosmart Supplier Portal account.</p>
+        <p>A password reset was requested for your Guardosmart account.</p>
         <p><a href="${escapeHtml(resetLink)}">Reset your password</a></p>
         <p>This link expires in 24 hours. If you did not request this, you can ignore this email.</p>
         <p>— Guardosmart</p>
       `,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[email] sendSupplierPasswordReset failed:", message);
-    return { ok: false, error: message };
-  }
+  });
 }
 
 /** Notify supplier that a document was rejected with reason. */

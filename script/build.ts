@@ -65,8 +65,13 @@ async function buildAll() {
 
 buildAll()
   .then(() => {
-    console.log("pushing database schema...");
-    execSync("npm run db:push", { stdio: "inherit" });
+    // --force: CI/deploy has no TTY; drizzle otherwise hangs on "Pulling schema..."
+    // waiting for confirmation (e.g. unique-index rebuilds).
+    console.log("pushing database schema (drizzle-kit push --force)...");
+    execSync("npx drizzle-kit push --force", {
+      stdio: "inherit",
+      env: { ...process.env, CI: "true" },
+    });
   })
   .catch((err) => {
     console.error(err);

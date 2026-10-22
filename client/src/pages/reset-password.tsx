@@ -12,10 +12,45 @@ export default function ResetPasswordPage() {
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const token = params.get("token") ?? "";
   const { toast } = useToast();
+  const [identifier, setIdentifier] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = identifier.trim();
+    if (!id) {
+      toast({ title: "Required", description: "Enter your username or email.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: id }),
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to request reset");
+      if (data.resetLink && typeof data.resetLink === "string") {
+        toast({ title: "Continue", description: "Enter your new password." });
+        // Full navigation so ?token= is picked up reliably
+        window.location.assign(data.resetLink);
+        return;
+      }
+      toast({
+        title: "Check your email",
+        description: data.message || "If an account exists, a reset link was sent.",
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Something went wrong", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,14 +89,40 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <h2 className="text-xl font-bold">Invalid reset link</h2>
-            <p className="text-muted-foreground text-sm">This link is missing the reset token. Request a new link from your administrator.</p>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold">Reset your password</h2>
+            <p className="text-muted-foreground text-sm">
+              Enter your username or email to continue.
+            </p>
           </CardHeader>
           <CardContent>
-            <Link href="/login">
-              <Button variant="outline">Go to sign in</Button>
-            </Link>
+            <form onSubmit={handleRequest} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="identifier">Username or email</Label>
+                <Input
+                  id="identifier"
+                  type="text"
+                  autoComplete="username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="e.g. guardian...fm"
+                  required
+                  data-testid="input-reset-identifier"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading} data-testid="button-request-reset">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Continue
+              </Button>
+            </form>
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              <Link href="/login" className="underline">Back to sign in</Link>
+            </p>
           </CardContent>
         </Card>
       </div>
