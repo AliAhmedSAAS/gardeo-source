@@ -7415,10 +7415,16 @@ export async function registerRoutes(
       const lastLogin = await storage.getSupplierLastLogin(id);
       // "Accepted" = supplier used the invite link and set password (invitation.acceptedAt), not just that we sent an invite (supplier.userId is set when we send)
       const invitationAccepted = await storage.hasSupplierAcceptedAnyInvitation(id);
+      const publicBase = String(process.env.PUBLIC_APP_URL || process.env.APP_URL || "")
+        .trim()
+        .replace(/\/$/, "");
+      const hostBase = `${req.protocol}://${req.get("host") || "localhost"}`;
+      const appBase = publicBase || hostBase;
       const inviteLink =
         !invitationAccepted && invitation?.token
-          ? `${req.protocol}://${req.get("host") || "localhost"}/accept-invite?token=${invitation.token}`
+          ? `${appBase}/accept-invite?token=${invitation.token}`
           : null;
+      const portalLoginUrl = supplier.portalAccessEnabled ? `${appBase}/login` : null;
       res.json({
         portalAccessEnabled: supplier.portalAccessEnabled ?? false,
         portalEmail: supplier.portalEmail ?? supplier.email,
@@ -7426,6 +7432,7 @@ export async function registerRoutes(
         invitationSentAt: invitation?.createdAt ?? null,
         reminderSentAt: invitation?.reminderSentAt ?? null,
         inviteLink,
+        portalLoginUrl,
         loginCount,
         lastLoginAt: lastLogin?.createdAt ?? null,
         lastLoginMeta: lastLogin ? { ipAddress: lastLogin.ipAddress, userAgent: lastLogin.userAgent, location: lastLogin.location } : null,
@@ -7579,7 +7586,11 @@ export async function registerRoutes(
         details: {},
         ipAddress: meta.ipAddress,
       });
-      const resetLink = `${req.protocol}://${req.get("host") || "localhost"}/reset-password?token=${token}`;
+      const publicBase = String(process.env.PUBLIC_APP_URL || process.env.APP_URL || "")
+        .trim()
+        .replace(/\/$/, "");
+      const hostBase = `${req.protocol}://${req.get("host") || "localhost"}`;
+      const resetLink = `${publicBase || hostBase}/reset-password?token=${token}`;
       const supplierUser = await storage.getUser(supplier.userId!);
       const emailResult = await emailService.sendSupplierPasswordReset({
         to: supplierUser?.email ?? (supplier.portalEmail || supplier.email).trim(),
@@ -7590,6 +7601,7 @@ export async function registerRoutes(
         message: "Password reset link created",
         resetLink,
         emailSent: emailResult.ok,
+        emailVia: emailResult.via || null,
         ...(emailResult.error && { emailError: emailResult.error }),
       });
     } catch (err: any) {

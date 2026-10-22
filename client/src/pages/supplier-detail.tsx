@@ -71,6 +71,7 @@ type PortalStatus = {
   invitationSentAt: string | null;
   reminderSentAt: string | null;
   inviteLink: string | null;
+  portalLoginUrl: string | null;
   loginCount: number;
   lastLoginAt: string | null;
   lastLoginMeta: { ipAddress: string | null; userAgent: string | null; location: string | null } | null;
@@ -393,6 +394,7 @@ export default function SupplierDetailPage() {
     queryKey: ["/api/suppliers", id, "portal-status"],
     enabled: id != null && !Number.isNaN(id),
   });
+  const [portalResetLink, setPortalResetLink] = useState<string | null>(null);
 
   const { data: activity = [] } = useQuery<ActivityItem[]>({
     queryKey: ["/api/suppliers", id, "activity"],
@@ -802,7 +804,8 @@ export default function SupplierDetailPage() {
     },
     onSuccess: (data) => {
       invalidateSupplier();
-      toast({ title: "Reset link created", description: data.resetLink ? "Share the link with the supplier." : undefined });
+      if (data.resetLink) setPortalResetLink(data.resetLink);
+      toast({ title: "Reset link created", description: data.resetLink ? "Copy the link below and share with the supplier." : undefined });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -2590,6 +2593,26 @@ export default function SupplierDetailPage() {
                     </Button>
                   )}
                 </div>
+                {portalStatus?.portalLoginUrl && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Portal login link</Label>
+                    <p className="text-xs text-muted-foreground">Share this link so the supplier can sign in to the portal.</p>
+                    <div className="flex gap-2 items-center rounded-lg border bg-muted/30 p-3">
+                      <code className="text-xs flex-1 truncate" title={portalStatus.portalLoginUrl}>{portalStatus.portalLoginUrl}</code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(portalStatus!.portalLoginUrl!);
+                          toast({ title: "Copied", description: "Portal login link copied to clipboard." });
+                        }}
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        Copy link
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {portalStatus?.inviteLink && !portalStatus?.invitationAccepted && (
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">Invitation link</Label>
@@ -2610,8 +2633,25 @@ export default function SupplierDetailPage() {
                     </div>
                   </div>
                 )}
-                {portalStatus?.invitationAccepted && (
-                  <p className="text-xs text-muted-foreground">The invitation link is only shown while the invitation is pending. This supplier has already accepted; use &quot;Reset password&quot; if they need to sign in again.</p>
+                {portalResetLink && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Password reset link</Label>
+                    <p className="text-xs text-muted-foreground">Copy and send this link if the supplier needs to set a new password.</p>
+                    <div className="flex gap-2 items-center rounded-lg border bg-muted/30 p-3">
+                      <code className="text-xs flex-1 truncate" title={portalResetLink}>{portalResetLink}</code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(portalResetLink);
+                          toast({ title: "Copied", description: "Password reset link copied to clipboard." });
+                        }}
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        Copy link
+                      </Button>
+                    </div>
+                  </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 text-sm">
                   <div>
