@@ -241,6 +241,17 @@ function mapShiftStatus(status: string | null | undefined): string {
   return "scheduled";
 }
 
+/** API duty hours (hoursWorked) → shifts.hours_override. Ignores nonsense totals. */
+function parseApiHoursWorked(item: any): string | null {
+  for (const k of ["hoursWorked", "hours_worked", "hours", "Hours", "dutyHours"]) {
+    const n = Number(item?.[k]);
+    if (Number.isFinite(n) && n >= 0 && n < 48) return String(Math.round(n * 100) / 100);
+  }
+  const th = Number(item?.totalHours);
+  if (Number.isFinite(th) && th >= 0 && th < 48) return String(Math.round(th * 100) / 100);
+  return null;
+}
+
 async function fetchFromRestPhpApi(
   url: string,
   apiKey: string,
@@ -336,6 +347,7 @@ async function syncRestPhpInhouseShifts(
       const apiStatus = mapShiftStatus(item.status);
       const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
       const payRate = item.hourlyRate != null && item.hourlyRate !== "" ? String(item.hourlyRate) : null;
+      const hoursOverride = parseApiHoursWorked(item);
       const startTime = item.startTime || "00:00";
       const endTime = item.endTime || "00:00";
 
@@ -344,7 +356,7 @@ async function syncRestPhpInhouseShifts(
         [tenantId, extId],
       );
       if (existingResult.rows.length > 0) {
-        // Full resync overwrite — employee/site/date/times/status (fixes wrong PIN links)
+        // Full resync overwrite — employee/site/date/times/status/hoursWorked
         await pool.query(
           `UPDATE shifts SET
              status = $1,
@@ -357,12 +369,14 @@ async function syncRestPhpInhouseShifts(
              end_time = $7,
              notes = COALESCE($8, notes),
              pay_rate = COALESCE($9, pay_rate),
+             hours_override = COALESCE($10::numeric, hours_override),
              last_synced_at = NOW(),
              updated_at = NOW()
-           WHERE id = $10`,
+           WHERE id = $11`,
           [
             apiStatus, employeeId, siteId, title, item.date,
-            startTime, endTime, item.notes || null, payRate, existingResult.rows[0].id,
+            startTime, endTime, item.notes || null, payRate, hoursOverride,
+            existingResult.rows[0].id,
           ],
         );
         breakdown.shifts.updated++;
@@ -391,12 +405,13 @@ async function syncRestPhpInhouseShifts(
                  end_time = $8,
                  notes = COALESCE($9, notes),
                  pay_rate = COALESCE($10, pay_rate),
+                 hours_override = COALESCE($11::numeric, hours_override),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $11`,
+               WHERE id = $12`,
               [
                 extId, apiStatus, employeeId, siteId, title, item.date,
-                startTime, endTime, item.notes || null, payRate, row.id,
+                startTime, endTime, item.notes || null, payRate, hoursOverride, row.id,
               ],
             );
             breakdown.shifts.updated++;
@@ -407,8 +422,8 @@ async function syncRestPhpInhouseShifts(
       }
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, hours_override, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::numeric, $13, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
           title,
@@ -418,6 +433,7 @@ async function syncRestPhpInhouseShifts(
           apiStatus,
           item.notes || null,
           payRate,
+          hoursOverride,
           extId,
         ],
       );
@@ -591,6 +607,7 @@ async function syncRestPhpShifts(
       const startTime = item.startTime || "00:00";
       const endTime = item.endTime || "00:00";
       const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
+      const hoursOverride = parseApiHoursWorked(item);
 
       // 1) Exact external_id match — refresh status/times so API and Gardeo stay aligned
       const existingResult = await pool.query(
@@ -611,13 +628,14 @@ async function syncRestPhpShifts(
              end_time = $9,
              notes = COALESCE($10, notes),
              pay_rate = COALESCE($11, pay_rate),
+             hours_override = COALESCE($12::numeric, hours_override),
              last_synced_at = NOW(),
              updated_at = NOW()
-           WHERE id = $12`,
+           WHERE id = $13`,
           [
             apiStatus, employeeId, siteId, supplierId, dutyTypeId,
             title, item.date, startTime, endTime,
-            item.notes || null, payRate, existingResult.rows[0].id,
+            item.notes || null, payRate, hoursOverride, existingResult.rows[0].id,
           ],
         );
         result.updated++;
@@ -650,12 +668,13 @@ async function syncRestPhpShifts(
                  end_time = $10,
                  notes = COALESCE($11, notes),
                  pay_rate = COALESCE($12, pay_rate),
+                 hours_override = COALESCE($13::numeric, hours_override),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $13`,
+               WHERE id = $14`,
               [
                 extId, apiStatus, employeeId, siteId, supplierId, dutyTypeId, title,
-                item.date, startTime, endTime, item.notes || null, payRate, row.id,
+                item.date, startTime, endTime, item.notes || null, payRate, hoursOverride, row.id,
               ],
             );
             result.updated++;
@@ -666,8 +685,8 @@ async function syncRestPhpShifts(
       }
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, duty_type_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, duty_type_id, title, date, start_time, end_time, status, notes, pay_rate, hours_override, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::numeric, $14, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId, dutyTypeId,
           title,
@@ -677,6 +696,7 @@ async function syncRestPhpShifts(
           apiStatus,
           item.notes || null,
           payRate,
+          hoursOverride,
           extId,
         ]
       );
@@ -940,6 +960,7 @@ async function syncPhpShifts(
       const startTime = item.time_start || "00:00";
       const endTime = item.time_finish || "00:00";
       const title = `${item.location || "Shift"} - ${item.shift_date}`;
+      const hoursOverride = parseApiHoursWorked(item);
 
       if (existingResult.rows.length > 0) {
         await pool.query(
@@ -953,13 +974,14 @@ async function syncPhpShifts(
              start_time = $7,
              end_time = $8,
              pay_rate = COALESCE($9, pay_rate),
+             hours_override = COALESCE($10::numeric, hours_override),
              last_synced_at = NOW(),
              updated_at = NOW()
-           WHERE id = $10`,
+           WHERE id = $11`,
           [
             item.status ? mapShiftStatus(item.status) : "completed",
             employeeId, siteId, supplierId, title, item.shift_date,
-            startTime, endTime, payRate, existingResult.rows[0].id,
+            startTime, endTime, payRate, hoursOverride, existingResult.rows[0].id,
           ],
         );
         result.updated++;
@@ -987,14 +1009,15 @@ async function syncPhpShifts(
                  start_time = $8,
                  end_time = $9,
                  pay_rate = COALESCE($10, pay_rate),
+                 hours_override = COALESCE($11::numeric, hours_override),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $11`,
+               WHERE id = $12`,
               [
                 extId,
                 item.status ? mapShiftStatus(item.status) : "completed",
                 employeeId, siteId, supplierId, title, item.shift_date,
-                startTime, endTime, payRate, row.id,
+                startTime, endTime, payRate, hoursOverride, row.id,
               ],
             );
             result.updated++;
@@ -1005,15 +1028,16 @@ async function syncPhpShifts(
       }
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, pay_rate, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9, $10, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, pay_rate, hours_override, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'completed', $9, $10::numeric, $11, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
           title,
           item.shift_date,
-          item.time_start || "00:00",
-          item.time_finish || "00:00",
+          startTime,
+          endTime,
           payRate,
+          hoursOverride,
           extId,
         ]
       );
@@ -1494,6 +1518,7 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
       const title = `${item.siteName || item.siteId || "Shift"} - ${item.date}`;
       const startTime = item.startTime || "00:00";
       const endTime = item.endTime || "00:00";
+      const hoursOverride = parseApiHoursWorked(item);
 
       if (existingResult.rows.length > 0) {
         await pool.query(
@@ -1508,12 +1533,14 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
              end_time = $8,
              notes = COALESCE($9, notes),
              pay_rate = COALESCE($10, pay_rate),
+             hours_override = COALESCE($11::numeric, hours_override),
              last_synced_at = NOW(),
              updated_at = NOW()
-           WHERE id = $11`,
+           WHERE id = $12`,
           [
             apiStatus, employeeId, siteId, supplierId, title, item.date,
-            startTime, endTime, item.notes || null, payRate, existingResult.rows[0].id,
+            startTime, endTime, item.notes || null, payRate, hoursOverride,
+            existingResult.rows[0].id,
           ],
         );
         result.updated++;
@@ -1542,12 +1569,13 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
                  end_time = $9,
                  notes = COALESCE($10, notes),
                  pay_rate = COALESCE($11, pay_rate),
+                 hours_override = COALESCE($12::numeric, hours_override),
                  last_synced_at = NOW(),
                  updated_at = NOW()
-               WHERE id = $12`,
+               WHERE id = $13`,
               [
                 extId, apiStatus, employeeId, siteId, supplierId, title, item.date,
-                startTime, endTime, item.notes || null, payRate, row.id,
+                startTime, endTime, item.notes || null, payRate, hoursOverride, row.id,
               ],
             );
             result.updated++;
@@ -1558,14 +1586,14 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
       }
 
       await pool.query(
-        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, external_id, last_synced_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())`,
+        `INSERT INTO shifts (tenant_id, employee_id, site_id, supplier_id, title, date, start_time, end_time, status, notes, pay_rate, hours_override, external_id, last_synced_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::numeric, $13, NOW())`,
         [
           tenantId, employeeId, siteId, supplierId,
           title,
           item.date, startTime, endTime,
           apiStatus,
-          item.notes || null, payRate, extId,
+          item.notes || null, payRate, hoursOverride, extId,
         ]
       );
       result.created++;
