@@ -14949,10 +14949,14 @@ export async function registerRoutes(
       candidates = candidates.filter((u) => u.isActive !== false && u.password !== "NEEDS_ONBOARDING");
 
       // Always return a generic success shape to avoid account enumeration when nothing matches.
+      // Never return resetLink here — user must open the link from their email only.
+      const genericOk = {
+        message: "If an account exists for that username or email, a reset link has been sent. Check your inbox.",
+        emailSent: true,
+      };
+
       if (candidates.length === 0) {
-        return res.json({
-          message: "If an account exists, a reset link has been created. Check your email or use the link shown.",
-        });
+        return res.json(genericOk);
       }
       if (candidates.length > 1) {
         return res.status(400).json({
@@ -14966,7 +14970,11 @@ export async function registerRoutes(
       await storage.deletePasswordResetTokensByUserId(target.id);
       await storage.createPasswordResetToken({ userId: target.id, token, expiresAt });
 
-      const resetLink = `${req.protocol}://${req.get("host") || "localhost"}/reset-password?token=${token}`;
+      const publicBase = String(process.env.PUBLIC_APP_URL || process.env.APP_URL || "")
+        .trim()
+        .replace(/\/$/, "");
+      const hostBase = `${req.protocol}://${req.get("host") || "localhost"}`;
+      const resetLink = `${publicBase || hostBase}/reset-password?token=${token}`;
       const emailResult = await emailService.sendSupplierPasswordReset({
         to: target.email,
         resetLink,
@@ -14981,19 +14989,28 @@ export async function registerRoutes(
           action: "password_reset_requested",
           entityType: "user",
           entityId: target.id,
-          details: { via: "request-password-reset" },
+          details: {
+            via: "request-password-reset",
+            emailSent: emailResult.ok,
+            emailVia: emailResult.via || null,
+          },
           ipAddress: meta.ipAddress,
         });
       }
 
+      if (!emailResult.ok) {
+        return res.status(503).json({
+          message: "Could not send the reset email. Check SMTP settings and try again.",
+          emailSent: false,
+          emailVia: emailResult.via || null,
+          ...(emailResult.error && { emailError: emailResult.error }),
+        });
+      }
+
       res.json({
-        message: emailResult.ok
-          ? "Password reset link sent. Check your email (or use the link below)."
-          : "Password reset link created. Email was not sent — use the link below.",
-        resetLink,
-        emailSent: emailResult.ok,
+        message: "A password reset link has been sent to your email. Open that link to set a new password.",
+        emailSent: true,
         emailVia: emailResult.via || null,
-        ...(emailResult.error && { emailError: emailResult.error }),
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });

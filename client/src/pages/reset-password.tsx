@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Loader2, Eye, EyeOff } from "lucide-react";
+import { Shield, Loader2, Eye, EyeOff, Mail } from "lucide-react";
 
 export default function ResetPasswordPage() {
   const [, setLocation] = useLocation();
@@ -17,6 +17,7 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,15 +36,11 @@ export default function ResetPasswordPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to request reset");
-      if (data.resetLink && typeof data.resetLink === "string") {
-        toast({ title: "Continue", description: "Enter your new password." });
-        // Full navigation so ?token= is picked up reliably
-        window.location.assign(data.resetLink);
-        return;
-      }
+      // Link is emailed only — never open reset form from this response.
+      setEmailSent(true);
       toast({
         title: "Check your email",
-        description: data.message || "If an account exists, a reset link was sent.",
+        description: data.message || "Open the reset link from your inbox to set a new password.",
       });
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Something went wrong", variant: "destructive" });
@@ -85,6 +82,40 @@ export default function ResetPasswordPage() {
     }
   };
 
+  if (!token && emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
+                <Mail className="w-6 h-6 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold">Check your email</h2>
+            <p className="text-muted-foreground text-sm">
+              If an account exists, we sent a reset link. Open that link from your inbox — it will not open automatically here.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setEmailSent(false)}
+              data-testid="button-send-again"
+            >
+              Send again
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              <Link href="/login" className="underline">Back to sign in</Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -97,7 +128,7 @@ export default function ResetPasswordPage() {
             </div>
             <h2 className="text-xl font-bold">Reset your password</h2>
             <p className="text-muted-foreground text-sm">
-              Enter your username or email to continue.
+              Enter your username or email. We will email you a reset link.
             </p>
           </CardHeader>
           <CardContent>
@@ -117,7 +148,7 @@ export default function ResetPasswordPage() {
               </div>
               <Button type="submit" className="w-full" disabled={loading} data-testid="button-request-reset">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Continue
+                Send reset link
               </Button>
             </form>
             <p className="text-center text-sm text-muted-foreground mt-4">
