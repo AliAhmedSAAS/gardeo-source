@@ -125,6 +125,10 @@ interface EnrichedShift {
   verifiedAt: string | null;
   shiftCode: string | null;
   employeeName?: string;
+  /** WID = employee_number || external_id */
+  officerWid?: string | null;
+  employeeNumber?: string | null;
+  externalId?: string | null;
   siteName?: string;
   supplierName?: string;
   payRate?: number | null;
@@ -184,6 +188,7 @@ const FINANCE_CSV_HEADERS = [
   "Date",
   "Start",
   "End",
+  "WID",
   "Officer",
   "Site",
   "Supplier",
@@ -196,6 +201,7 @@ const FINANCE_CSV_HEADERS = [
   "Travel £",
   "Pay rate",
   "Charge rate",
+  "Total pay £",
   "Shift status",
   "Finance status",
   "Finance note",
@@ -220,6 +226,24 @@ function calcHoursFromTimes(
 function shiftDisplayHours(shift: EnrichedShift): number | null {
   if (shift.hours != null && !Number.isNaN(Number(shift.hours))) return Number(shift.hours);
   return calcHoursFromTimes(shift.startTime, shift.endTime);
+}
+
+function officerWid(shift: EnrichedShift): string {
+  return String(shift.officerWid || shift.employeeNumber || shift.externalId || "").trim();
+}
+
+/** Gross shift pay: (hours + holiday − late + deduction hrs) × rate + travel − deduction £ */
+function shiftTotalPay(shift: EnrichedShift): number | null {
+  const hours = shiftDisplayHours(shift);
+  const rate = shift.payRate != null ? Number(shift.payRate) : NaN;
+  if (hours == null || !Number.isFinite(rate)) return null;
+  const holiday = Number(shift.holidayHours || 0);
+  const late = Number(shift.lateHours || 0);
+  const dedHrs = Number(shift.deductionHours || 0);
+  const travel = Number(shift.travelAllowance || 0);
+  const dedAmt = Number(shift.deductionAmount || 0);
+  const wageHours = Math.max(0, hours + holiday - late + dedHrs);
+  return Math.round((wageHours * rate + travel - dedAmt) * 100) / 100;
 }
 
 interface PaginatedResponse {
@@ -631,6 +655,7 @@ export default function FinanceApprovalPage() {
         formatShiftDate(s.date),
         formatShiftTime(s.startTime),
         formatShiftTime(s.endTime),
+        officerWid(s),
         s.employeeName || "Unassigned",
         s.siteName || "",
         supplierLabel(s),
@@ -643,6 +668,7 @@ export default function FinanceApprovalPage() {
         s.travelAllowance ?? 0,
         s.payRate ?? "",
         s.chargeRate ?? "",
+        shiftTotalPay(s) ?? "",
         s.status || "",
         s.financeStatus || "pending",
         s.financeNote || "",

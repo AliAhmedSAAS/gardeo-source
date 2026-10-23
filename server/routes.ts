@@ -5278,6 +5278,9 @@ export async function registerRoutes(
             si.client_id,
             COALESCE(cl.company_name, si.client_name, '') AS client_name,
             COALESCE(u.first_name || ' ' || u.last_name, 'Unassigned') AS employee_name,
+            COALESCE(NULLIF(e.employee_number, ''), e.external_id) AS officer_wid,
+            e.employee_number,
+            e.external_id,
             COALESCE(su.company_name, '') AS supplier_name
           ${fromJoins}
           WHERE ${whereClause}
@@ -5414,6 +5417,9 @@ export async function registerRoutes(
           verifiedAt: r.verified_at,
           shiftCode: r.shift_code,
           employeeName: r.employee_name,
+          officerWid: r.officer_wid || r.employee_number || r.external_id || null,
+          employeeNumber: r.employee_number || null,
+          externalId: r.external_id || null,
           siteName: r.site_name,
           clientName: r.client_name,
           supplierName: r.supplier_name,
