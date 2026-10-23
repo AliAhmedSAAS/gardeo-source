@@ -650,8 +650,8 @@ export default function PayrollSummaryPage() {
               <th className="p-2">GFM PAYE</th>
               <th className="p-2">Self-employed</th>
               <th className="p-2">Total</th>
-              <th className="p-2">Remarks</th>
-              <th className="p-2">Accounts remarks</th>
+              <th className="p-2 min-w-[14rem]">Remarks</th>
+              <th className="p-2 min-w-[14rem]">Accounts remarks</th>
               <th className="p-2">Shifts</th>
             </tr>
           </thead>
@@ -812,19 +812,23 @@ export default function PayrollSummaryPage() {
                       {Number(totalH)}h<br />{gbp(totalW)}
                     </button>
                   </td>
-                  <td className="p-2 w-32">
+                  <td className="p-2 min-w-[14rem] w-56 align-top">
                     <Textarea
-                      className="h-16 text-xs"
+                      key={`remarks-${row.employeeId}-${row.monthId ?? "x"}-${row.remarks ?? ""}`}
+                      className="h-16 min-w-[12rem] w-full text-xs resize-y whitespace-pre-wrap break-words"
                       defaultValue={row.remarks || ""}
                       disabled={!canControllerRemarks(role) || !row.monthId}
+                      title={row.remarks || undefined}
                       onBlur={(e) => row.monthId && e.target.value !== (row.remarks || "") && patchMutation.mutate({ id: row.monthId, data: { remarks: e.target.value } })}
                     />
                   </td>
-                  <td className="p-2 w-32">
+                  <td className="p-2 min-w-[14rem] w-56 align-top">
                     <Textarea
-                      className="h-16 text-xs"
+                      key={`acc-remarks-${row.employeeId}-${row.monthId ?? "x"}-${row.accountsRemarks ?? ""}`}
+                      className="h-16 min-w-[12rem] w-full text-xs resize-y whitespace-pre-wrap break-words"
                       defaultValue={row.accountsRemarks || ""}
                       disabled={!canAccountsRemarks(role) || !row.monthId}
+                      title={row.accountsRemarks || undefined}
                       onBlur={(e) => row.monthId && e.target.value !== (row.accountsRemarks || "") && patchMutation.mutate({ id: row.monthId, data: { accountsRemarks: e.target.value } })}
                     />
                   </td>
