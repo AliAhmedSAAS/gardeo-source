@@ -237,7 +237,12 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
                 u.first_name, u.last_name,
                 s.company_name AS agent_name,
                 b.account_name, b.account_number, b.sort_code, b.bank_name,
-                m.id AS month_id, m.rules_of_payment, m.payroll_source, m.self_payroll_source, m.ni_used, m.hr_status,
+                m.id AS month_id,
+                COALESCE(m.rules_of_payment, prev.rules_of_payment) AS rules_of_payment,
+                COALESCE(m.payroll_source, prev.payroll_source) AS payroll_source,
+                COALESCE(m.self_payroll_source, prev.self_payroll_source) AS self_payroll_source,
+                COALESCE(m.ni_used, prev.ni_used, 0) AS ni_used,
+                COALESCE(m.hr_status, prev.hr_status, 'approved') AS hr_status,
                 m.remarks, m.accounts_remarks, m.first4_hours, m.first4_wages, m.first4_paid,
                 m.gfm_hours, m.gfm_wages, m.gfm_paid, m.self_hours, m.self_wages, m.self_paid
          FROM eligible el
@@ -247,6 +252,15 @@ export function registerPayrollControlRoutes(app: Express, requireRole: RequireR
          LEFT JOIN bank_details b ON b.employee_id = e.id AND b.account_purpose = 'default'
          LEFT JOIN payroll_control_months m
            ON m.employee_id = e.id AND m.tenant_id = e.tenant_id AND m.period_month = $2
+         LEFT JOIN LATERAL (
+           SELECT p.rules_of_payment, p.payroll_source, p.self_payroll_source, p.ni_used, p.hr_status
+           FROM payroll_control_months p
+           WHERE p.tenant_id = e.tenant_id
+             AND p.employee_id = e.id
+             AND p.period_month < $2::date
+           ORDER BY p.period_month DESC
+           LIMIT 1
+         ) prev ON true
          WHERE e.tenant_id = $1
            AND COALESCE(e.is_merged, false) = false
          ORDER BY u.last_name NULLS LAST, u.first_name NULLS LAST, e.id`,

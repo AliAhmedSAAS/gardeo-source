@@ -149,12 +149,43 @@ export async function ensureMonthRow(tenantId: number, employeeId: number, month
     [tenantId, employeeId, period],
   );
   if (existing.rows[0]) return existing.rows[0];
+
+  // Carry live rules from the officer's most recent prior month (already approved / live).
+  // Do not copy wage buckets, paid flags, or remarks — those are month-specific.
+  const prior = await pool.query(
+    `SELECT rules_of_payment, payroll_source, self_payroll_source, ni_used, hr_status
+     FROM payroll_control_months
+     WHERE tenant_id = $1 AND employee_id = $2 AND period_month < $3::date
+     ORDER BY period_month DESC
+     LIMIT 1`,
+    [tenantId, employeeId, period],
+  );
+  const p = prior.rows[0];
+
   const inserted = await pool.query(
-    `INSERT INTO payroll_control_months (tenant_id, employee_id, period_month)
-     VALUES ($1, $2, $3)
+    `INSERT INTO payroll_control_months (
+       tenant_id, employee_id, period_month,
+       rules_of_payment, payroll_source, self_payroll_source, ni_used, hr_status
+     ) VALUES (
+       $1, $2, $3,
+       COALESCE($4, 'full_paye'),
+       COALESCE($5, 'first4_paye'),
+       COALESCE($6, 'self_employed'),
+       COALESCE($7, 0),
+       COALESCE($8, 'approved')
+     )
      ON CONFLICT (tenant_id, employee_id, period_month) DO UPDATE SET updated_at = NOW()
      RETURNING *`,
-    [tenantId, employeeId, period],
+    [
+      tenantId,
+      employeeId,
+      period,
+      p?.rules_of_payment ?? null,
+      p?.payroll_source ?? null,
+      p?.self_payroll_source ?? null,
+      p?.ni_used ?? null,
+      p?.hr_status ?? null,
+    ],
   );
   return inserted.rows[0];
 }
