@@ -40,7 +40,7 @@ import { generateTwiML } from "./twilio-service";
 import { classifyTransactions, learnFromAllocation } from "./auto-classify-service";
 import { registerStaffProfileRoutes } from "./staff-profile-routes";
 import { registerPayrollControlRoutes } from "./payroll-control-routes";
-import { shiftHours as calcShiftHours } from "./payroll-control";
+import { shiftHours as calcShiftHours, syncAppliedLinesFromShift } from "./payroll-control";
 import { registerPanlRoutes } from "./panl-routes";
 import { registerQuEmailsCronRoutes } from "./qu-emails-cron";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
@@ -5543,6 +5543,9 @@ export async function registerRoutes(
 
       const updated = await storage.updateShift(shiftId, parsed.patch as any);
       if (user.tenantId != null) {
+        await syncAppliedLinesFromShift({ tenantId: user.tenantId, shiftId }).catch((e) => {
+          console.warn("syncAppliedLinesFromShift failed", shiftId, (e as Error)?.message);
+        });
         await storage.createAuditLog({
           tenantId: user.tenantId,
           userId: user.id,
@@ -5582,6 +5585,9 @@ export async function registerRoutes(
           }
           await storage.updateShift(id, parsed.patch as any);
           if (user.tenantId != null) {
+            await syncAppliedLinesFromShift({ tenantId: user.tenantId, shiftId: id }).catch((e) => {
+              console.warn("syncAppliedLinesFromShift failed", id, (e as Error)?.message);
+            });
             await storage.createAuditLog({
               tenantId: user.tenantId,
               userId: user.id,

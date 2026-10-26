@@ -297,6 +297,80 @@ async function eligibleShifts(tenantId: number, employeeId: number, month: strin
   return rows;
 }
 
+/**
+ * After Finance Approval edits pay_rate / deduction / travel / hours on a shift,
+ * push the same figures onto unbilled payroll_applied_lines so Summary + Create Bill match.
+ */
+export async function syncAppliedLinesFromShift(opts: {
+  tenantId: number;
+  shiftId: number;
+}): Promise<{ updated: number }> {
+  const shiftRes = await pool.query(
+    `SELECT id, tenant_id, pay_rate, deduction_amount, travel_allowance,
+            holiday_hours, late_hours, hours_override, break_minutes, start_time, end_time
+     FROM shifts WHERE id = $1 AND tenant_id = $2`,
+    [opts.shiftId, opts.tenantId],
+  );
+  const shift = shiftRes.rows[0];
+  if (!shift) return { updated: 0 };
+
+  const linesRes = await pool.query(
+    `SELECT id, month_row_id, hours, holiday_hours, late_hours, rate, expense, wages, bucket
+     FROM payroll_applied_lines
+     WHERE tenant_id = $1 AND shift_id = $2 AND billed = false
+     ORDER BY id ASC`,
+    [opts.tenantId, opts.shiftId],
+  );
+  if (!linesRes.rows.length) return { updated: 0 };
+
+  const payRate = num(shift.pay_rate);
+  const travelTotal = money(Math.max(0, num(shift.travel_allowance)));
+  const deductionTotal = money(Math.max(0, num(shift.deduction_amount)));
+  const single = linesRes.rows.length === 1;
+  const shiftHoliday = money(Math.max(0, num(shift.holiday_hours)));
+  const shiftLate = money(Math.max(0, num(shift.late_hours)));
+
+  let travelLeft = travelTotal;
+  let dedLeft = deductionTotal;
+  const monthIds = new Set<number>();
+  let updated = 0;
+
+  for (const line of linesRes.rows) {
+    // Single applied line: keep holiday/late/hours in sync with the shift the approver edits
+    const holiday = single ? shiftHoliday : money(Math.max(0, num(line.holiday_hours)));
+    const late = single ? shiftLate : money(Math.max(0, num(line.late_hours)));
+    const hours = single && num(shift.hours_override) > 0
+      ? money(num(shift.hours_override))
+      : money(num(line.hours));
+    const rate = payRate > 0 ? money(payRate) : money(num(line.rate));
+    const travelOnce = travelLeft;
+    travelLeft = 0;
+    const expense = dedLeft;
+    dedLeft = 0;
+    const paidHours = money(Math.max(0, hours + holiday - late));
+    const wages = money(paidHours * rate - expense + travelOnce);
+
+    await pool.query(
+      `UPDATE payroll_applied_lines SET
+         hours = $2,
+         holiday_hours = $3,
+         late_hours = $4,
+         rate = $5,
+         expense = $6,
+         wages = $7
+       WHERE id = $1`,
+      [line.id, hours, holiday, late, rate, expense, wages],
+    );
+    monthIds.add(Number(line.month_row_id));
+    updated += 1;
+  }
+
+  for (const monthRowId of monthIds) {
+    await refreshMonthTotals(monthRowId);
+  }
+  return { updated };
+}
+
 export async function refreshMonthTotals(monthRowId: number) {
   const { rows } = await pool.query(
     `SELECT
