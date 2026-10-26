@@ -5481,6 +5481,11 @@ export async function registerRoutes(
       if (r.error) return { error: r.error };
       patch.deductionHours = String(r.value);
     }
+    if (body.deductionAmount !== undefined) {
+      const r = numOrNull(body.deductionAmount, false, "deduction amount");
+      if (r.error) return { error: r.error };
+      patch.deductionAmount = String(r.value);
+    }
     if (body.breakMinutes !== undefined) {
       const v = Number(body.breakMinutes);
       if (!Number.isFinite(v) || v < 0) return { error: "Invalid break minutes" };

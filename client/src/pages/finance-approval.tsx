@@ -29,6 +29,7 @@ type FinanceEditableField =
   | "hours"
   | "holidayHours"
   | "deductionHours"
+  | "deductionAmount"
   | "breakMinutes"
   | "payRate"
   | "chargeRate"
@@ -306,7 +307,7 @@ export default function FinanceApprovalPage() {
   const [bulkEdit, setBulkEdit] = useState({
     hours: "",
     holidayHours: "",
-    deductionHours: "",
+    deductionAmount: "",
     breakMinutes: "",
     payRate: "",
     chargeRate: "",
@@ -502,7 +503,7 @@ export default function FinanceApprovalPage() {
       setBulkEdit({
         hours: "",
         holidayHours: "",
-        deductionHours: "",
+        deductionAmount: "",
         breakMinutes: "",
         payRate: "",
         chargeRate: "",
@@ -524,7 +525,7 @@ export default function FinanceApprovalPage() {
     const map: Array<[FinanceEditableField, string]> = [
       ["hours", bulkEdit.hours],
       ["holidayHours", bulkEdit.holidayHours],
-      ["deductionHours", bulkEdit.deductionHours],
+      ["deductionAmount", bulkEdit.deductionAmount],
       ["breakMinutes", bulkEdit.breakMinutes],
       ["payRate", bulkEdit.payRate],
       ["travelAllowance", bulkEdit.travelAllowance],
@@ -1011,7 +1012,7 @@ export default function FinanceApprovalPage() {
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Break</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Holiday hrs</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Late hrs</th>
-                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Deduction</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Deduction £</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Travel £</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
@@ -1111,18 +1112,19 @@ export default function FinanceApprovalPage() {
                             fmtNum(shift.lateHours ?? 0)
                           )}
                         </td>
-                        <td className={`p-3 text-right tabular-nums text-xs ${(shift.deductionAmount ?? 0) > 0 ? "text-red-600" : ""}`} data-testid={`text-deduction-${shift.id}`}>
+                        <td className={`p-3 text-right tabular-nums text-xs ${Number(shift.deductionAmount ?? 0) > 0 ? "text-red-600" : ""}`} data-testid={`text-deduction-${shift.id}`}>
                           {canEditFields ? (
                             <FinanceNumInput
-                              value={shift.deductionHours ?? 0}
-                              min="-999"
+                              value={shift.deductionAmount ?? 0}
+                              prefix="£"
                               testId={`input-deduction-${shift.id}`}
-                              onSave={(n) => saveField(shift.id, "deductionHours", n ?? 0)}
+                              onSave={(n) => saveField(shift.id, "deductionAmount", n ?? 0)}
                               disabled={updateFieldsMutation.isPending}
+                              className={Number(shift.deductionAmount ?? 0) > 0 ? "text-red-600" : ""}
                             />
-                          ) : (shift.deductionAmount ?? 0) > 0
-                            ? `£${fmtNum(shift.deductionAmount)}`
-                            : fmtNum(shift.deductionHours ?? 0)}
+                          ) : (
+                            `£${fmtNum(shift.deductionAmount ?? 0)}`
+                          )}
                         </td>
                         <td className="p-3 text-right tabular-nums text-xs" data-testid={`text-travel-${shift.id}`}>
                           {canEditFields ? (
@@ -1256,7 +1258,7 @@ export default function FinanceApprovalPage() {
               <li>Only shifts that have been booked on and booked off (or verified/completed) appear for finance review</li>
               <li>Shifts with no book-on remain as "scheduled" or "missed" and are not eligible for invoicing</li>
               <li>Late shifts are highlighted when Late hrs is greater than zero</li>
-              <li>Account/admin can edit Break, Holiday hrs, Late hrs, Deduction, Travel £, Pay rate, and Charge rate</li>
+              <li>Account/admin can edit Break, Holiday hrs, Late hrs, Deduction £, Travel £, Pay rate, and Charge rate</li>
               <li>Select multiple shifts and use Bulk Update Fields to apply the same values</li>
               <li>Rejected shifts require a reason and will not be included in invoices or payroll</li>
               <li>Only approved shifts can be invoiced to clients or paid to officers</li>
@@ -1359,13 +1361,14 @@ export default function FinanceApprovalPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="bulk-deduction">Deduction hrs</Label>
+              <Label htmlFor="bulk-deduction">Deduction £</Label>
               <Input
                 id="bulk-deduction"
                 type="number"
+                min={0}
                 step={0.01}
-                value={bulkEdit.deductionHours}
-                onChange={(e) => setBulkEdit((p) => ({ ...p, deductionHours: e.target.value }))}
+                value={bulkEdit.deductionAmount}
+                onChange={(e) => setBulkEdit((p) => ({ ...p, deductionAmount: e.target.value }))}
                 data-testid="input-bulk-deduction"
               />
             </div>
