@@ -271,6 +271,10 @@ export default function PayrollBillsPage() {
                     <th className="p-2">Date</th>
                     <th className="p-2">Site</th>
                     <th className="p-2">Hours</th>
+                    <th className="p-2">Break</th>
+                    <th className="p-2">Holiday</th>
+                    <th className="p-2">Late</th>
+                    <th className="p-2">Travel £</th>
                     <th className="p-2">Rate</th>
                     <th className="p-2">Wages</th>
                     <th className="p-2">Deduction</th>
@@ -284,18 +288,28 @@ export default function PayrollBillsPage() {
                       rate: Number(l.rate) || 0,
                       wages: Number(l.wages) || 0,
                       bucket: l.bucket,
+                      expense: l.expense,
                     });
+                    const travel = Number(l.travel_allowance) || 0;
                     return (
                       <tr key={l.id} className="border-t">
                         <td className="p-2">{String(l.shift_date || l.date || "").slice(0, 10)}</td>
                         <td className="p-2">{l.site_name || "—"}</td>
                         <td className="p-2">{l.hours}</td>
+                        <td className="p-2">
+                          {(l.break_minutes || 0) > 0 ? `${l.break_minutes}m` : "—"}
+                        </td>
+                        <td className="p-2">{l.holiday_hours ?? 0}</td>
+                        <td className={`p-2 ${Number(l.late_hours) > 0 ? "text-amber-600" : ""}`}>
+                          {l.late_hours ?? 0}
+                        </td>
+                        <td className="p-2">{travel > 0 ? gbp(travel) : "—"}</td>
                         <td className="p-2">{gbp(pay.rate)}</td>
                         <td className="p-2">{gbp(pay.wages)}</td>
                         <td className={`p-2 ${pay.deduction > 0 ? "text-red-600" : ""}`}>
-                          {pay.deduction > 0 ? gbp(pay.deduction) : "—"}
+                          {gbp(pay.deduction)}
                         </td>
-                        <td className="p-2">{pay.deduction > 0 ? gbp(pay.net) : "—"}</td>
+                        <td className="p-2 font-medium">{gbp(pay.net)}</td>
                       </tr>
                     );
                   })}

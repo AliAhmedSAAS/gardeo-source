@@ -676,6 +676,7 @@ export async function listClaimable(opts: {
 
   const { rows } = await pool.query(
     `SELECT l.*, s.date AS shift_date, s.start_time, s.end_time, s.title,
+            s.break_minutes, s.travel_allowance,
             st.name AS site_name,
             e.employee_number, e.external_id, e.national_insurance, e.officer_step, e.supplier_id,
             s.supplier_id AS shift_supplier_id,

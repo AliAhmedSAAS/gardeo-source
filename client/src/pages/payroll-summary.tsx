@@ -950,6 +950,7 @@ export default function PayrollSummaryPage() {
                       rate: Number(s.rate) || 0,
                       wages: Number(s.wages) || 0,
                       bucket: s.bucket,
+                      expense: s.expense,
                     });
                     return (
                       <tr key={`${s.id}-${s.bucket || "raw"}`} className="border-b">
@@ -968,9 +969,11 @@ export default function PayrollSummaryPage() {
                         <td className="p-1">{pay.rate ? pay.rate.toFixed(2) : "—"}</td>
                         <td className="p-1">{s.wages != null && s.wages !== "" ? gbp(pay.wages) : "—"}</td>
                         <td className={`p-1 ${pay.deduction > 0 ? "text-red-600" : ""}`}>
-                          {pay.deduction > 0 ? gbp(pay.deduction) : "—"}
+                          {s.wages != null && s.wages !== "" ? gbp(pay.deduction) : "—"}
                         </td>
-                        <td className="p-1">{pay.deduction > 0 ? gbp(pay.net) : "—"}</td>
+                        <td className="p-1 font-medium">
+                          {s.wages != null && s.wages !== "" ? gbp(pay.net) : "—"}
+                        </td>
                         <td className="p-1">{s.bucket || s.status}</td>
                       </tr>
                     );

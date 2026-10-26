@@ -554,6 +554,7 @@ export default function PayrollPendingPaymentsPage() {
                   rate: Number(l.rate) || 0,
                   wages: Number(l.wages) || 0,
                   bucket: review?.bill?.payee_type === "Self-employed" ? "self" : l.bucket,
+                  expense: l.expense,
                 });
                 return (
                   <tr key={l.id} className="border-b">
@@ -569,9 +570,9 @@ export default function PayrollPendingPaymentsPage() {
                     <td className="p-1">{gbp(pay.rate)}</td>
                     <td className="p-1">{gbp(pay.wages)}</td>
                     <td className={`p-1 ${pay.deduction > 0 ? "text-red-600" : ""}`}>
-                      {pay.deduction > 0 ? gbp(pay.deduction) : "—"}
+                      {gbp(pay.deduction)}
                     </td>
-                    <td className="p-1">{pay.deduction > 0 ? gbp(pay.net) : "—"}</td>
+                    <td className="p-1 font-medium">{gbp(pay.net)}</td>
                   </tr>
                 );
               })}

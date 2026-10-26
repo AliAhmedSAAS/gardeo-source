@@ -143,18 +143,33 @@ export function money2(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
-/** Self-employed lines: book rate below £12.71 stays at PAYE rate, with a deduction for the gap. */
+/**
+ * Line pay display for claimable / summary / bill review.
+ * - PAYE buckets: wages on the line are net; optional expense £ is shown as deduction.
+ * - Self bucket: book rate below £12.71 → show PAYE rate + deduction for the gap.
+ */
 export function selfShiftPayDisplay(params: {
   hours: number;
   rate: number;
   wages: number;
   bucket?: string | null;
+  expense?: number | null;
 }): { rate: number; wages: number; deduction: number; net: number } {
   const hours = Number(params.hours) || 0;
   const storedRate = Number(params.rate) || 0;
   const net = Number(params.wages) || 0;
   if (params.bucket !== "self") {
-    return { rate: storedRate, wages: net, deduction: 0, net };
+    const ded = money2(Number(params.expense) || 0);
+    return { rate: storedRate, wages: money2(net + ded), deduction: ded, net };
+  }
+  const expense = money2(Number(params.expense) || 0);
+  if (expense > 0) {
+    return {
+      rate: storedRate || PAYE_RATE,
+      wages: money2(net + expense),
+      deduction: expense,
+      net,
+    };
   }
   const impliedBook = hours > 0 ? money2(net / hours) : storedRate;
   const bookRate = impliedBook > 0 ? impliedBook : storedRate;
