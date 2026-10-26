@@ -399,6 +399,8 @@ export async function applyRulesForOfficer(opts: {
     }
 
     let shiftDeduction = 0;
+    let shiftRuleRate: number | null = null;
+    let shiftRuleRateHours = -1;
     let holidayLeft = dutyHours > 0 ? holiday : 0;
     let lateLeft = late;
     let travelLeft = Math.max(0, money(num(shift.travel_allowance)));
@@ -416,6 +418,12 @@ export async function applyRulesForOfficer(opts: {
       travelLeft = 0;
       const wages = money(paidHours * piece.rate - (piece.expense || 0) + travelOnce);
       shiftDeduction = money(shiftDeduction + (piece.expense || 0));
+      // Prefer rate from the piece with most hours (Finance Approval / shift pay_rate)
+      const hoursForRatePick = holidayOnly ? piece.hours : lineHours;
+      if (hoursForRatePick > shiftRuleRateHours) {
+        shiftRuleRateHours = hoursForRatePick;
+        shiftRuleRate = money(piece.rate);
+      }
       await pool.query(
         `INSERT INTO payroll_applied_lines
           (tenant_id, month_row_id, employee_id, shift_id, hours, holiday_hours, late_hours, rate, expense, wages, bucket, payee_to_claim, claimable, billed)
@@ -428,10 +436,14 @@ export async function applyRulesForOfficer(opts: {
       applied += 1;
     }
 
-    // Persist £ deduction on the shift so Finance Approval / other screens can reuse it
+    // Persist rule rate + £ deduction on the shift so Finance Approval matches Apply Rules
     await pool.query(
-      `UPDATE shifts SET deduction_amount = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`,
-      [shiftDeduction, shift.id, opts.tenantId],
+      `UPDATE shifts SET
+         deduction_amount = $1,
+         pay_rate = COALESCE($2::numeric, pay_rate),
+         updated_at = NOW()
+       WHERE id = $3 AND tenant_id = $4`,
+      [shiftDeduction, shiftRuleRate, shift.id, opts.tenantId],
     ).catch(() => {});
   }
 
