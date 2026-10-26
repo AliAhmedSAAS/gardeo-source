@@ -71,3 +71,9 @@ services:
         sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
+      - key: QU_EMAILS_CRON_ENABLED
+        value: "true"
+      - key: QU_EMAILS_CRON_URL
+        value: "https://gfmtrack.co.uk/Teamgate/SMS/db_SendQUEmails_1.php"
+      - key: QU_EMAILS_CRON_INTERVAL_MS
+        value: "60000"

@@ -11,6 +11,7 @@ import { startOnboardingScheduler } from "./onboarding-scheduler";
 import { startNotificationScheduler } from "./notification-scheduler";
 import { startProbationScheduler } from "./probation-scheduler";
 import { startFmPpmScheduler } from "./fm-ppm-scheduler";
+import { ensureCronJobRunsTable, startQuEmailsCron } from "./qu-emails-cron";
 
 // Global safety nets: keep the production server alive when a background task
 // (scheduler interval, async route, webhook handler, etc.) rejects or throws
@@ -986,6 +987,13 @@ app.use((req, res, next) => {
   startNotificationScheduler();
   startProbationScheduler();
   startFmPpmScheduler();
+  try {
+    await ensureCronJobRunsTable();
+    log("Ensured cron_job_runs table exists");
+  } catch (e) {
+    log("Could not ensure cron_job_runs: " + (e as Error).message);
+  }
+  startQuEmailsCron();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

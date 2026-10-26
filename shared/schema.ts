@@ -3328,6 +3328,24 @@ export const insertTenantPayrollSourceSchema = createInsertSchema(tenantPayrollS
 export type TenantPayrollSource = typeof tenantPayrollSources.$inferSelect;
 export type InsertTenantPayrollSource = z.infer<typeof insertTenantPayrollSourceSchema>;
 
+/** Background cron / scheduled job run history (e.g. Teamgate QU email flush). */
+export const cronJobRuns = pgTable("cron_job_runs", {
+  id: serial("id").primaryKey(),
+  jobName: text("job_name").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  ok: boolean("ok"),
+  httpStatus: integer("http_status"),
+  durationMs: integer("duration_ms"),
+  responsePreview: text("response_preview"),
+  error: text("error"),
+  meta: jsonb("meta"),
+}, (table) => [
+  index("idx_cron_job_runs_job_started").on(table.jobName, table.startedAt),
+]);
+
+export type CronJobRun = typeof cronJobRuns.$inferSelect;
+
 export const shiftCheckCalls = pgTable("shift_check_calls", {
   id: serial("id").primaryKey(),
   tenantId: integer("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
