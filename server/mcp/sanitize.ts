@@ -50,8 +50,16 @@ export function sanitizeEmployeeSearch(row: Record<string, unknown>) {
   };
 }
 
-/** Supplier list — no bank, VAT numbers, or finance contacts. */
+/** Supplier list — includes VAT registration status, not VAT number / bank / finance contacts. */
 export function sanitizeSupplier(row: Record<string, unknown>) {
+  const vatStatus = (row.vatStatus ?? row.vat_status ?? null) as string | null;
+  const vatRegistered =
+    vatStatus === "vat_registered"
+      ? true
+      : vatStatus === "not_vat_registered"
+        ? false
+        : null;
+
   return {
     id: row.id,
     supplierCode: row.supplierCode ?? row.supplier_code ?? null,
@@ -61,6 +69,8 @@ export function sanitizeSupplier(row: Record<string, unknown>) {
     postcode: row.postcode ?? null,
     supplierType: row.supplierType ?? row.supplier_type ?? null,
     status: row.status ?? null,
+    vatStatus,
+    vatRegistered,
   };
 }
 
