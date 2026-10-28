@@ -43,6 +43,7 @@ import { registerPayrollControlRoutes } from "./payroll-control-routes";
 import { shiftHours as calcShiftHours, syncAppliedLinesFromShift } from "./payroll-control";
 import { registerPanlRoutes } from "./panl-routes";
 import { registerQuEmailsCronRoutes } from "./qu-emails-cron";
+import { registerMcpRoutes } from "./mcp";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
@@ -946,6 +947,7 @@ export async function registerRoutes(
   registerPayrollControlRoutes(app, requireRole);
   registerPanlRoutes(app, requireRole);
   registerQuEmailsCronRoutes(app, requireRole);
+  registerMcpRoutes(app, requireRole);
 
   // ─── Tenant Onboarding Routes (public) ───
   app.get("/api/subscription-plans", async (_req, res) => {

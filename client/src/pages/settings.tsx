@@ -28,6 +28,7 @@ import {
   Link2, Link2Off, RefreshCw, AlertCircle, Plug,
 } from "lucide-react";
 import { TenantEmailSettingsCard } from "@/components/settings/TenantEmailSettingsCard";
+import { TenantMcpSettingsCard } from "@/components/settings/TenantMcpSettingsCard";
 import { TenantOfficerTypesSettingsCard } from "@/components/settings/TenantOfficerTypesSettingsCard";
 import { TenantDutyTypesSettingsCard } from "@/components/settings/TenantDutyTypesSettingsCard";
 import { TenantPayrollSourcesSettingsCard } from "@/components/settings/TenantPayrollSourcesSettingsCard";
@@ -2346,6 +2347,7 @@ export default function SettingsPage() {
           </div>
 
           <TenantEmailSettingsCard />
+          <TenantMcpSettingsCard />
 
           {/* Xero Integration */}
           <Card data-testid="card-xero-integration">

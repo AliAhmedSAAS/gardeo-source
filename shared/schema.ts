@@ -3692,3 +3692,74 @@ export const wagesLedger = pgTable("wages_ledger", {
 export const insertWagesLedgerSchema = createInsertSchema(wagesLedger).omit({ id: true, createdAt: true });
 export type WagesLedgerEntry = typeof wagesLedger.$inferSelect;
 export type InsertWagesLedgerEntry = z.infer<typeof insertWagesLedgerSchema>;
+
+/** MCP product scopes — Phase 1 is read-only ops. */
+export const MCP_SCOPES = ["ops.read"] as const;
+export type McpScope = (typeof MCP_SCOPES)[number];
+
+export const mcpClients = pgTable("mcp_clients", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  name: text("name").notNull(),
+  scopes: text("scopes").array().notNull().default(sql`ARRAY['ops.read']::text[]`),
+  status: text("status").notNull().default("active"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_clients_tenant").on(table.tenantId),
+  index("idx_mcp_clients_tenant_status").on(table.tenantId, table.status),
+]);
+
+export const insertMcpClientSchema = createInsertSchema(mcpClients).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type McpClient = typeof mcpClients.$inferSelect;
+export type InsertMcpClient = z.infer<typeof insertMcpClientSchema>;
+
+export const mcpApiKeys = pgTable("mcp_api_keys", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => mcpClients.id, { onDelete: "cascade" }).notNull(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  keyPrefix: text("key_prefix").notNull(),
+  keyHash: text("key_hash").notNull(),
+  label: text("label"),
+  expiresAt: timestamp("expires_at"),
+  lastUsedAt: timestamp("last_used_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_api_keys_tenant").on(table.tenantId),
+  index("idx_mcp_api_keys_client").on(table.clientId),
+  index("idx_mcp_api_keys_prefix").on(table.keyPrefix),
+]);
+
+export const insertMcpApiKeySchema = createInsertSchema(mcpApiKeys).omit({
+  id: true, createdAt: true, lastUsedAt: true, revokedAt: true,
+});
+export type McpApiKey = typeof mcpApiKeys.$inferSelect;
+export type InsertMcpApiKey = z.infer<typeof insertMcpApiKeySchema>;
+
+export const mcpToolInvocations = pgTable("mcp_tool_invocations", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  clientId: integer("client_id").references(() => mcpClients.id, { onDelete: "set null" }),
+  apiKeyId: integer("api_key_id").references(() => mcpApiKeys.id, { onDelete: "set null" }),
+  toolName: text("tool_name").notNull(),
+  argsFingerprint: text("args_fingerprint"),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  latencyMs: integer("latency_ms"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_invocations_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_mcp_invocations_client").on(table.clientId),
+]);
+
+export const insertMcpToolInvocationSchema = createInsertSchema(mcpToolInvocations).omit({
+  id: true, createdAt: true,
+});
+export type McpToolInvocation = typeof mcpToolInvocations.$inferSelect;
+export type InsertMcpToolInvocation = z.infer<typeof insertMcpToolInvocationSchema>;
