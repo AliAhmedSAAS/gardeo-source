@@ -50,7 +50,7 @@ export function sanitizeEmployeeSearch(row: Record<string, unknown>) {
   };
 }
 
-/** Supplier list — includes VAT registration status, not VAT number / bank / finance contacts. */
+/** Supplier list — VAT status always; VAT number only when vat_registered. No bank / finance contacts. */
 export function sanitizeSupplier(row: Record<string, unknown>) {
   const vatStatus = (row.vatStatus ?? row.vat_status ?? null) as string | null;
   const vatRegistered =
@@ -59,6 +59,7 @@ export function sanitizeSupplier(row: Record<string, unknown>) {
       : vatStatus === "not_vat_registered"
         ? false
         : null;
+  const vatNumberRaw = (row.vatNumber ?? row.vat_number ?? null) as string | null;
 
   return {
     id: row.id,
@@ -71,6 +72,9 @@ export function sanitizeSupplier(row: Record<string, unknown>) {
     status: row.status ?? null,
     vatStatus,
     vatRegistered,
+    ...(vatRegistered === true
+      ? { vatNumber: vatNumberRaw }
+      : {}),
   };
 }
 

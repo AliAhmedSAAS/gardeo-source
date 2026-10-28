@@ -670,7 +670,7 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
     "list_suppliers",
     {
       description:
-        "List suppliers for the tenant. Includes vatStatus/vatRegistered; excludes VAT number, bank, and finance contact fields.",
+        "List suppliers for the tenant. Includes vatStatus/vatRegistered; vatNumber only when VAT registered. Excludes bank and finance contact fields.",
       inputSchema: {
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(MAX_PAGE).default(25),
