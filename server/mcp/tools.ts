@@ -2,7 +2,7 @@ import { and, eq, gte, ilike, lte, or, sql, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db, pool } from "../db";
-import { sites, shifts } from "@shared/schema";
+import { incidents, sites, shifts } from "@shared/schema";
 import type { McpAuthContext } from "./context";
 import { assertScope } from "./context";
 import { recordMcpInvocation } from "./audit";
@@ -11,6 +11,13 @@ import {
   sanitizeShift,
   sanitizeSite,
 } from "./sanitize";
+import {
+  confirmProposal,
+  createProposal,
+  listProposals,
+  rejectProposal,
+  validateCreateShiftPayload,
+} from "./proposals";
 
 const MAX_PAGE = 50;
 const MAX_DATE_RANGE_DAYS = 31;
@@ -87,7 +94,7 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
           clientName: ctx.clientName,
           apiKeyId: ctx.apiKeyId,
           scopes: ctx.scopes,
-          phase: 1,
+          phase: 2,
           tools: [
             "whoami",
             "list_sites",
@@ -95,6 +102,12 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
             "get_shift",
             "get_site_coverage",
             "search_employees",
+            "propose_create_shift",
+            "propose_add_handover_note",
+            "propose_acknowledge_incident",
+            "list_pending_proposals",
+            "confirm_proposal",
+            "reject_proposal",
           ],
         };
       }),
@@ -364,6 +377,229 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
           pageSize,
           total: countRows[0]?.count ?? 0,
           data: rows.map((r) => sanitizeEmployeeSearch(r)),
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_create_shift",
+    {
+      description:
+        "Propose creating a scheduled shift. Does NOT write until confirm_proposal (or admin UI approve). Requires ops.write.",
+      inputSchema: {
+        siteId: z.number().int(),
+        title: z.string().min(1).max(200),
+        date: z.string().describe("YYYY-MM-DD"),
+        startTime: z.string().describe("HH:MM"),
+        endTime: z.string().describe("HH:MM"),
+        employeeId: z.number().int().optional(),
+        supplierId: z.number().int().optional(),
+        dutyTypeId: z.number().int().optional(),
+        breakMinutes: z.number().int().min(0).max(240).optional(),
+        notes: z.string().max(2000).optional(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_create_shift", args, async () => {
+        assertScope(ctx, "ops.write");
+        const payload = await validateCreateShiftPayload(ctx.tenantId, {
+          siteId: args.siteId,
+          title: args.title,
+          date: args.date,
+          startTime: args.startTime,
+          endTime: args.endTime,
+          employeeId: args.employeeId,
+          supplierId: args.supplierId,
+          dutyTypeId: args.dutyTypeId,
+          breakMinutes: args.breakMinutes,
+          notes: args.notes,
+        });
+        const summary = `Create shift "${payload.title}" at site ${payload.siteId} on ${payload.date} ${payload.startTime}-${payload.endTime}`;
+        const { proposal, confirmToken } = await createProposal(
+          ctx,
+          "create_shift",
+          payload as unknown as Record<string, unknown>,
+          summary,
+        );
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+          note: "Call confirm_proposal with proposalId + confirmToken to apply, or approve in Settings → MCP.",
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_add_handover_note",
+    {
+      description:
+        "Propose adding a handover note to a shift. Requires confirm_proposal. Requires ops.write.",
+      inputSchema: {
+        shiftId: z.number().int(),
+        note: z.string().min(1).max(2000),
+        mode: z.enum(["append", "replace"]).optional().describe("Default append"),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_add_handover_note", args, async () => {
+        assertScope(ctx, "ops.write");
+        const shift = await db
+          .select({ id: shifts.id })
+          .from(shifts)
+          .where(and(eq(shifts.id, args.shiftId), eq(shifts.tenantId, ctx.tenantId)))
+          .limit(1);
+        if (!shift[0]) throw new Error("Shift not found");
+        const payload = {
+          shiftId: args.shiftId,
+          note: args.note.trim(),
+          mode: args.mode === "replace" ? "replace" : "append",
+        };
+        const summary = `Add handover note on shift ${args.shiftId} (${payload.mode})`;
+        const { proposal, confirmToken } = await createProposal(
+          ctx,
+          "add_handover_note",
+          payload,
+          summary,
+        );
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_acknowledge_incident",
+    {
+      description:
+        "Propose acknowledging an incident (status → investigating). Requires confirm_proposal. Requires ops.write.",
+      inputSchema: {
+        incidentId: z.number().int(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_acknowledge_incident", args, async () => {
+        assertScope(ctx, "ops.write");
+        const [incident] = await db
+          .select({
+            id: incidents.id,
+            title: incidents.title,
+            status: incidents.status,
+          })
+          .from(incidents)
+          .where(and(eq(incidents.id, args.incidentId), eq(incidents.tenantId, ctx.tenantId)))
+          .limit(1);
+        if (!incident) throw new Error("Incident not found");
+        if (incident.status !== "reported" && incident.status !== "investigating") {
+          throw new Error(`Cannot acknowledge incident with status '${incident.status}'`);
+        }
+        const payload = { incidentId: args.incidentId };
+        const summary = `Acknowledge incident #${incident.id}: ${incident.title}`;
+        const { proposal, confirmToken } = await createProposal(
+          ctx,
+          "acknowledge_incident",
+          payload,
+          summary,
+        );
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "list_pending_proposals",
+    {
+      description: "List pending MCP write proposals for this client/tenant.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(100).default(25),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "list_pending_proposals", args, async () => {
+        assertScope(ctx, "ops.write");
+        const rows = await listProposals(ctx.tenantId, {
+          status: "pending",
+          limit: args.limit ?? 25,
+          clientId: ctx.clientId,
+        });
+        return {
+          data: rows.map((r) => ({
+            id: r.id,
+            proposalType: r.proposalType,
+            summary: r.summary,
+            status: r.status,
+            expiresAt: r.expiresAt,
+            createdAt: r.createdAt,
+          })),
+        };
+      }),
+  );
+
+  server.registerTool(
+    "confirm_proposal",
+    {
+      description:
+        "Confirm a pending proposal using the one-time confirmToken returned by propose_* tools. Requires ops.write.",
+      inputSchema: {
+        proposalId: z.number().int(),
+        confirmToken: z.string().min(10),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "confirm_proposal", args, async () => {
+        assertScope(ctx, "ops.write");
+        const { proposal, result } = await confirmProposal({
+          tenantId: ctx.tenantId,
+          proposalId: args.proposalId,
+          confirmToken: args.confirmToken,
+          requireToken: true,
+          clientId: ctx.clientId,
+          ipAddress: ctx.ipAddress,
+        });
+        return {
+          status: proposal.status,
+          proposalId: proposal.id,
+          proposalType: proposal.proposalType,
+          result,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "reject_proposal",
+    {
+      description: "Reject a pending proposal. Requires ops.write and confirmToken.",
+      inputSchema: {
+        proposalId: z.number().int(),
+        confirmToken: z.string().min(10),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "reject_proposal", args, async () => {
+        assertScope(ctx, "ops.write");
+        const proposal = await rejectProposal({
+          tenantId: ctx.tenantId,
+          proposalId: args.proposalId,
+          confirmToken: args.confirmToken,
+          requireToken: true,
+          clientId: ctx.clientId,
+          ipAddress: ctx.ipAddress,
+        });
+        return {
+          status: proposal.status,
+          proposalId: proposal.id,
+          proposalType: proposal.proposalType,
         };
       }),
   );

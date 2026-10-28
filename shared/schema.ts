@@ -3693,9 +3693,16 @@ export const insertWagesLedgerSchema = createInsertSchema(wagesLedger).omit({ id
 export type WagesLedgerEntry = typeof wagesLedger.$inferSelect;
 export type InsertWagesLedgerEntry = z.infer<typeof insertWagesLedgerSchema>;
 
-/** MCP product scopes — Phase 1 is read-only ops. */
-export const MCP_SCOPES = ["ops.read"] as const;
+/** MCP product scopes — Phase 1 read; Phase 2 controlled writes via proposals. */
+export const MCP_SCOPES = ["ops.read", "ops.write"] as const;
 export type McpScope = (typeof MCP_SCOPES)[number];
+
+export const MCP_PROPOSAL_TYPES = [
+  "create_shift",
+  "add_handover_note",
+  "acknowledge_incident",
+] as const;
+export type McpProposalType = (typeof MCP_PROPOSAL_TYPES)[number];
 
 export const mcpClients = pgTable("mcp_clients", {
   id: serial("id").primaryKey(),
@@ -3763,3 +3770,33 @@ export const insertMcpToolInvocationSchema = createInsertSchema(mcpToolInvocatio
 });
 export type McpToolInvocation = typeof mcpToolInvocations.$inferSelect;
 export type InsertMcpToolInvocation = z.infer<typeof insertMcpToolInvocationSchema>;
+
+export const mcpProposals = pgTable("mcp_proposals", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  clientId: integer("client_id").references(() => mcpClients.id, { onDelete: "set null" }),
+  apiKeyId: integer("api_key_id").references(() => mcpApiKeys.id, { onDelete: "set null" }),
+  proposalType: text("proposal_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  summary: text("summary").notNull(),
+  confirmTokenHash: text("confirm_token_hash").notNull(),
+  status: text("status").notNull().default("pending"),
+  result: jsonb("result"),
+  errorMessage: text("error_message"),
+  expiresAt: timestamp("expires_at").notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  confirmedByUserId: varchar("confirmed_by_user_id").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectedByUserId: varchar("rejected_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_proposals_tenant_status").on(table.tenantId, table.status),
+  index("idx_mcp_proposals_tenant_created").on(table.tenantId, table.createdAt),
+  index("idx_mcp_proposals_client").on(table.clientId),
+]);
+
+export const insertMcpProposalSchema = createInsertSchema(mcpProposals).omit({
+  id: true, createdAt: true, confirmedAt: true, rejectedAt: true, result: true, errorMessage: true,
+});
+export type McpProposal = typeof mcpProposals.$inferSelect;
+export type InsertMcpProposal = z.infer<typeof insertMcpProposalSchema>;

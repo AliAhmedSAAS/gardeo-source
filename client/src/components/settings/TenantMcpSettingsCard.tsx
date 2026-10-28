@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Copy, Key, Loader2, Plus, Plug, Trash2 } from "lucide-react";
+import { Check, Copy, Key, Loader2, Plus, Plug, Trash2, X } from "lucide-react";
 
 type McpStatus = {
   enabled: boolean;
@@ -36,9 +37,19 @@ type McpClient = {
   keys: McpKey[];
 };
 
+type McpProposal = {
+  id: number;
+  proposalType: string;
+  summary: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+};
+
 export function TenantMcpSettingsCard() {
   const { toast } = useToast();
   const [name, setName] = useState("Cursor / AI agent");
+  const [allowWrite, setAllowWrite] = useState(false);
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
 
   const { data: status, isLoading: statusLoading } = useQuery<McpStatus>({
@@ -52,11 +63,22 @@ export function TenantMcpSettingsCard() {
     enabled,
   });
 
+  const { data: proposalsData, isLoading: proposalsLoading } = useQuery<{ data: McpProposal[] }>({
+    queryKey: ["/api/admin/mcp/proposals", { status: "pending" }],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/mcp/proposals?status=pending");
+      return res.json();
+    },
+    enabled,
+    refetchInterval: enabled ? 15000 : false,
+  });
+
   const createMut = useMutation({
     mutationFn: async () => {
+      const scopes = allowWrite ? ["ops.read", "ops.write"] : ["ops.read"];
       const res = await apiRequest("POST", "/api/admin/mcp/clients", {
         name: name.trim() || "MCP client",
-        scopes: ["ops.read"],
+        scopes,
         label: "default",
       });
       return res.json() as Promise<{ apiKey: string; client: McpClient }>;
@@ -83,10 +105,38 @@ export function TenantMcpSettingsCard() {
       toast({ title: "Revoke failed", description: err.message, variant: "destructive" }),
   });
 
+  const confirmMut = useMutation({
+    mutationFn: async (proposalId: number) => {
+      const res = await apiRequest("POST", `/api/admin/mcp/proposals/${proposalId}/confirm`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp/proposals"] });
+      toast({ title: "Proposal confirmed" });
+    },
+    onError: (err: Error) =>
+      toast({ title: "Confirm failed", description: err.message, variant: "destructive" }),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: async (proposalId: number) => {
+      const res = await apiRequest("POST", `/api/admin/mcp/proposals/${proposalId}/reject`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp/proposals"] });
+      toast({ title: "Proposal rejected" });
+    },
+    onError: (err: Error) =>
+      toast({ title: "Reject failed", description: err.message, variant: "destructive" }),
+  });
+
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
     toast({ title: "Copied" });
   };
+
+  const pending = proposalsData?.data || [];
 
   return (
     <Card data-testid="card-mcp-integration">
@@ -99,7 +149,7 @@ export function TenantMcpSettingsCard() {
             <div>
               <h3 className="font-semibold text-base">Gardeo MCP (AI)</h3>
               <p className="text-sm text-muted-foreground">
-                Secure Phase 1 read-only tools for Cursor and other MCP clients.
+                Phase {status?.phase ?? 2}: read tools + human-confirmed write proposals.
               </p>
             </div>
           </div>
@@ -114,8 +164,8 @@ export function TenantMcpSettingsCard() {
 
         {!enabled && (
           <p className="text-sm text-muted-foreground">
-            Set <code className="text-xs">MCP_ENABLED=true</code> on the server, apply migration{" "}
-            <code className="text-xs">0044_mcp_phase1.sql</code>, then refresh.
+            Set <code className="text-xs">MCP_ENABLED=true</code> on the server, apply migrations{" "}
+            <code className="text-xs">0044</code>/<code className="text-xs">0045</code>, then refresh.
           </p>
         )}
 
@@ -126,33 +176,44 @@ export function TenantMcpSettingsCard() {
                 Endpoint: <code className="text-xs">{status?.endpoint || "/mcp"}</code>
               </div>
               <div>
-                Scopes: {(status?.scopes || []).join(", ") || "ops.read"}
+                Scopes: {(status?.scopes || []).join(", ") || "ops.read, ops.write"}
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label htmlFor="mcp-client-name">New client name</Label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  id="mcp-client-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Cursor / AI agent"
-                  data-testid="input-mcp-client-name"
+              <Input
+                id="mcp-client-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Cursor / AI agent"
+                data-testid="input-mcp-client-name"
+              />
+              <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                <div>
+                  <div className="text-sm font-medium">Allow ops.write</div>
+                  <div className="text-xs text-muted-foreground">
+                    Enables propose_* tools. Changes still need confirm.
+                  </div>
+                </div>
+                <Switch
+                  checked={allowWrite}
+                  onCheckedChange={setAllowWrite}
+                  data-testid="switch-mcp-ops-write"
                 />
-                <Button
-                  onClick={() => createMut.mutate()}
-                  disabled={createMut.isPending}
-                  data-testid="button-mcp-create-client"
-                >
-                  {createMut.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Create key
-                </Button>
               </div>
+              <Button
+                onClick={() => createMut.mutate()}
+                disabled={createMut.isPending}
+                data-testid="button-mcp-create-client"
+              >
+                {createMut.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                Create key
+              </Button>
             </div>
 
             {revealedKey && (
@@ -175,6 +236,56 @@ export function TenantMcpSettingsCard() {
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Pending proposals</h4>
+                <Badge variant="secondary">{pending.length}</Badge>
+              </div>
+              {proposalsLoading ? (
+                <div className="flex justify-center py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : pending.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No pending write proposals.</p>
+              ) : (
+                <div className="space-y-2">
+                  {pending.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-md border p-3 space-y-2"
+                      data-testid={`mcp-proposal-${p.id}`}
+                    >
+                      <div className="text-sm font-medium">{p.summary}</div>
+                      <div className="text-xs text-muted-foreground">
+                        #{p.id} · {p.proposalType} · expires {new Date(p.expiresAt).toLocaleString("en-GB")}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => confirmMut.mutate(p.id)}
+                          disabled={confirmMut.isPending || rejectMut.isPending}
+                          data-testid={`button-mcp-confirm-${p.id}`}
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          Confirm
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => rejectMut.mutate(p.id)}
+                          disabled={confirmMut.isPending || rejectMut.isPending}
+                          data-testid={`button-mcp-reject-${p.id}`}
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {isLoading ? (
               <div className="flex justify-center py-4">

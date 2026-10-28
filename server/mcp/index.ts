@@ -14,6 +14,7 @@ import { authenticateMcpBearer, generateMcpApiKey } from "./auth";
 import { isMcpEnabled } from "./context";
 import { checkMcpRateLimit } from "./rate-limit";
 import { createGardeoMcpServer } from "./tools";
+import { confirmProposal, listProposals, rejectProposal } from "./proposals";
 import { storage } from "../storage";
 
 function clientIp(req: Request): string | null {
@@ -129,7 +130,7 @@ export function registerMcpRoutes(
         enabled: isMcpEnabled(),
         endpoint: "/mcp",
         scopes: MCP_SCOPES,
-        phase: 1,
+        phase: 2,
       });
     },
   );
@@ -452,6 +453,87 @@ export function registerMcpRoutes(
         res.json({ data: rows });
       } catch (err: any) {
         res.status(500).json({ message: err.message });
+      }
+    },
+  );
+
+  app.get(
+    "/api/admin/mcp/proposals",
+    requireRole(...MCP_ADMIN_ROLES),
+    async (req, res) => {
+      try {
+        if (!isMcpEnabled()) {
+          return res.status(503).json({ message: "MCP is disabled. Set MCP_ENABLED=true." });
+        }
+        const tenantId = requireTenant(req, res);
+        if (tenantId == null) return;
+        const status = typeof req.query.status === "string" ? req.query.status : "pending";
+        const limit = Math.min(parseInt(String(req.query.limit || "50"), 10) || 50, 200);
+        const data = await listProposals(tenantId, {
+          status: status === "all" ? undefined : status,
+          limit,
+        });
+        res.json({ data });
+      } catch (err: any) {
+        res.status(500).json({ message: err.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/mcp/proposals/:id/confirm",
+    requireRole(...MCP_ADMIN_ROLES),
+    async (req, res) => {
+      try {
+        if (!isMcpEnabled()) {
+          return res.status(503).json({ message: "MCP is disabled. Set MCP_ENABLED=true." });
+        }
+        const tenantId = requireTenant(req, res);
+        if (tenantId == null) return;
+        const user = req.user as User;
+        const proposalId = paramId(req.params.id);
+        if (!Number.isFinite(proposalId)) {
+          return res.status(400).json({ message: "Invalid proposal id" });
+        }
+        const { proposal, result } = await confirmProposal({
+          tenantId,
+          proposalId,
+          requireToken: false,
+          confirmedByUserId: user.id,
+          ipAddress: clientIp(req),
+        });
+        res.json({ proposal, result });
+      } catch (err: any) {
+        res.status(400).json({ message: err.message });
+      }
+    },
+  );
+
+  app.post(
+    "/api/admin/mcp/proposals/:id/reject",
+    requireRole(...MCP_ADMIN_ROLES),
+    async (req, res) => {
+      try {
+        if (!isMcpEnabled()) {
+          return res.status(503).json({ message: "MCP is disabled. Set MCP_ENABLED=true." });
+        }
+        const tenantId = requireTenant(req, res);
+        if (tenantId == null) return;
+        const user = req.user as User;
+        const proposalId = paramId(req.params.id);
+        if (!Number.isFinite(proposalId)) {
+          return res.status(400).json({ message: "Invalid proposal id" });
+        }
+        const proposal = await rejectProposal({
+          tenantId,
+          proposalId,
+          requireToken: false,
+          rejectedByUserId: user.id,
+          ipAddress: clientIp(req),
+        });
+        res.json({ proposal });
+      } catch (err: any) {
+        res.status(400).json({ message: err.message });
       }
     },
   );
