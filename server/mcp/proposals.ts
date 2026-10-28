@@ -92,8 +92,8 @@ export async function createProposal(
     .insert(mcpProposals)
     .values({
       tenantId: ctx.tenantId,
-      clientId: ctx.clientId,
-      apiKeyId: ctx.apiKeyId,
+      clientId: ctx.clientId ?? null,
+      apiKeyId: ctx.apiKeyId ?? null,
       proposalType,
       payload,
       summary,
@@ -105,10 +105,11 @@ export async function createProposal(
 
   await storage.createAuditLog({
     tenantId: ctx.tenantId,
+    userId: ctx.userId ?? undefined,
     action: "mcp_proposal_created",
     entityType: "mcp_proposal",
     entityId: String(proposal.id),
-    details: { proposalType, summary, clientId: ctx.clientId },
+    details: { proposalType, summary, clientId: ctx.clientId, authType: ctx.authType },
     ipAddress: ctx.ipAddress ?? undefined,
   });
 

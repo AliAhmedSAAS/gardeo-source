@@ -2,9 +2,12 @@ import type { McpScope } from "@shared/schema";
 
 export type McpAuthContext = {
   tenantId: number;
-  clientId: number;
+  /** Numeric API-key client id; null for OAuth sessions. */
+  clientId: number | null;
   clientName: string;
-  apiKeyId: number;
+  apiKeyId: number | null;
+  userId?: string | null;
+  authType: "api_key" | "oauth";
   scopes: McpScope[];
   ipAddress: string | null;
 };

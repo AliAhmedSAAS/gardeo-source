@@ -7,13 +7,37 @@ Secure product MCP endpoint for AI hosts (Cursor, Claude Desktop, agents): **rea
 1. Apply migrations:
    - `migrations/0044_mcp_phase1.sql`
    - `migrations/0045_mcp_phase2.sql`
-2. Set `MCP_ENABLED=true` and restart.
+   - `migrations/0046_mcp_oauth.sql`
+2. Set env and restart:
+
+```bash
+MCP_ENABLED=true
+APP_BASE_URL=https://gardeo-source.onrender.com
+JWT_SECRET=...   # required for OAuth access tokens
+```
 
 ## Endpoint
 
 - `POST https://<your-host>/mcp`
-- `Authorization: Bearer gdeo_mcp_…`
+- Auth (either):
+  - API key: `Authorization: Bearer gdeo_mcp_…`
+  - OAuth access token (Claude Sign in now)
 - Streamable HTTP (stateless)
+
+## Claude Custom Connector (OAuth / Sign in now)
+
+1. URL: `https://gardeo-source.onrender.com/mcp`
+2. Authentication: **Sign in now**
+3. OAuth client: **Use Claude's published identity** (CIMD)
+4. Add → browser opens Gardeo consent → login with Gardeo user → Allow
+
+Discovery (auto):
+
+- `/.well-known/oauth-protected-resource/mcp`
+- `/.well-known/oauth-authorization-server`
+- `/oauth/authorize`, `/oauth/token`
+
+Unauthenticated `/mcp` returns `401` + `WWW-Authenticate` so Claude starts OAuth.
 
 ## Scopes
 

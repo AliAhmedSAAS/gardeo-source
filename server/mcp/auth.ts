@@ -72,6 +72,7 @@ export async function authenticateMcpBearer(
       clientId: row.clientId,
       clientName: row.clientName,
       apiKeyId: row.keyId,
+      authType: "api_key",
       scopes: normalizeScopes(row.scopes),
       ipAddress,
     };

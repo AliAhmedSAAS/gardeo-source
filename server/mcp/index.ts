@@ -15,6 +15,11 @@ import { isMcpEnabled } from "./context";
 import { checkMcpRateLimit } from "./rate-limit";
 import { createGardeoMcpServer } from "./tools";
 import { confirmProposal, listProposals, rejectProposal } from "./proposals";
+import {
+  authenticateMcpOauthBearer,
+  mcpWwwAuthenticateHeader,
+  registerMcpOauthRoutes,
+} from "./oauth";
 import { storage } from "../storage";
 
 function clientIp(req: Request): string | null {
@@ -53,16 +58,27 @@ async function handleMcpHttp(req: Request, res: Response) {
     });
   }
 
-  const ctx = await authenticateMcpBearer(req.headers.authorization, clientIp(req));
+  const ip = clientIp(req);
+  const ctx =
+    (await authenticateMcpBearer(req.headers.authorization, ip)) ||
+    (await authenticateMcpOauthBearer(req.headers.authorization, ip));
   if (!ctx) {
+    res.setHeader("WWW-Authenticate", mcpWwwAuthenticateHeader());
     return res.status(401).json({
       jsonrpc: "2.0",
-      error: { code: -32001, message: "Unauthorized — valid Gardeo MCP API key required" },
+      error: {
+        code: -32001,
+        message: "Unauthorized — MCP API key or OAuth access token required",
+      },
       id: null,
     });
   }
 
-  const rl = checkMcpRateLimit(`mcp:${ctx.apiKeyId}`);
+  const rlKey =
+    ctx.authType === "oauth"
+      ? `mcp-oauth:${ctx.userId || ctx.tenantId}`
+      : `mcp:${ctx.apiKeyId}`;
+  const rl = checkMcpRateLimit(rlKey);
   if (!rl.allowed) {
     res.setHeader("Retry-After", String(rl.retryAfterSec));
     return res.status(429).json({
@@ -102,6 +118,8 @@ export function registerMcpRoutes(
   app: Express,
   requireRole: (...roles: string[]) => RequestHandler,
 ) {
+  registerMcpOauthRoutes(app);
+
   app.post("/mcp", async (req, res) => {
     await handleMcpHttp(req, res);
   });
@@ -131,6 +149,13 @@ export function registerMcpRoutes(
         endpoint: "/mcp",
         scopes: MCP_SCOPES,
         phase: 3,
+        oauth: {
+          authorizationServer: "/.well-known/oauth-authorization-server",
+          protectedResource: "/.well-known/oauth-protected-resource/mcp",
+          authorize: "/oauth/authorize",
+          token: "/oauth/token",
+          cimdSupported: true,
+        },
       });
     },
   );

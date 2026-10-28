@@ -149,7 +149,7 @@ export function TenantMcpSettingsCard() {
             <div>
               <h3 className="font-semibold text-base">Gardeo MCP (AI)</h3>
               <p className="text-sm text-muted-foreground">
-                Phase {status?.phase ?? 3}: reads, write proposals, and hard deny-list lockdown.
+                Phase {status?.phase ?? 3}: reads, write proposals, deny-list, Claude OAuth.
               </p>
             </div>
           </div>

@@ -103,6 +103,8 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
           clientId: ctx.clientId,
           clientName: ctx.clientName,
           apiKeyId: ctx.apiKeyId,
+          userId: ctx.userId ?? null,
+          authType: ctx.authType,
           scopes: ctx.scopes,
           phase: 3,
           tools: [
@@ -550,7 +552,7 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
         const rows = await listProposals(ctx.tenantId, {
           status: "pending",
           limit: args.limit ?? 25,
-          clientId: ctx.clientId,
+          clientId: ctx.clientId ?? undefined,
         });
         return {
           data: rows.map((r) => ({

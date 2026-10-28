@@ -3804,3 +3804,42 @@ export const insertMcpProposalSchema = createInsertSchema(mcpProposals).omit({
 });
 export type McpProposal = typeof mcpProposals.$inferSelect;
 export type InsertMcpProposal = z.infer<typeof insertMcpProposalSchema>;
+
+/** OAuth authorization codes for Claude / MCP CIMD clients. */
+export const mcpOauthCodes = pgTable("mcp_oauth_codes", {
+  id: serial("id").primaryKey(),
+  codeHash: text("code_hash").notNull(),
+  clientId: text("client_id").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  codeChallengeMethod: text("code_challenge_method").notNull().default("S256"),
+  scope: text("scope").notNull().default("ops.read"),
+  resource: text("resource"),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_oauth_codes_hash").on(table.codeHash),
+  index("idx_mcp_oauth_codes_tenant").on(table.tenantId),
+]);
+
+export type McpOauthCode = typeof mcpOauthCodes.$inferSelect;
+
+export const mcpOauthRefreshTokens = pgTable("mcp_oauth_refresh_tokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull(),
+  clientId: text("client_id").notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  scopes: text("scopes").array().notNull().default(sql`ARRAY['ops.read']::text[]`),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_mcp_oauth_refresh_hash").on(table.tokenHash),
+  index("idx_mcp_oauth_refresh_user").on(table.userId),
+]);
+
+export type McpOauthRefreshToken = typeof mcpOauthRefreshTokens.$inferSelect;
