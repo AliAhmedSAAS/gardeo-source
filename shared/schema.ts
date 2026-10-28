@@ -3693,7 +3693,7 @@ export const insertWagesLedgerSchema = createInsertSchema(wagesLedger).omit({ id
 export type WagesLedgerEntry = typeof wagesLedger.$inferSelect;
 export type InsertWagesLedgerEntry = z.infer<typeof insertWagesLedgerSchema>;
 
-/** MCP product scopes — Phase 1 read; Phase 2 controlled writes via proposals. */
+/** MCP product scopes — Phase 1–3: read + proposal-gated writes. */
 export const MCP_SCOPES = ["ops.read", "ops.write"] as const;
 export type McpScope = (typeof MCP_SCOPES)[number];
 
@@ -3701,6 +3701,10 @@ export const MCP_PROPOSAL_TYPES = [
   "create_shift",
   "add_handover_note",
   "acknowledge_incident",
+  "assign_officer",
+  "cancel_shift",
+  "book_on",
+  "book_off",
 ] as const;
 export type McpProposalType = (typeof MCP_PROPOSAL_TYPES)[number];
 

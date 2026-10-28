@@ -2,14 +2,24 @@ import { and, eq, gte, ilike, lte, or, sql, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db, pool } from "../db";
-import { incidents, sites, shifts } from "@shared/schema";
+import {
+  employees,
+  incidents,
+  sites,
+  shifts,
+  suppliers,
+} from "@shared/schema";
 import type { McpAuthContext } from "./context";
 import { assertScope } from "./context";
 import { recordMcpInvocation } from "./audit";
+import { MCP_DENIED_DOMAINS } from "./deny-list";
 import {
+  sanitizeAbsence,
   sanitizeEmployeeSearch,
+  sanitizeIncident,
   sanitizeShift,
   sanitizeSite,
+  sanitizeSupplier,
 } from "./sanitize";
 import {
   confirmProposal,
@@ -94,7 +104,7 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
           clientName: ctx.clientName,
           apiKeyId: ctx.apiKeyId,
           scopes: ctx.scopes,
-          phase: 2,
+          phase: 3,
           tools: [
             "whoami",
             "list_sites",
@@ -102,13 +112,22 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
             "get_shift",
             "get_site_coverage",
             "search_employees",
+            "list_open_incidents",
+            "list_suppliers",
+            "get_compliance_summary",
+            "list_today_absences",
             "propose_create_shift",
             "propose_add_handover_note",
             "propose_acknowledge_incident",
+            "propose_assign_officer",
+            "propose_cancel_shift",
+            "propose_book_on",
+            "propose_book_off",
             "list_pending_proposals",
             "confirm_proposal",
             "reject_proposal",
           ],
+          deniedDomains: MCP_DENIED_DOMAINS,
         };
       }),
   );
@@ -604,5 +623,332 @@ export function createGardeoMcpServer(ctx: McpAuthContext): McpServer {
       }),
   );
 
+  // ─── Phase 3 reads ───────────────────────────────────────────────
+
+  server.registerTool(
+    "list_open_incidents",
+    {
+      description: "List open/investigating incidents for the tenant (sanitized).",
+      inputSchema: {
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(MAX_PAGE).default(25),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "list_open_incidents", args, async () => {
+        assertScope(ctx, "ops.read");
+        const page = args.page ?? 1;
+        const pageSize = Math.min(args.pageSize ?? 25, MAX_PAGE);
+        const offset = (page - 1) * pageSize;
+        const where = and(
+          eq(incidents.tenantId, ctx.tenantId),
+          or(eq(incidents.status, "reported"), eq(incidents.status, "investigating")),
+        );
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(incidents)
+          .where(where);
+        const rows = await db
+          .select()
+          .from(incidents)
+          .where(where)
+          .orderBy(desc(incidents.incidentDate), desc(incidents.id))
+          .limit(pageSize)
+          .offset(offset);
+        return {
+          page,
+          pageSize,
+          total: countRow?.count ?? 0,
+          data: rows.map((r) => sanitizeIncident(r as unknown as Record<string, unknown>)),
+        };
+      }),
+  );
+
+  server.registerTool(
+    "list_suppliers",
+    {
+      description: "List suppliers for the tenant (no bank/VAT/finance fields).",
+      inputSchema: {
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(MAX_PAGE).default(25),
+        q: z.string().optional(),
+        status: z.string().optional(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "list_suppliers", args, async () => {
+        assertScope(ctx, "ops.read");
+        const page = args.page ?? 1;
+        const pageSize = Math.min(args.pageSize ?? 25, MAX_PAGE);
+        const offset = (page - 1) * pageSize;
+        const conditions = [eq(suppliers.tenantId, ctx.tenantId)];
+        if (args.status) conditions.push(eq(suppliers.status, args.status as any));
+        if (args.q?.trim()) {
+          const q = `%${args.q.trim()}%`;
+          conditions.push(
+            or(ilike(suppliers.companyName, q), ilike(suppliers.supplierCode, q))!,
+          );
+        }
+        const where = and(...conditions);
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(suppliers)
+          .where(where);
+        const rows = await db
+          .select()
+          .from(suppliers)
+          .where(where)
+          .orderBy(suppliers.companyName)
+          .limit(pageSize)
+          .offset(offset);
+        return {
+          page,
+          pageSize,
+          total: countRow?.count ?? 0,
+          data: rows.map((r) => sanitizeSupplier(r as unknown as Record<string, unknown>)),
+        };
+      }),
+  );
+
+  server.registerTool(
+    "get_compliance_summary",
+    {
+      description:
+        "Aggregated SIA/DBS/first-aid expiry bands for active employees. No licence numbers returned.",
+      inputSchema: {},
+    },
+    async () =>
+      withAudit(ctx, "get_compliance_summary", {}, async () => {
+        assertScope(ctx, "ops.read");
+        const { rows } = await pool.query(
+          `SELECT
+             COUNT(*)::int AS total_employees,
+             COUNT(*) FILTER (
+               WHERE e.sia_expiry_date IS NOT NULL
+                 AND e.sia_expiry_date::date < CURRENT_DATE
+             )::int AS sia_expired,
+             COUNT(*) FILTER (
+               WHERE e.sia_expiry_date IS NOT NULL
+                 AND e.sia_expiry_date::date >= CURRENT_DATE
+                 AND e.sia_expiry_date::date < CURRENT_DATE + INTERVAL '30 days'
+             )::int AS sia_within_30,
+             COUNT(*) FILTER (
+               WHERE e.sia_expiry_date IS NOT NULL
+                 AND e.sia_expiry_date::date >= CURRENT_DATE + INTERVAL '30 days'
+                 AND e.sia_expiry_date::date < CURRENT_DATE + INTERVAL '90 days'
+             )::int AS sia_within_90,
+             COUNT(*) FILTER (
+               WHERE e.dbs_issue_date IS NULL
+             )::int AS dbs_missing,
+             COUNT(*) FILTER (
+               WHERE e.has_first_aid = true
+                 AND e.first_aid_expiry IS NOT NULL
+                 AND e.first_aid_expiry::date < CURRENT_DATE
+             )::int AS first_aid_expired
+           FROM employees e
+           LEFT JOIN users u ON u.id = e.user_id
+           WHERE e.tenant_id = $1
+             AND COALESCE(e.is_merged, false) = false
+             AND COALESCE(u.is_active, true) = true`,
+          [ctx.tenantId],
+        );
+        return { summary: rows[0] || {} };
+      }),
+  );
+
+  server.registerTool(
+    "list_today_absences",
+    {
+      description:
+        "Open absences and approved leave overlapping a date (default today). No fit-note/reason text.",
+      inputSchema: {
+        date: z.string().optional().describe("YYYY-MM-DD, default today (UTC)"),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "list_today_absences", args, async () => {
+        assertScope(ctx, "ops.read");
+        const date =
+          args.date && parseDateOnly(args.date)
+            ? args.date
+            : new Date().toISOString().slice(0, 10);
+
+        const { rows: absRows } = await pool.query(
+          `SELECT a.id, a.employee_id, a.absence_type AS type, a.start_date, a.end_date, a.status,
+                  e.employee_number, u.first_name, u.last_name, 'absence' AS kind
+           FROM absence_records a
+           JOIN employees e ON e.id = a.employee_id
+           LEFT JOIN users u ON u.id = e.user_id
+           WHERE a.tenant_id = $1
+             AND a.status = 'open'
+             AND a.start_date <= $2::date
+             AND (a.end_date IS NULL OR a.end_date >= $2::date)
+           ORDER BY a.start_date, a.id`,
+          [ctx.tenantId, date],
+        );
+
+        const { rows: leaveRows } = await pool.query(
+          `SELECT t.id, t.employee_id, t.leave_type AS type, t.start_date, t.end_date, t.status,
+                  e.employee_number, u.first_name, u.last_name, 'leave' AS kind
+           FROM time_off_requests t
+           JOIN employees e ON e.id = t.employee_id
+           LEFT JOIN users u ON u.id = e.user_id
+           WHERE t.tenant_id = $1
+             AND t.status = 'approved'
+             AND t.start_date <= $2::date
+             AND t.end_date >= $2::date
+           ORDER BY t.start_date, t.id`,
+          [ctx.tenantId, date],
+        );
+
+        return {
+          date,
+          absences: absRows.map((r) => sanitizeAbsence(r)),
+          leave: leaveRows.map((r) => sanitizeAbsence(r)),
+          totals: {
+            absences: absRows.length,
+            leave: leaveRows.length,
+          },
+        };
+      }),
+  );
+
+  // ─── Phase 3 write proposals ─────────────────────────────────────
+
+  server.registerTool(
+    "propose_assign_officer",
+    {
+      description: "Propose assigning an employee to a shift. Requires confirm_proposal + ops.write.",
+      inputSchema: {
+        shiftId: z.number().int(),
+        employeeId: z.number().int(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_assign_officer", args, async () => {
+        assertScope(ctx, "ops.write");
+        const shift = await storageGetShift(ctx.tenantId, args.shiftId);
+        const emp = await db
+          .select({ id: employees.id })
+          .from(employees)
+          .where(and(eq(employees.id, args.employeeId), eq(employees.tenantId, ctx.tenantId)))
+          .limit(1);
+        if (!emp[0]) throw new Error("Employee not found");
+        const payload = { shiftId: args.shiftId, employeeId: args.employeeId };
+        const summary = `Assign employee ${args.employeeId} to shift ${args.shiftId} (${shift.title})`;
+        const { proposal, confirmToken } = await createProposal(ctx, "assign_officer", payload, summary);
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_cancel_shift",
+    {
+      description: "Propose cancelling a shift. Requires confirm_proposal + ops.write.",
+      inputSchema: {
+        shiftId: z.number().int(),
+        reason: z.string().max(500).optional(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_cancel_shift", args, async () => {
+        assertScope(ctx, "ops.write");
+        const shift = await storageGetShift(ctx.tenantId, args.shiftId);
+        if (shift.status === "cancelled") throw new Error("Shift is already cancelled");
+        const payload = { shiftId: args.shiftId, reason: args.reason?.trim() || null };
+        const summary = `Cancel shift ${args.shiftId} (${shift.title} on ${shift.date})`;
+        const { proposal, confirmToken } = await createProposal(ctx, "cancel_shift", payload, summary);
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_book_on",
+    {
+      description: "Propose booking on a scheduled shift. Requires confirm_proposal + ops.write.",
+      inputSchema: {
+        shiftId: z.number().int(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_book_on", args, async () => {
+        assertScope(ctx, "ops.write");
+        const shift = await storageGetShift(ctx.tenantId, args.shiftId);
+        if (shift.status !== "scheduled") {
+          throw new Error(`Cannot book on a shift with status '${shift.status}'`);
+        }
+        const payload = { shiftId: args.shiftId };
+        const summary = `Book on shift ${args.shiftId} (${shift.title})`;
+        const { proposal, confirmToken } = await createProposal(ctx, "book_on", payload, summary);
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
+  server.registerTool(
+    "propose_book_off",
+    {
+      description:
+        "Propose booking off a booked_on/in_progress shift, optional handover note. Requires confirm_proposal + ops.write.",
+      inputSchema: {
+        shiftId: z.number().int(),
+        handoverNote: z.string().max(2000).optional(),
+      },
+    },
+    async (args) =>
+      withAudit(ctx, "propose_book_off", args, async () => {
+        assertScope(ctx, "ops.write");
+        const shift = await storageGetShift(ctx.tenantId, args.shiftId);
+        if (shift.status !== "booked_on" && shift.status !== "in_progress") {
+          throw new Error(`Cannot book off a shift with status '${shift.status}'`);
+        }
+        const payload = {
+          shiftId: args.shiftId,
+          handoverNote: args.handoverNote?.trim() || null,
+        };
+        const summary = `Book off shift ${args.shiftId} (${shift.title})`;
+        const { proposal, confirmToken } = await createProposal(ctx, "book_off", payload, summary);
+        return {
+          status: "pending_confirmation",
+          proposalId: proposal.id,
+          confirmToken,
+          expiresAt: proposal.expiresAt,
+          summary,
+        };
+      }),
+  );
+
   return server;
+}
+
+async function storageGetShift(tenantId: number, shiftId: number) {
+  const [shift] = await db
+    .select({
+      id: shifts.id,
+      title: shifts.title,
+      date: shifts.date,
+      status: shifts.status,
+    })
+    .from(shifts)
+    .where(and(eq(shifts.id, shiftId), eq(shifts.tenantId, tenantId)))
+    .limit(1);
+  if (!shift) throw new Error("Shift not found");
+  return shift;
 }

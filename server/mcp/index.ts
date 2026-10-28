@@ -130,7 +130,7 @@ export function registerMcpRoutes(
         enabled: isMcpEnabled(),
         endpoint: "/mcp",
         scopes: MCP_SCOPES,
-        phase: 2,
+        phase: 3,
       });
     },
   );

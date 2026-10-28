@@ -1,27 +1,19 @@
-# Gardeo MCP — Phase 1 + Phase 2
+# Gardeo MCP — Phase 1–3
 
-Secure product MCP endpoint so AI hosts (Cursor, Claude Desktop, custom agents) can call **read tools** and **propose writes** with tenant-scoped API keys.
+Secure product MCP endpoint for AI hosts (Cursor, Claude Desktop, agents): **read tools**, **proposal-gated writes**, and a **hard deny-list** for sensitive domains.
 
 ## Enable
 
 1. Apply migrations:
    - `migrations/0044_mcp_phase1.sql`
    - `migrations/0045_mcp_phase2.sql`
-2. Set env:
-
-```bash
-MCP_ENABLED=true
-# optional
-MCP_RATE_LIMIT_PER_MIN=60
-```
-
-3. Restart the server.
+2. Set `MCP_ENABLED=true` and restart.
 
 ## Endpoint
 
-- **URL:** `POST https://<your-host>/mcp`
-- **Auth:** `Authorization: Bearer gdeo_mcp_…`
-- **Transport:** Streamable HTTP (stateless)
+- `POST https://<your-host>/mcp`
+- `Authorization: Bearer gdeo_mcp_…`
+- Streamable HTTP (stateless)
 
 ## Scopes
 
@@ -30,48 +22,48 @@ MCP_RATE_LIMIT_PER_MIN=60
 | `ops.read` | Read tools (default) |
 | `ops.write` | Propose / confirm / reject writes |
 
-New keys default to `ops.read` only. Enable **Allow ops.write** in Settings when creating a key.
+## Phase 1 reads
 
-## Phase 1 tools (ops.read)
+`whoami`, `list_sites`, `list_shifts`, `get_shift`, `get_site_coverage`, `search_employees`
+
+## Phase 2 writes (proposals)
+
+`propose_create_shift`, `propose_add_handover_note`, `propose_acknowledge_incident`, `list_pending_proposals`, `confirm_proposal`, `reject_proposal`
+
+## Phase 3
+
+### A — Hard lockdown (never exposed)
+
+Denied domains (also returned by `whoami`):
+
+- Bank / NI / passport / visa / BRP / share code
+- Document file URLs / downloads
+- Payroll mark-paid / wages mutations
+- Invoice delete / reverse-engineer
+- External sync triggers / API keys
+- Raw SQL / unrestricted internal proxy
+
+### B — Extra reads
 
 | Tool | Description |
 |------|-------------|
-| `whoami` | Client / tenant / scopes |
-| `list_sites` | Paginated sites |
-| `list_shifts` | Shifts in a ≤31-day range |
-| `get_shift` | One shift by id (tenant-checked) |
-| `get_site_coverage` | Book-on coverage for a date |
-| `search_employees` | Name / employee number search (sanitized) |
+| `list_open_incidents` | reported / investigating |
+| `list_suppliers` | No bank/VAT/finance fields |
+| `get_compliance_summary` | SIA/DBS/first-aid bands only |
+| `list_today_absences` | Open absences + approved leave for a date |
 
-Responses never include NI, bank details, immigration data, document URLs, or pay rates.
-
-## Phase 2 tools (ops.write)
-
-Writes never apply immediately. They create a **proposal** (30 min TTL) that must be confirmed.
+### C — Extra write proposals
 
 | Tool | Description |
 |------|-------------|
-| `propose_create_shift` | Draft a scheduled shift |
-| `propose_add_handover_note` | Draft handover note on a shift |
-| `propose_acknowledge_incident` | Draft incident → investigating |
-| `list_pending_proposals` | List this client's pending proposals |
-| `confirm_proposal` | Apply with `proposalId` + `confirmToken` |
-| `reject_proposal` | Discard with `proposalId` + `confirmToken` |
+| `propose_assign_officer` | Assign employee to shift |
+| `propose_cancel_shift` | Cancel shift (+ optional reason) |
+| `propose_book_on` | Book on scheduled shift |
+| `propose_book_off` | Book off (+ optional handover) |
 
-Human-in-the-loop: Settings → Integrations → **Pending proposals** → Confirm / Reject (no token needed for admins).
+All writes require `confirm_proposal` (token) or Settings → **Pending proposals** Confirm/Reject. Proposals expire in 30 minutes.
 
-## Create a key
-
-**UI:** Settings → Integrations → **Gardeo MCP (AI)** → optionally enable ops.write → Create key (shown once).
-
-**API** (tenant_admin / admin / super_admin session):
-
-```http
-POST /api/admin/mcp/clients
-{ "name": "Cursor", "scopes": ["ops.read", "ops.write"] }
-```
-
-## Cursor `mcp.json` example
+## Cursor config
 
 ```json
 {
@@ -88,17 +80,8 @@ POST /api/admin/mcp/clients
 
 ## Admin APIs
 
-| Method | Path |
-|--------|------|
-| GET | `/api/admin/mcp/status` |
-| GET | `/api/admin/mcp/clients` |
-| POST | `/api/admin/mcp/clients` |
-| POST | `/api/admin/mcp/clients/:id/keys` |
-| PATCH | `/api/admin/mcp/clients/:id` |
-| POST | `/api/admin/mcp/keys/:id/revoke` |
-| GET | `/api/admin/mcp/invocations` |
-| GET | `/api/admin/mcp/proposals?status=pending` |
-| POST | `/api/admin/mcp/proposals/:id/confirm` |
-| POST | `/api/admin/mcp/proposals/:id/reject` |
+Clients/keys/invocations/proposals — see Settings → Integrations → Gardeo MCP, or:
 
-Every tool call is logged to `mcp_tool_invocations` and `audit_logs`. Proposal lifecycle is logged on create/confirm/reject.
+- `GET/POST /api/admin/mcp/clients`
+- `GET /api/admin/mcp/proposals?status=pending`
+- `POST /api/admin/mcp/proposals/:id/confirm|reject`

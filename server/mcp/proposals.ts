@@ -39,6 +39,25 @@ export type AcknowledgeIncidentPayload = {
   incidentId: number;
 };
 
+export type AssignOfficerPayload = {
+  shiftId: number;
+  employeeId: number;
+};
+
+export type CancelShiftPayload = {
+  shiftId: number;
+  reason?: string | null;
+};
+
+export type BookOnPayload = {
+  shiftId: number;
+};
+
+export type BookOffPayload = {
+  shiftId: number;
+  handoverNote?: string | null;
+};
+
 function generateConfirmToken(): { raw: string; hash: string } {
   const raw = `mcp_confirm_${crypto.randomBytes(24).toString("hex")}`;
   return { raw, hash: bcrypt.hashSync(raw, 10) };
@@ -213,6 +232,87 @@ async function executeProposal(proposal: McpProposal): Promise<Record<string, un
         siteId: updated.siteId,
       },
     };
+  }
+
+  if (type === "assign_officer") {
+    const p = payload as AssignOfficerPayload;
+    const shift = await storage.getShift(p.shiftId, proposal.tenantId);
+    if (!shift) throw new Error("Shift not found");
+    if (shift.status === "cancelled" || shift.status === "completed") {
+      throw new Error(`Cannot assign officer to a '${shift.status}' shift`);
+    }
+    await assertEmployeeOwned(proposal.tenantId, p.employeeId);
+    const updated = await storage.updateShift(p.shiftId, { employeeId: p.employeeId } as any);
+    return { shift: sanitizeShift((updated || shift) as unknown as Record<string, unknown>) };
+  }
+
+  if (type === "cancel_shift") {
+    const p = payload as CancelShiftPayload;
+    const shift = await storage.getShift(p.shiftId, proposal.tenantId);
+    if (!shift) throw new Error("Shift not found");
+    if (shift.status === "cancelled") throw new Error("Shift is already cancelled");
+    if (shift.status === "completed" || shift.status === "verified") {
+      throw new Error(`Cannot cancel a '${shift.status}' shift`);
+    }
+    const note = p.reason?.trim()
+      ? `[MCP cancel ${new Date().toISOString()}] ${p.reason.trim()}`
+      : null;
+    const nextNotes = note
+      ? shift.notes
+        ? `${shift.notes.trim()}\n${note}`
+        : note
+      : shift.notes;
+    const updated = await storage.updateShift(p.shiftId, {
+      status: "cancelled",
+      ...(nextNotes != null ? { notes: nextNotes } : {}),
+    } as any);
+    return { shift: sanitizeShift((updated || { ...shift, status: "cancelled" }) as unknown as Record<string, unknown>) };
+  }
+
+  if (type === "book_on") {
+    const p = payload as BookOnPayload;
+    const shift = await storage.getShift(p.shiftId, proposal.tenantId);
+    if (!shift) throw new Error("Shift not found");
+    if (shift.status !== "scheduled") {
+      throw new Error(`Cannot book on a shift with status '${shift.status}'`);
+    }
+    const now = new Date();
+    const { calculateLateDeduction, shiftDateTime } = await import("@shared/lateDeduction");
+    const late = calculateLateDeduction(shiftDateTime(shift.date, shift.startTime), now);
+    const updated = await storage.updateShift(p.shiftId, {
+      status: "booked_on",
+      bookedOnAt: now,
+      checkInTime: now,
+      lateMinutes: late.lateMinutes,
+      lateHours: late.lateHours,
+    } as any);
+    return {
+      shift: sanitizeShift((updated || shift) as unknown as Record<string, unknown>),
+      lateMinutes: late.lateMinutes,
+      lateHours: late.lateHours,
+    };
+  }
+
+  if (type === "book_off") {
+    const p = payload as BookOffPayload;
+    const shift = await storage.getShift(p.shiftId, proposal.tenantId);
+    if (!shift) throw new Error("Shift not found");
+    if (shift.status !== "booked_on" && shift.status !== "in_progress") {
+      throw new Error(`Cannot book off a shift with status '${shift.status}'`);
+    }
+    const now = new Date();
+    let handoverNotes = shift.handoverNotes;
+    if (p.handoverNote?.trim()) {
+      const stamped = `[MCP ${now.toISOString()}] ${p.handoverNote.trim()}`;
+      handoverNotes = handoverNotes ? `${handoverNotes.trim()}\n${stamped}` : stamped;
+    }
+    const updated = await storage.updateShift(p.shiftId, {
+      status: "booked_off",
+      bookedOffAt: now,
+      checkOutTime: now,
+      ...(handoverNotes != null ? { handoverNotes } : {}),
+    } as any);
+    return { shift: sanitizeShift((updated || shift) as unknown as Record<string, unknown>) };
   }
 
   throw new Error(`Unsupported proposal type: ${type}`);

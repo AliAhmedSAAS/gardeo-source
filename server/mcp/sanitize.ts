@@ -50,6 +50,49 @@ export function sanitizeEmployeeSearch(row: Record<string, unknown>) {
   };
 }
 
+/** Supplier list — no bank, VAT numbers, or finance contacts. */
+export function sanitizeSupplier(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    supplierCode: row.supplierCode ?? row.supplier_code ?? null,
+    companyName: row.companyName ?? row.company_name ?? null,
+    contactName: row.contactName ?? row.contact_name ?? null,
+    city: row.city ?? null,
+    postcode: row.postcode ?? null,
+    supplierType: row.supplierType ?? row.supplier_type ?? null,
+    status: row.status ?? null,
+  };
+}
+
+/** Open incident — no free-text PII dumps beyond title/status. */
+export function sanitizeIncident(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    incidentRef: row.incidentRef ?? row.incident_ref ?? null,
+    title: row.title ?? null,
+    severity: row.severity ?? null,
+    status: row.status ?? null,
+    siteId: row.siteId ?? row.site_id ?? null,
+    incidentDate: row.incidentDate ?? row.incident_date ?? null,
+  };
+}
+
+/** Absence / leave snapshot — type and dates only (no fit notes / reason text). */
+export function sanitizeAbsence(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    employeeId: row.employeeId ?? row.employee_id ?? null,
+    employeeNumber: row.employeeNumber ?? row.employee_number ?? null,
+    firstName: row.firstName ?? row.first_name ?? null,
+    lastName: row.lastName ?? row.last_name ?? null,
+    kind: row.kind ?? null,
+    type: row.type ?? row.absenceType ?? row.absence_type ?? row.leaveType ?? row.leave_type ?? null,
+    startDate: row.startDate ?? row.start_date ?? null,
+    endDate: row.endDate ?? row.end_date ?? null,
+    status: row.status ?? null,
+  };
+}
+
 export function fingerprintArgs(args: unknown): string {
   const raw = JSON.stringify(args ?? {});
   let hash = 0;
