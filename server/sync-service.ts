@@ -352,10 +352,15 @@ async function syncRestPhpInhouseShifts(
       const endTime = item.endTime || "00:00";
 
       const existingResult = await pool.query(
-        `SELECT id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
+        `SELECT id, supplier_id FROM shifts WHERE tenant_id = $1 AND external_id = $2 LIMIT 1`,
         [tenantId, extId],
       );
       if (existingResult.rows.length > 0) {
+        // Never steal a contractor-owned row into MAIN (supplier_id null)
+        if (existingResult.rows[0].supplier_id != null) {
+          breakdown.shifts.skipped++;
+          continue;
+        }
         // Full resync overwrite — employee/site/date/times/status/hoursWorked
         await pool.query(
           `UPDATE shifts SET
@@ -391,7 +396,14 @@ async function syncRestPhpInhouseShifts(
         if (compositeCheck.rows.length > 0) {
           const row = compositeCheck.rows[0];
           const rowExt = row.external_id ? stripEntityPrefix(String(row.external_id)) : "";
-          if (!rowExt || rowExt === extId) {
+          // Contractor owns this slot — do not convert to in-house
+          if (row.supplier_id != null) {
+            if (!rowExt || rowExt === extId) {
+              breakdown.shifts.skipped++;
+              continue;
+            }
+            // Different external_id → fall through to INSERT (cancel+rebook)
+          } else if (!rowExt || rowExt === extId) {
             await pool.query(
               `UPDATE shifts SET
                  external_id = $1,
@@ -568,11 +580,60 @@ function extractEntitiesFromRestPhpShifts(shifts: any[]): {
 }
 
 /** Match shifts on emp|site|date|start|end (time normalized to HH:MM). */
-const SHIFT_COMPOSITE_SQL = `SELECT id, external_id, status::text AS status FROM shifts
+const SHIFT_COMPOSITE_SQL = `SELECT id, external_id, status::text AS status, supplier_id FROM shifts
   WHERE tenant_id = $1 AND (employee_id::text || '|' || site_id::text || '|' || date::text || '|' ||
   CASE WHEN start_time LIKE '____-__-__ %' THEN SUBSTRING(start_time FROM 12 FOR 5) ELSE LEFT(start_time::text, 5) END || '|' ||
   CASE WHEN end_time LIKE '____-__-__ %' THEN SUBSTRING(end_time FROM 12 FOR 5) ELSE LEFT(end_time::text, 5) END) = $2
   LIMIT 1`;
+
+/**
+ * After a successful API pull for a date range, mark DB shifts in that scope as cancelled
+ * when their external_id is no longer present in the API payload (stale completed rows).
+ * Scoped to in-house (supplier_id null / MAIN) or one contractor supplier — never tenant-wide.
+ */
+async function reconcileAbsentApiShiftsToCancelled(
+  tenantId: number,
+  dateFrom: string,
+  dateTo: string,
+  apiExtIds: string[],
+  scope: { kind: "inhouse" } | { kind: "supplier"; supplierDbId: number },
+): Promise<number> {
+  const ids = [...new Set(apiExtIds.map((id) => stripEntityPrefix(String(id || ""))).filter(Boolean))];
+  const params: unknown[] = [tenantId, dateFrom, dateTo, ids];
+  let supplierClause: string;
+  if (scope.kind === "inhouse") {
+    supplierClause = `AND (
+      supplier_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM suppliers s WHERE s.id = shifts.supplier_id
+          AND (
+            LOWER(TRIM(s.company_name)) IN ('main','in house','in-house','inhouse')
+            OR LOWER(REGEXP_REPLACE(TRIM(COALESCE(s.external_id,'')), '^sup-', '', 'i')) = '1120'
+          )
+      )
+    )`;
+  } else {
+    supplierClause = `AND supplier_id = $5`;
+    params.push(scope.supplierDbId);
+  }
+
+  const res = await pool.query(
+    `UPDATE shifts SET
+       status = 'cancelled',
+       last_synced_at = NOW(),
+       updated_at = NOW()
+     WHERE tenant_id = $1
+       AND date >= $2::date
+       AND date <= $3::date
+       AND external_id IS NOT NULL
+       AND TRIM(external_id) <> ''
+       AND COALESCE(status::text, '') <> 'cancelled'
+       AND REGEXP_REPLACE(TRIM(external_id), '^SHIFT-', '', 'i') <> ALL($4::text[])
+       ${supplierClause}`,
+    params,
+  );
+  return res.rowCount || 0;
+}
 
 async function syncRestPhpShifts(
   tenantId: number,
@@ -620,7 +681,8 @@ async function syncRestPhpShifts(
              status = $1,
              employee_id = COALESCE($2, employee_id),
              site_id = COALESCE($3, site_id),
-             supplier_id = COALESCE($4, supplier_id),
+             -- Force API supplier when known (fixes mis-tagged MAIN / null rows)
+             supplier_id = CASE WHEN $4::int IS NOT NULL THEN $4 ELSE supplier_id END,
              duty_type_id = COALESCE($5, duty_type_id),
              title = $6,
              date = $7::date,
@@ -660,7 +722,7 @@ async function syncRestPhpShifts(
                  status = $2,
                  employee_id = COALESCE($3, employee_id),
                  site_id = COALESCE($4, site_id),
-                 supplier_id = COALESCE($5, supplier_id),
+                 supplier_id = CASE WHEN $5::int IS NOT NULL THEN $5 ELSE supplier_id END,
                  duty_type_id = COALESCE($6, duty_type_id),
                  title = $7,
                  date = $8::date,
@@ -968,7 +1030,7 @@ async function syncPhpShifts(
              status = COALESCE($1, status, 'completed'),
              employee_id = COALESCE($2, employee_id),
              site_id = COALESCE($3, site_id),
-             supplier_id = COALESCE($4, supplier_id),
+             supplier_id = CASE WHEN $4::int IS NOT NULL THEN $4 ELSE supplier_id END,
              title = $5,
              date = $6::date,
              start_time = $7,
@@ -1003,7 +1065,7 @@ async function syncPhpShifts(
                  status = COALESCE($2, status, 'completed'),
                  employee_id = COALESCE($3, employee_id),
                  site_id = COALESCE($4, site_id),
-                 supplier_id = COALESCE($5, supplier_id),
+                 supplier_id = CASE WHEN $5::int IS NOT NULL THEN $5 ELSE supplier_id END,
                  title = $6,
                  date = $7::date,
                  start_time = $8,
@@ -1999,6 +2061,23 @@ export async function runSync(
         `[INHOUSE] Synced in-house only — supplier_id forced null (${inhouseOnly.length} of ${shifts.length} shifts)`,
       );
 
+      try {
+        const apiIds = inhouseOnly.map((s) => stripEntityPrefix(String(s.id || "")));
+        const cancelledN = await reconcileAbsentApiShiftsToCancelled(
+          tenantId,
+          dateFrom!,
+          dateTo!,
+          apiIds,
+          { kind: "inhouse" },
+        );
+        if (cancelledN > 0) {
+          breakdown.shifts.updated += cancelledN;
+          allErrors.push(`[INHOUSE RECONCILE] Marked ${cancelledN} absent shift(s) cancelled`);
+        }
+      } catch (reconErr: any) {
+        allErrors.push(`[INHOUSE RECONCILE] Failed: ${reconErr?.message || reconErr}`);
+      }
+
       if (skipEnrichment) {
         allErrors.push("[ENRICHMENT] Skipped for in-house sync (skipEnrichment=true)");
       } else {
@@ -2072,6 +2151,37 @@ export async function runSync(
       breakdown.shifts = newEntitySyncResult();
       const shiftResult = await syncRestPhpShifts(tenantId, shifts, supplierIdMap, clientIdMap, siteIdMap, employeeIdMap);
       breakdown.shifts = shiftResult;
+
+      // Reconcile stale rows only when sync is scoped to one contractor (cron / UI supplier filter)
+      if (supplierId) {
+        try {
+          const want = stripEntityPrefix(String(supplierId));
+          const supplierDbId =
+            supplierIdMap.get(want)
+            || (await findByExternalId(tenantId, "suppliers", want))?.id
+            || null;
+          if (supplierDbId) {
+            const apiIds = shifts.map((s) => stripEntityPrefix(String(s.id || "")));
+            const cancelledN = await reconcileAbsentApiShiftsToCancelled(
+              tenantId,
+              dateFrom!,
+              dateTo!,
+              apiIds,
+              { kind: "supplier", supplierDbId },
+            );
+            if (cancelledN > 0) {
+              breakdown.shifts.updated += cancelledN;
+              allErrors.push(
+                `[RECONCILE] supplier=${want} marked ${cancelledN} absent shift(s) cancelled`,
+              );
+            }
+          } else {
+            allErrors.push(`[RECONCILE] Skipped — supplier ${want} not found in DB`);
+          }
+        } catch (reconErr: any) {
+          allErrors.push(`[RECONCILE] Failed: ${reconErr?.message || reconErr}`);
+        }
+      }
 
       if (skipEnrichment) {
         allErrors.push("[ENRICHMENT] Skipped for this chunk (skipEnrichment=true)");
