@@ -241,15 +241,61 @@ function mapShiftStatus(status: string | null | undefined): string {
   return "scheduled";
 }
 
-/** API duty hours (hoursWorked) → shifts.hours_override. Ignores nonsense totals. */
+/**
+ * GFMTrack tbl_dutyschedule.minhrs=checked → billable hours floor at 8
+ * even when clock duty is shorter. API may send an explicit flag and/or
+ * already bake the floor into hoursWorked.
+ */
+function isApiMinHrsEnabled(item: any): boolean {
+  const v =
+    item?.minhrs
+    ?? item?.minHrs
+    ?? item?.min_hrs
+    ?? item?.minimumHours
+    ?? item?.isMinHrs
+    ?? item?.minHoursChecked
+    ?? item?.min_hours;
+  if (v === true || v === 1 || v === "1") return true;
+  const s = String(v ?? "").trim().toLowerCase();
+  return s === "checked" || s === "yes" || s === "y" || s === "true" || s === "on";
+}
+
+function clockHoursFromApiItem(item: any): number | null {
+  const start = String(item?.startTime || item?.time_start || "").slice(0, 5);
+  const end = String(item?.endTime || item?.time_finish || "").slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let mins = eh * 60 + em - (sh * 60 + sm);
+  if (mins < 0) mins += 1440;
+  const breakMins = Number(item?.breakMinutes ?? item?.break_minutes ?? 0);
+  if (Number.isFinite(breakMins) && breakMins > 0) mins = Math.max(0, mins - breakMins);
+  return Math.round((mins / 60) * 100) / 100;
+}
+
+/** API billable duty hours → shifts.hours_override (includes minhrs floor when applicable). */
 function parseApiHoursWorked(item: any): string | null {
+  let n: number | null = null;
   for (const k of ["hoursWorked", "hours_worked", "hours", "Hours", "dutyHours"]) {
-    const n = Number(item?.[k]);
-    if (Number.isFinite(n) && n >= 0 && n < 48) return String(Math.round(n * 100) / 100);
+    const v = Number(item?.[k]);
+    if (Number.isFinite(v) && v >= 0 && v < 48) {
+      n = v;
+      break;
+    }
   }
-  const th = Number(item?.totalHours);
-  if (Number.isFinite(th) && th >= 0 && th < 48) return String(Math.round(th * 100) / 100);
-  return null;
+  // Per-row totalHours from shifts-main is often a cumulative meta field — only use if sensible.
+  if (n == null) {
+    const th = Number(item?.totalHours);
+    if (Number.isFinite(th) && th >= 0 && th < 48) n = th;
+  }
+  if (n == null) n = clockHoursFromApiItem(item);
+
+  if (n == null || !Number.isFinite(n) || n < 0 || n >= 48) return null;
+
+  // minhrs checked → at least 8 hours (even if duty clock is shorter)
+  if (isApiMinHrsEnabled(item) && n > 0 && n < 8) n = 8;
+
+  return String(Math.round(n * 100) / 100);
 }
 
 async function fetchFromRestPhpApi(
@@ -361,7 +407,7 @@ async function syncRestPhpInhouseShifts(
           breakdown.shifts.skipped++;
           continue;
         }
-        // Full resync overwrite — employee/site/date/times/status/hoursWorked
+        // Full resync overwrite — employee/site/date/times/status/billable hours (minhrs-aware)
         await pool.query(
           `UPDATE shifts SET
              status = $1,
@@ -374,7 +420,7 @@ async function syncRestPhpInhouseShifts(
              end_time = $7,
              notes = COALESCE($8, notes),
              pay_rate = COALESCE($9, pay_rate),
-             hours_override = COALESCE($10::numeric, hours_override),
+             hours_override = CASE WHEN $10::numeric IS NOT NULL THEN $10::numeric ELSE hours_override END,
              last_synced_at = NOW(),
              updated_at = NOW()
            WHERE id = $11`,
@@ -417,7 +463,7 @@ async function syncRestPhpInhouseShifts(
                  end_time = $8,
                  notes = COALESCE($9, notes),
                  pay_rate = COALESCE($10, pay_rate),
-                 hours_override = COALESCE($11::numeric, hours_override),
+                 hours_override = CASE WHEN $11::numeric IS NOT NULL THEN $11::numeric ELSE hours_override END,
                  last_synced_at = NOW(),
                  updated_at = NOW()
                WHERE id = $12`,
@@ -699,7 +745,7 @@ async function syncRestPhpShifts(
              end_time = $9,
              notes = COALESCE($10, notes),
              pay_rate = COALESCE($11, pay_rate),
-             hours_override = COALESCE($12::numeric, hours_override),
+             hours_override = CASE WHEN $12::numeric IS NOT NULL THEN $12::numeric ELSE hours_override END,
              last_synced_at = NOW(),
              updated_at = NOW()
            WHERE id = $13`,
@@ -739,7 +785,7 @@ async function syncRestPhpShifts(
                  end_time = $10,
                  notes = COALESCE($11, notes),
                  pay_rate = COALESCE($12, pay_rate),
-                 hours_override = COALESCE($13::numeric, hours_override),
+                 hours_override = CASE WHEN $13::numeric IS NOT NULL THEN $13::numeric ELSE hours_override END,
                  last_synced_at = NOW(),
                  updated_at = NOW()
                WHERE id = $14`,
@@ -1045,7 +1091,7 @@ async function syncPhpShifts(
              start_time = $7,
              end_time = $8,
              pay_rate = COALESCE($9, pay_rate),
-             hours_override = COALESCE($10::numeric, hours_override),
+             hours_override = CASE WHEN $10::numeric IS NOT NULL THEN $10::numeric ELSE hours_override END,
              last_synced_at = NOW(),
              updated_at = NOW()
            WHERE id = $11`,
@@ -1080,7 +1126,7 @@ async function syncPhpShifts(
                  start_time = $8,
                  end_time = $9,
                  pay_rate = COALESCE($10, pay_rate),
-                 hours_override = COALESCE($11::numeric, hours_override),
+                 hours_override = CASE WHEN $11::numeric IS NOT NULL THEN $11::numeric ELSE hours_override END,
                  last_synced_at = NOW(),
                  updated_at = NOW()
                WHERE id = $12`,
@@ -1604,7 +1650,7 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
              end_time = $8,
              notes = COALESCE($9, notes),
              pay_rate = COALESCE($10, pay_rate),
-             hours_override = COALESCE($11::numeric, hours_override),
+             hours_override = CASE WHEN $11::numeric IS NOT NULL THEN $11::numeric ELSE hours_override END,
              last_synced_at = NOW(),
              updated_at = NOW()
            WHERE id = $12`,
@@ -1640,7 +1686,7 @@ async function syncShifts(tenantId: number, data: any[]): Promise<SyncResult> {
                  end_time = $9,
                  notes = COALESCE($10, notes),
                  pay_rate = COALESCE($11, pay_rate),
-                 hours_override = COALESCE($12::numeric, hours_override),
+                 hours_override = CASE WHEN $12::numeric IS NOT NULL THEN $12::numeric ELSE hours_override END,
                  last_synced_at = NOW(),
                  updated_at = NOW()
                WHERE id = $13`,
