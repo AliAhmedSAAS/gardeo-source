@@ -12,6 +12,7 @@ import { startNotificationScheduler } from "./notification-scheduler";
 import { startProbationScheduler } from "./probation-scheduler";
 import { startFmPpmScheduler } from "./fm-ppm-scheduler";
 import { ensureCronJobRunsTable, startQuEmailsCron } from "./qu-emails-cron";
+import { startSyncMonthCron } from "./sync-month-cron";
 
 // Global safety nets: keep the production server alive when a background task
 // (scheduler interval, async route, webhook handler, etc.) rejects or throws
@@ -994,6 +995,7 @@ app.use((req, res, next) => {
     log("Could not ensure cron_job_runs: " + (e as Error).message);
   }
   startQuEmailsCron();
+  startSyncMonthCron();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
