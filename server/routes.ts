@@ -5656,7 +5656,8 @@ export async function registerRoutes(
           e.sia_license_number AS emp_sia_license_number, e.sia_expiry_date AS emp_sia_expiry_date,
           e.dbs_certificate_number AS emp_dbs_certificate_number, e.dbs_issue_date AS emp_dbs_issue_date,
           sup.company_name AS supplier_name,
-          COALESCE(NULLIF(TRIM(sup.supplier_code), ''), 'MAIN') AS branch_code,
+          -- BRANCH column: show supplier name (not supplier_code / SUP-xxxxx)
+          COALESCE(NULLIF(TRIM(sup.company_name), ''), 'MAIN') AS branch_code,
           COALESCE(cu.username, TRIM(CONCAT(COALESCE(cu.first_name, ''), ' ', COALESCE(cu.last_name, ''))), sh.created_by, '') AS created_by_name,
           (SELECT COUNT(*)::int FROM incidents i
             WHERE i.tenant_id = sh.tenant_id
@@ -5770,7 +5771,7 @@ export async function registerRoutes(
           dbsCertificateNumber: r.emp_dbs_certificate_number || null,
           dbsValid,
           supplierName: r.supplier_name || null,
-          branchCode: r.branch_code || (!r.supplier_id ? "MAIN" : "—"),
+          branchCode: r.branch_code || (!r.supplier_id ? "MAIN" : (r.supplier_name || "—")),
           createdByName: (r.created_by_name || "").trim() || null,
           incidentCount: Number(r.incident_count || 0),
           isLate,

@@ -971,7 +971,7 @@ export default function SchedulingPage() {
         String(shift.startTime || "").slice(0, 5),
         String(shift.endTime || "").slice(0, 5),
         guardDisplay(shift),
-        shift.branchCode || "MAIN",
+        shift.supplierName || shift.branchCode || "MAIN",
         hours,
         statusConf.label,
         shift.incidentCount || 0,
@@ -1012,7 +1012,7 @@ export default function SchedulingPage() {
       if (searchOfficer !== "all" && String(shift.employeeId || "") !== searchOfficer) return false;
       if (searchAssignment === "assigned" && !shift.employeeId) return false;
       if (searchAssignment === "unassigned" && shift.employeeId) return false;
-      if (searchBranch !== "all" && String(shift.branchCode || "MAIN") !== searchBranch) return false;
+      if (searchBranch !== "all" && String(shift.supplierName || shift.branchCode || "MAIN") !== searchBranch) return false;
       if (q) {
         const statusLabel = (STATUS_CONFIG[shift.status || "scheduled"]?.label || shift.status || "").toLowerCase();
         const haystack = [
@@ -1041,7 +1041,7 @@ export default function SchedulingPage() {
 
   const branchFilterOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const s of shifts) set.add(s.branchCode || "MAIN");
+    for (const s of shifts) set.add(s.supplierName || s.branchCode || "MAIN");
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [shifts]);
 
@@ -1654,7 +1654,9 @@ export default function SchedulingPage() {
                       </Button>
                     </td>
                     <td className="p-2 max-w-[160px] truncate" title={guardDisplay(shift)}>{guardDisplay(shift)}</td>
-                    <td className="p-2 font-medium">{shift.branchCode || "MAIN"}</td>
+                    <td className="p-2 font-medium max-w-[160px] truncate" title={shift.supplierName || shift.branchCode || "MAIN"}>
+                      {shift.supplierName || shift.branchCode || "MAIN"}
+                    </td>
                     <td className="p-2 text-center font-mono">{hours}</td>
                     <td className="p-2">
                       <Badge variant="secondary" className={`${statusConf.className} text-[10px]`}>{statusConf.label}</Badge>
