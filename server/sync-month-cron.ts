@@ -12,7 +12,7 @@ import { ensureCronJobRunsTable } from "./qu-emails-cron";
 
 export const SYNC_MONTH_JOB_NAME = "sync_current_month";
 
-const DEFAULT_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const HISTORY_RETENTION_DAYS = 30;
 const PREVIEW_MAX = 4000;
 
@@ -31,8 +31,8 @@ function cronEnabled(): boolean {
 
 function intervalMs(): number {
   const n = Number(process.env.SYNC_MONTH_CRON_INTERVAL_MS || DEFAULT_INTERVAL_MS);
-  // Floor at 15 minutes to avoid hammering external APIs
-  return Number.isFinite(n) && n >= 15 * 60 * 1000 ? Math.floor(n) : DEFAULT_INTERVAL_MS;
+  // Floor at 5 minutes to avoid hammering external APIs
+  return Number.isFinite(n) && n >= 5 * 60 * 1000 ? Math.floor(n) : DEFAULT_INTERVAL_MS;
 }
 
 /** Current calendar month in Europe/London as YYYY-MM-DD bounds. */
