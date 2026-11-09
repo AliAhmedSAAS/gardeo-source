@@ -641,7 +641,9 @@ async function syncRestPhpShifts(
   supplierMap: Map<string, number>,
   clientMap: Map<string, number>,
   siteMap: Map<string, number>,
-  employeeMap: Map<string, number>
+  employeeMap: Map<string, number>,
+  /** Month-linked Gardeo supplier — wins over API supplierName map when set */
+  forcedSupplierDbId?: number | null,
 ): Promise<SyncResult> {
   const result: SyncResult = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
   const rateCardCache = new Map<number, SupplierRateCardRow[]>();
@@ -651,9 +653,16 @@ async function syncRestPhpShifts(
     try {
       const extId = stripEntityPrefix(item.id);
       const siteId = item.siteId ? (siteMap.get(stripEntityPrefix(item.siteId)) || null) : null;
-      const supplierId = item.supplierId ? (supplierMap.get(stripEntityPrefix(item.supplierId)) || null) : null;
+      const fromMap = item.supplierId
+        ? (supplierMap.get(stripEntityPrefix(item.supplierId)) || null)
+        : null;
+      const supplierId = forcedSupplierDbId ?? fromMap;
       const employeeId = item.employeeId
-        ? (employeeMap.get(empSyncKey(stripEntityPrefix(item.employeeId), supplierId)) || null)
+        ? (
+          employeeMap.get(empSyncKey(stripEntityPrefix(item.employeeId), supplierId))
+          || employeeMap.get(empSyncKey(stripEntityPrefix(item.employeeId), fromMap))
+          || null
+        )
         : null;
       const payRateFromCard = await getPayRateFromSupplierRateCard(
         tenantId, rateCardCache, supplierId, item.date, siteId, employeeId,
@@ -2115,6 +2124,20 @@ export async function runSync(
       }
       const entities = extractEntitiesFromRestPhpShifts(shifts);
 
+      // Month-linked Gardeo supplier (e.g. Exact for Nov) — resolve by external_id only.
+      // Do NOT upsert from API company name ("Capital Protection") when it conflicts with the linked row.
+      let scopedSupplierDbId: number | null = null;
+      let scopedSupplierExt: string | null = null;
+      let scopedSupplierName = "";
+      if (supplierId) {
+        scopedSupplierExt = stripEntityPrefix(String(supplierId));
+        const linked = await findByExternalId(tenantId, "suppliers", scopedSupplierExt);
+        if (linked?.id) {
+          scopedSupplierDbId = Number(linked.id);
+          scopedSupplierName = String(linked.company_name || "").trim();
+        }
+      }
+
       breakdown.clients = newEntitySyncResult();
       const clientIdMap = new Map<string, number>();
       for (const [extId, name] of entities.clients) {
@@ -2132,16 +2155,53 @@ export async function runSync(
 
       breakdown.suppliers = newEntitySyncResult();
       const supplierIdMap = new Map<string, number>();
-      for (const [extId, name] of entities.suppliers) {
-        const id = await upsertSupplier(tenantId, extId, { companyName: name }, breakdown.suppliers);
-        if (id) supplierIdMap.set(extId, id);
+      if (scopedSupplierDbId && scopedSupplierExt) {
+        supplierIdMap.set(scopedSupplierExt, scopedSupplierDbId);
+        const mismatchNames = new Set<string>();
+        for (const [extId, apiName] of entities.suppliers) {
+          // Point every API supplier key in this scoped pull at the linked Gardeo supplier
+          supplierIdMap.set(extId, scopedSupplierDbId);
+          breakdown.suppliers.skipped++;
+          const apiNameTrim = String(apiName || "").trim();
+          if (
+            apiNameTrim
+            && scopedSupplierName
+            && apiNameTrim.toLowerCase() !== scopedSupplierName.toLowerCase()
+          ) {
+            mismatchNames.add(apiNameTrim);
+          }
+        }
+        allErrors.push(
+          `[SUPPLIER LINK] Using linked Gardeo supplier id=${scopedSupplierDbId}` +
+          (scopedSupplierName ? ` "${scopedSupplierName}"` : "") +
+          ` for filter ${scopedSupplierExt}`,
+        );
+        for (const apiName of mismatchNames) {
+          allErrors.push(
+            `[SUPPLIER LINK] API name "${apiName}" ignored — keeping linked Gardeo supplier`,
+          );
+        }
+      } else {
+        for (const [extId, name] of entities.suppliers) {
+          const id = await upsertSupplier(tenantId, extId, { companyName: name }, breakdown.suppliers);
+          if (id) supplierIdMap.set(extId, id);
+        }
+        if (supplierId && !scopedSupplierDbId) {
+          allErrors.push(
+            `[SUPPLIER LINK] No Gardeo supplier with external_id=${stripEntityPrefix(String(supplierId))} — ` +
+            `fell back to API name upsert`,
+          );
+        }
       }
 
       breakdown.employees = newEntitySyncResult();
       const employeeIdMap = new Map<string, number>();
       for (const [, info] of entities.employees) {
         const empExtId = info.empExtId;
-        const supId = supplierIdMap.get(info.supplierExtId) || null;
+        const supId =
+          scopedSupplierDbId
+          || supplierIdMap.get(info.supplierExtId)
+          || null;
         const empData: Record<string, any> = { fullName: info.name };
         if (info.email) empData.email = info.email;
         const { empId } = await upsertEmployee(tenantId, empExtId, empData, supId, breakdown.employees);
@@ -2149,17 +2209,22 @@ export async function runSync(
       }
 
       breakdown.shifts = newEntitySyncResult();
-      const shiftResult = await syncRestPhpShifts(tenantId, shifts, supplierIdMap, clientIdMap, siteIdMap, employeeIdMap);
+      const shiftResult = await syncRestPhpShifts(
+        tenantId,
+        shifts,
+        supplierIdMap,
+        clientIdMap,
+        siteIdMap,
+        employeeIdMap,
+        scopedSupplierDbId,
+      );
       breakdown.shifts = shiftResult;
 
       // Reconcile stale rows only when sync is scoped to one contractor (cron / UI supplier filter)
       if (supplierId) {
         try {
           const want = stripEntityPrefix(String(supplierId));
-          const supplierDbId =
-            supplierIdMap.get(want)
-            || (await findByExternalId(tenantId, "suppliers", want))?.id
-            || null;
+          const supplierDbId = scopedSupplierDbId || supplierIdMap.get(want) || null;
           if (supplierDbId) {
             const apiIds = shifts.map((s) => stripEntityPrefix(String(s.id || "")));
             const cancelledN = await reconcileAbsentApiShiftsToCancelled(
