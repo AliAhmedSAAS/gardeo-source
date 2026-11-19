@@ -3,6 +3,7 @@ import type { User } from "@shared/schema";
 import { storage } from "./storage";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { verifySiaLicence } from "./sia-check-service";
+import { sendRouteError } from "./route-errors";
 import {
   createEmployeeVettingFormToken,
   getVettingFormByToken,
@@ -93,7 +94,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(note);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -104,7 +105,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteNote(paramId(req.params.noteId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -123,7 +124,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -134,7 +135,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deletePreferredSite(paramId(req.params.rowId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -155,7 +156,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -173,7 +174,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!row) return res.status(404).json({ message: "Not found" });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -184,7 +185,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteEducation(paramId(req.params.eduId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -203,7 +204,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -214,7 +215,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteDrivingLicence(paramId(req.params.licId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -238,7 +239,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -260,7 +261,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -271,7 +272,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteCertificate(paramId(req.params.certId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -291,7 +292,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -302,7 +303,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteSiaLicence(paramId(req.params.siaId), ctx.employeeId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -318,7 +319,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -369,7 +370,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
 
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -390,7 +391,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -408,7 +409,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!row) return res.status(404).json({ message: "Not found" });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -437,7 +438,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -448,7 +449,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const row = await staffProfileStorage.unlockPForm(ctx.employeeId, ctx.employee.tenantId, ctx.user.id);
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -459,7 +460,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const row = await staffProfileStorage.finishPForm(ctx.employeeId, ctx.employee.tenantId, ctx.user.id);
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -485,7 +486,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -509,7 +510,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!row) return res.status(404).json({ message: "Reference record not found" });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -520,7 +521,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteReference(paramId(req.params.refId));
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -541,7 +542,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!updated) return res.status(404).json({ message: "Reference record not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -573,7 +574,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!result.ok) return res.status(400).json({ message: result.error });
       res.json(result.record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -647,7 +648,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json({ results, sent: results.filter((r) => r.ok).length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -674,7 +675,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -701,7 +702,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!row) return res.status(404).json({ message: "Employment record not found" });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -712,7 +713,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       await staffProfileStorage.deleteEmployment(paramId(req.params.histId));
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -735,7 +736,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!updated) return res.status(404).json({ message: "Employment record not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -751,7 +752,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       );
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -767,7 +768,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       );
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -783,7 +784,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       );
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -795,7 +796,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const result = await staffProfileStorage.runCompletionCertification(ctx.employeeId, ctx.employee);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -827,7 +828,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!result.ok) return res.status(400).json({ message: result.error });
       res.json(result.record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -849,7 +850,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
         issueNumber: result.issueNumber,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -921,7 +922,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json({ results, sent: results.filter((r) => r.ok).length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -951,7 +952,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const row = await storage.upsertBankDetailsByPurpose(ctx.employeeId, purpose, payload);
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -989,7 +990,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.json(row);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1017,7 +1018,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       });
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1029,7 +1030,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       if (!updated) return res.status(404).json({ message: "Document not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1107,7 +1108,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       const gate = await staffProfileStorage.validateDeployment(ctx.employeeId);
       res.json(gate);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1126,7 +1127,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
         companyConfigured: !!(tenant?.name && (tenant.addressLine1 || tenant.address)),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1383,7 +1384,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json(result.data);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1424,7 +1425,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json(result.data);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1437,7 +1438,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1454,7 +1455,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json(result.data);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1467,7 +1468,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1483,7 +1484,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json(result.data);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1496,7 +1497,7 @@ export function registerStaffProfileRoutes(app: Express, requireRole: RequireRol
       }
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 }

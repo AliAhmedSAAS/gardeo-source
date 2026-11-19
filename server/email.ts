@@ -161,6 +161,26 @@ export async function sendSupplierPasswordReset(params: {
   });
 }
 
+/** Sent when an administrator has invalidated a user's password for security reasons. */
+export async function sendForcedPasswordReset(params: {
+  to: string;
+  resetLink: string;
+  contactName?: string;
+}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
+  const { to, resetLink, contactName = "there" } = params;
+  return sendMail({
+    to,
+    subject: "Action required: set a new Guardosmart password",
+    html: `
+        <p>Hi ${escapeHtml(contactName)},</p>
+        <p>For security reasons your Guardosmart password has been reset and your old password no longer works.</p>
+        <p><a href="${escapeHtml(resetLink)}">Set a new password</a></p>
+        <p>This link expires in 24 hours. After that, use "Forgot password" on the sign-in page to get a new link.</p>
+        <p>— Guardosmart</p>
+      `,
+  });
+}
+
 /** Notify supplier that a document was rejected with reason. */
 export async function sendDocumentRejected(params: {
   to: string;

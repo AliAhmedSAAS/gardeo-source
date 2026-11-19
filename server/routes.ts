@@ -48,6 +48,17 @@ import { registerMcpRoutes } from "./mcp";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
+import { findInvalidTenantReference, invalidReferenceMessage, omitProtectedFields } from "./request-guards";
+import { SHIFT_SERVER_MANAGED_FIELDS, getEditStatusError, getShiftDeleteBlockReason } from "./shift-status-rules";
+import { getSupplierActionError, getMissingRequiredDocuments } from "./supplier-status-rules";
+import { isPortalRole, getPortalScope, getPortalSiteIds } from "./portal-scope";
+import { getLoginBlockReason, ONBOARDING_PASSWORD_PLACEHOLDER } from "./login-policy";
+import { deleteEmployees } from "./employee-deletion";
+import { sendRouteError } from "./route-errors";
+import {
+  respondIfInvalid, validateBody, changedFieldsOnly, clientSchemas, siteSchemas, shiftSchemas, supplierSchemas,
+  clientRateCardSchemas, siteChargeRateSchemas, employeePayRateSchemas, supplierRateCardSchemas, employeeUpdateSchema,
+} from "./validation";
 
 async function generateUniqueCode(prefix: string, table: string, column: string, tenantId: number): Promise<string> {
   const { rows } = await pool.query(
@@ -272,6 +283,14 @@ function requireRole(...roles: string[]) {
     if (!roles.includes(user.role)) return res.status(403).json({ message: "Forbidden" });
     next();
   };
+}
+
+function requireStaff(req: Request, res: Response, next: NextFunction) {
+  const isSession = req.isAuthenticated();
+  const isJwt = (req as any).user && (req as any).jwtAuth;
+  if (!isSession && !isJwt) return res.status(401).json({ message: "Unauthorized" });
+  if (isPortalRole(((req as any).user as User).role)) return res.status(403).json({ message: "Forbidden" });
+  next();
 }
 
 async function archiveCurrentAgreement(supplierId: number, reason: string): Promise<boolean> {
@@ -580,6 +599,9 @@ export async function registerRoutes(
           return done(null, false, { message: `Invalid credentials. ${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining.` });
         }
 
+        const blockReason = await getLoginBlockReason(user);
+        if (blockReason) return done(null, false, { message: blockReason });
+
         if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
           await storage.updateUser(user.id, { failedLoginAttempts: 0, lockedUntil: null } as any);
         }
@@ -795,6 +817,8 @@ export async function registerRoutes(
       }
       if (validUsers.length === 1) {
         const matchedUser = validUsers[0];
+        const blockReason = await getLoginBlockReason(matchedUser);
+        if (blockReason) return res.status(401).json({ message: blockReason });
         if (matchedUser.failedLoginAttempts && matchedUser.failedLoginAttempts > 0) {
           await storage.updateUser(matchedUser.id, { failedLoginAttempts: 0, lockedUntil: null } as any);
         }
@@ -895,7 +919,8 @@ export async function registerRoutes(
         return res.status(401).json({ message: `Invalid credentials. ${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining.` });
       }
 
-      if (!user.isActive) return res.status(401).json({ message: "Account is deactivated" });
+      const blockReason = await getLoginBlockReason(user);
+      if (blockReason) return res.status(401).json({ message: blockReason });
 
       await storage.updateUser(user.id, { lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: null } as any);
 
@@ -957,7 +982,7 @@ export async function registerRoutes(
       const plans = await storage.getSubscriptionPlans();
       res.json(plans);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -972,7 +997,7 @@ export async function registerRoutes(
       const existing = await storage.getTenantBySubdomain(normalized);
       res.json({ available: !existing, subdomain: normalized });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1055,7 +1080,7 @@ export async function registerRoutes(
         res.status(201).json({ user: safeUser, tenant });
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1066,7 +1091,7 @@ export async function registerRoutes(
       const employee = await storage.getEmployeeByUserId(user.id);
       res.json(employee || null);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1089,7 +1114,7 @@ export async function registerRoutes(
       const updated = await storage.updateEmployee(employee.id, filtered);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1102,7 +1127,7 @@ export async function registerRoutes(
       if (!supplier) return res.json(null);
       res.json({ companyName: supplier.companyName });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1136,7 +1161,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Change request submitted successfully.", status: "pending" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1157,7 +1182,7 @@ export async function registerRoutes(
       });
       res.json({ token: created.token, formUrl: created.formUrl, expiresAt: created.expiresAt });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1168,7 +1193,7 @@ export async function registerRoutes(
       const record = await storage.getOnboardingByUserId(user.id);
       res.json(record || null);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1190,7 +1215,7 @@ export async function registerRoutes(
       const updated = await storage.updateOnboarding(record.id, body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1209,7 +1234,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1242,7 +1267,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1295,7 +1320,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1308,7 +1333,7 @@ export async function registerRoutes(
       const contacts = await storage.getEmergencyContacts(employee.id);
       res.json(contacts);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1322,7 +1347,7 @@ export async function registerRoutes(
       const contact = await storage.createEmergencyContact({ ...req.body, employeeId: employee.id });
       res.status(201).json(contact);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1337,7 +1362,7 @@ export async function registerRoutes(
       await storage.deleteEmergencyContact(parseInt(req.params.id));
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1352,7 +1377,7 @@ export async function registerRoutes(
       const updated = await storage.updateEmergencyContact(parseInt(req.params.id), req.body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1403,7 +1428,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Bank details change request submitted. An admin will review and apply the changes.", status: "pending", pendingId: pending.id });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1415,7 +1440,7 @@ export async function registerRoutes(
       const changes = await storage.getPendingBankChangesForEmployee(employee.id);
       res.json(changes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1428,7 +1453,7 @@ export async function registerRoutes(
       const changes = await storage.getAllPendingBankChanges(user.tenantId ?? undefined);
       res.json(changes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1475,7 +1500,7 @@ export async function registerRoutes(
 
       res.json({ message: "Bank change approved and applied", change });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1522,7 +1547,7 @@ export async function registerRoutes(
 
       res.json({ message: "Bank change rejected", change });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1589,7 +1614,7 @@ export async function registerRoutes(
       }
       res.json({ triggered });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1602,7 +1627,7 @@ export async function registerRoutes(
       const details = await storage.getBankDetails(employee.id);
       res.json(details || null);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1627,7 +1652,7 @@ export async function registerRoutes(
       const details = await storage.createBankDetails({ accountName, bankName, sortCode, accountNumber, buildingSocietyRef: buildingSocietyRef || null, employeeId: employee.id });
       res.status(201).json(details);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1640,7 +1665,7 @@ export async function registerRoutes(
       const docs = await storage.getDocuments(employee.id);
       res.json(docs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1659,7 +1684,7 @@ export async function registerRoutes(
       ).catch(() => {});
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1674,7 +1699,7 @@ export async function registerRoutes(
       await storage.deleteDocument(parseInt(req.params.id));
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1723,7 +1748,7 @@ export async function registerRoutes(
         })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1750,7 +1775,7 @@ export async function registerRoutes(
         })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1763,7 +1788,7 @@ export async function registerRoutes(
       const records = await storage.getVettingRecords(employee.id);
       res.json(records);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1776,7 +1801,7 @@ export async function registerRoutes(
       const refs = await storage.getReferences(employee.id);
       res.json(refs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1790,7 +1815,7 @@ export async function registerRoutes(
       const ref = await storage.createReference({ ...req.body, employeeId: employee.id });
       res.status(201).json(ref);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1805,7 +1830,7 @@ export async function registerRoutes(
       await storage.deleteReference(parseInt(req.params.id));
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1818,7 +1843,7 @@ export async function registerRoutes(
       const history = await storage.getEmploymentHistory(employee.id);
       res.json(history);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1832,7 +1857,7 @@ export async function registerRoutes(
       const history = await storage.createEmploymentHistory({ ...req.body, employeeId: employee.id });
       res.status(201).json(history);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1847,7 +1872,7 @@ export async function registerRoutes(
       await storage.deleteEmploymentHistory(parseInt(req.params.id));
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1857,7 +1882,7 @@ export async function registerRoutes(
       const allTenants = await storage.getAllTenants();
       res.json(allTenants);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1872,7 +1897,7 @@ export async function registerRoutes(
       });
       res.json(tenant);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1909,7 +1934,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1924,7 +1949,7 @@ export async function registerRoutes(
         leaveCarryForwardCapDays: (tenant as any).leaveCarryForwardCapDays ?? 5,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1943,7 +1968,7 @@ export async function registerRoutes(
         leaveCarryForwardCapDays: (updated as any).leaveCarryForwardCapDays ?? 5,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1958,7 +1983,7 @@ export async function registerRoutes(
         geofenceRadiusMetres: (tenant as any).geofenceRadiusMetres ?? 200,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1977,7 +2002,7 @@ export async function registerRoutes(
         geofenceRadiusMetres: (updated as any).geofenceRadiusMetres ?? 200,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -1989,7 +2014,7 @@ export async function registerRoutes(
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json(schema.resolveDeploymentGateSettings(tenant.deploymentGateSettings));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2011,7 +2036,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json(schema.resolveDeploymentGateSettings(updated.deploymentGateSettings));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2023,7 +2048,7 @@ export async function registerRoutes(
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json({ supplierDataVisibilityMonths: tenant?.supplierDataVisibilityMonths ?? null });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2039,7 +2064,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json({ supplierDataVisibilityMonths: updated?.supplierDataVisibilityMonths ?? null });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2052,7 +2077,7 @@ export async function registerRoutes(
       const cutoffDate = computeSupplierCutoffDate(supplier.dataVisibilityMonths, tenant?.supplierDataVisibilityMonths);
       res.json({ cutoffDate });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2064,7 +2089,7 @@ export async function registerRoutes(
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json({ onboardingDeadlineDays: tenant.onboardingDeadlineDays ?? 7 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2086,7 +2111,7 @@ export async function registerRoutes(
       });
       res.json({ onboardingDeadlineDays: updated.onboardingDeadlineDays ?? 7 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2098,7 +2123,7 @@ export async function registerRoutes(
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json({ defaultProbationWeeks: tenant.defaultProbationWeeks ?? 12 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2115,7 +2140,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json({ defaultProbationWeeks: updated.defaultProbationWeeks ?? 12 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2126,7 +2151,7 @@ export async function registerRoutes(
       const types = await storage.ensureDefaultOfficerTypes(user.tenantId);
       res.json(types);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2141,7 +2166,7 @@ export async function registerRoutes(
       const created = await storage.createTenantOfficerType(user.tenantId, name);
       res.status(201).json(created);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2155,7 +2180,7 @@ export async function registerRoutes(
       if (!deleted) return res.status(404).json({ message: "Officer type not found" });
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2167,7 +2192,7 @@ export async function registerRoutes(
       const types = await storage.ensureDefaultDutyTypes(user.tenantId);
       res.json(types);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2182,7 +2207,7 @@ export async function registerRoutes(
       const created = await storage.createTenantDutyType(user.tenantId, name, Boolean(requiresLicense));
       res.status(201).json(created);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2199,7 +2224,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Duty type not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2213,7 +2238,7 @@ export async function registerRoutes(
       if (!deleted) return res.status(404).json({ message: "Duty type not found" });
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2228,7 +2253,7 @@ export async function registerRoutes(
       const sources = await storage.ensureDefaultPayrollSources(user.tenantId);
       res.json(sources);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2297,7 +2322,7 @@ export async function registerRoutes(
       const permissions = await storage.getRolePermissions();
       res.json(permissions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2306,7 +2331,7 @@ export async function registerRoutes(
       const permissions = await storage.getRolePermissionsByRole(req.params.role);
       res.json(permissions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2317,7 +2342,7 @@ export async function registerRoutes(
       await storage.bulkSetRolePermissions(permissions);
       res.json({ message: "Permissions updated" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2342,7 +2367,7 @@ export async function registerRoutes(
       const enabled = permissions.filter(p => p.enabled).map(p => p.permissionKey);
       res.json({ role: user.role, permissions: enabled, tenant: tenantInfo });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2355,7 +2380,7 @@ export async function registerRoutes(
       if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json(tenant);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2374,7 +2399,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ message: "Tenant not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2387,7 +2412,7 @@ export async function registerRoutes(
       const { getPublicTenantEmailSettings } = await import("./tenant-email-settings");
       res.json(await getPublicTenantEmailSettings(user.tenantId));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2402,7 +2427,7 @@ export async function registerRoutes(
       });
       res.json(saved);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2419,7 +2444,7 @@ export async function registerRoutes(
       if (!result.ok) return res.status(400).json({ message: result.error || "Test failed" });
       res.json({ success: true, via: result.via, to });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2543,7 +2568,7 @@ export async function registerRoutes(
         mortgages: topic.Mortgages ?? null,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2643,7 +2668,7 @@ export async function registerRoutes(
         addresses,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2687,7 +2712,7 @@ export async function registerRoutes(
         resignedCount: data.resigned_count ?? officers.filter(o => !o.isActive).length,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2699,7 +2724,7 @@ export async function registerRoutes(
       const allUsers = await storage.getUsersByTenant(user.tenantId);
       res.json(allUsers.map(({ password: _, ...u }) => u));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -2885,7 +2910,7 @@ export async function registerRoutes(
         stats: statsResult.rows[0],
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3011,7 +3036,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3077,7 +3102,7 @@ export async function registerRoutes(
 
       res.json({ ok: conflicts.length === 0, conflicts });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3146,7 +3171,7 @@ export async function registerRoutes(
         ...extras,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3174,7 +3199,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3206,7 +3231,7 @@ export async function registerRoutes(
         userId: empUser?.id ?? null,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3266,7 +3291,7 @@ export async function registerRoutes(
       const inviteLink = `${req.protocol}://${req.get("host") || "localhost"}/accept-invite?token=${token}`;
       res.json({ success: true, message: "Invitation sent successfully", inviteLink, email: portalEmail });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3297,7 +3322,7 @@ export async function registerRoutes(
       const inviteLink = `${req.protocol}://${req.get("host") || "localhost"}/accept-invite?token=${token}`;
       res.json({ message: "Reminder sent", inviteLink });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3326,7 +3351,7 @@ export async function registerRoutes(
       const resetLink = `${req.protocol}://${req.get("host") || "localhost"}/reset-password?token=${token}`;
       res.json({ message: "Password reset link created", resetLink });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3393,10 +3418,9 @@ export async function registerRoutes(
         if (siaRows[0]) return res.status(400).json({ message: "SIA licence number already exists" });
       }
 
-      const hashedPassword = await bcrypt.hash("Password123!", 10);
       const newUser = await storage.createUser({
         username: resolvedUsername,
-        password: hashedPassword,
+        password: ONBOARDING_PASSWORD_PLACEHOLDER,
         email: emailNorm,
         firstName,
         lastName,
@@ -3470,7 +3494,7 @@ export async function registerRoutes(
 
       res.status(201).json({ ...employee, firstName, lastName, email: emailNorm });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3481,6 +3505,20 @@ export async function registerRoutes(
       const employee = await storage.getEmployee(id);
       if (!employee) return res.status(404).json({ message: "Employee not found" });
       if (user.tenantId != null && employee.tenantId !== user.tenantId) return res.status(404).json({ message: "Employee not found" });
+
+      const linkedUser = employee.userId ? await storage.getUser(String(employee.userId)) : undefined;
+      const changed = changedFieldsOnly(req.body, {
+        ...employee,
+        firstName: linkedUser?.firstName,
+        lastName: linkedUser?.lastName,
+        email: linkedUser?.email,
+        phone: linkedUser?.phone ?? employee.phone,
+      } as Record<string, unknown>);
+      if (respondIfInvalid(res, employeeUpdateSchema, changed)) return;
+      if (employee.tenantId != null && req.body.supplierId) {
+        const invalidRef = await findInvalidTenantReference(employee.tenantId, { supplierId: req.body.supplierId });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
 
       const { firstName, lastName, email, phone, drivingLicenceNumber, ...employeeFields } = req.body;
 
@@ -3574,7 +3612,7 @@ export async function registerRoutes(
         supplierName,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3588,7 +3626,7 @@ export async function registerRoutes(
       const contact = await storage.createEmergencyContact({ ...req.body, employeeId });
       res.status(201).json(contact);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3603,7 +3641,7 @@ export async function registerRoutes(
       const updated = await storage.updateEmergencyContact(contactId, req.body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3617,7 +3655,7 @@ export async function registerRoutes(
       await storage.deleteEmergencyContact(parseInt(req.params.contactId));
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3632,99 +3670,7 @@ export async function registerRoutes(
       const employeeIds = ids.map((id: any) => parseInt(id)).filter((id: number) => !isNaN(id));
       if (employeeIds.length === 0) return res.status(400).json({ message: "No valid employee IDs" });
 
-      let deleted = 0;
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
-
-        for (const empId of employeeIds) {
-          const employee = await storage.getEmployee(empId, user.tenantId!);
-          if (!employee) continue;
-
-          if (employee.userId) {
-            const userCheck = await client.query("SELECT id, tenant_id FROM users WHERE id = $1 AND tenant_id = $2", [employee.userId, user.tenantId]);
-            if (userCheck.rows.length === 0) continue;
-          }
-
-          await client.query("DELETE FROM payroll_run_items WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM emergency_contacts WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM vetting_records WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM documents WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM bank_details WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employment_history WHERE employee_id = $1", [empId]);
-          await client.query('DELETE FROM "references" WHERE employee_id = $1', [empId]);
-          await client.query("DELETE FROM invoices WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employee_invitations WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employee_policies WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employee_audit_trail WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employee_pay_rates WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM shifts WHERE employee_id = $1", [empId]);
-          await client.query("DELETE FROM employees WHERE id = $1 AND tenant_id = $2", [empId, user.tenantId]);
-          if (employee.userId) {
-            await client.query("DELETE FROM onboarding_records WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM password_reset_tokens WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM notifications WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM audit_logs WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM data_consents WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM data_erasure_requests WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE incidents SET reported_by = NULL WHERE reported_by = $1", [employee.userId]);
-            await client.query("UPDATE incidents SET assigned_to = NULL WHERE assigned_to = $1", [employee.userId]);
-            await client.query("UPDATE shifts SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE shifts SET booked_on_by = NULL WHERE booked_on_by = $1", [employee.userId]);
-            await client.query("UPDATE shifts SET booked_off_by = NULL WHERE booked_off_by = $1", [employee.userId]);
-            await client.query("UPDATE shifts SET verified_by = NULL WHERE verified_by = $1", [employee.userId]);
-            await client.query("UPDATE shifts SET finance_approved_by = NULL WHERE finance_approved_by = $1", [employee.userId]);
-            await client.query("UPDATE invoices SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE invoices SET issued_by = NULL WHERE issued_by = $1", [employee.userId]);
-            await client.query("UPDATE invoices SET paid_by = NULL WHERE paid_by = $1", [employee.userId]);
-            await client.query("UPDATE invoices SET accepted_by_supplier_user_id = NULL WHERE accepted_by_supplier_user_id = $1", [employee.userId]);
-            await client.query("UPDATE documents SET verified_by = NULL WHERE verified_by = $1", [employee.userId]);
-            await client.query("UPDATE vetting_records SET conducted_by = NULL WHERE conducted_by = $1", [employee.userId]);
-            await client.query("UPDATE employee_pay_rates SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE job_postings SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE rate_cards SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE rate_card_history SET changed_by = NULL WHERE changed_by = $1", [employee.userId]);
-            await client.query("UPDATE credit_notes SET issued_by = NULL WHERE issued_by = $1", [employee.userId]);
-            await client.query("UPDATE debit_notes SET issued_by = NULL WHERE issued_by = $1", [employee.userId]);
-            await client.query("UPDATE disputes SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE disputes SET resolved_by = NULL WHERE resolved_by = $1", [employee.userId]);
-            await client.query("DELETE FROM dispute_messages WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET user_id = NULL WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET created_by = NULL WHERE created_by = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET approved_by = NULL WHERE approved_by = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET submitted_by = NULL WHERE submitted_by = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET suspended_by = NULL WHERE suspended_by = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET last_review_by = NULL WHERE last_review_by = $1", [employee.userId]);
-            await client.query("UPDATE suppliers SET info_required_by = NULL WHERE info_required_by = $1", [employee.userId]);
-            await client.query("UPDATE supplier_documents SET uploaded_by = NULL WHERE uploaded_by = $1", [employee.userId]);
-            await client.query("UPDATE supplier_documents SET reviewed_by = NULL WHERE reviewed_by = $1", [employee.userId]);
-            await client.query("DELETE FROM supplier_document_audit WHERE user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM supplier_audit_events WHERE actor_user_id = $1", [employee.userId]);
-            await client.query("DELETE FROM supplier_login_activity WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE supplier_pending_changes SET user_id = NULL WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE supplier_pending_changes SET reviewed_by = NULL WHERE reviewed_by = $1", [employee.userId]);
-            await client.query("DELETE FROM supplier_profile_change_log WHERE user_id = $1", [employee.userId]);
-            await client.query("UPDATE supplier_field_requests SET requested_by = NULL WHERE requested_by = $1", [employee.userId]);
-            await client.query("UPDATE supplier_policies SET uploaded_by = NULL WHERE uploaded_by = $1", [employee.userId]);
-            await client.query("UPDATE supplier_policies SET reviewed_by = NULL WHERE reviewed_by = $1", [employee.userId]);
-            await client.query("DELETE FROM supplier_invitations WHERE created_by = $1", [employee.userId]);
-            await client.query("DELETE FROM employee_invitations WHERE created_by = $1", [employee.userId]);
-            await client.query("DELETE FROM tenant_invitations WHERE invited_by = $1", [employee.userId]);
-            await client.query("UPDATE onboarding_records SET reviewed_by = NULL WHERE reviewed_by = $1", [employee.userId]);
-            await client.query("UPDATE vat_verifications SET verified_by = NULL WHERE verified_by = $1", [employee.userId]);
-            await client.query("DELETE FROM sessions WHERE sess::text LIKE $1", [`%${employee.userId}%`]);
-            await client.query("DELETE FROM users WHERE id = $1 AND tenant_id = $2", [employee.userId, user.tenantId]);
-          }
-          deleted++;
-        }
-
-        await client.query("COMMIT");
-      } catch (txErr) {
-        await client.query("ROLLBACK");
-        throw txErr;
-      } finally {
-        client.release();
-      }
+      const { deleted, blocked } = await deleteEmployees(user.tenantId, employeeIds);
 
       const meta = getClientMeta(req);
       await storage.createAuditLog({
@@ -3733,13 +3679,19 @@ export async function registerRoutes(
         action: "bulk_delete_employees",
         entityType: "employee",
         entityId: null,
-        details: { deletedCount: deleted, requestedIds: employeeIds },
+        details: { deletedIds: deleted, blocked, requestedIds: employeeIds },
         ipAddress: meta.ipAddress,
       });
 
-      res.json({ deleted, total: employeeIds.length });
+      const status = deleted.length === 0 && blocked.length > 0 ? 409 : 200;
+      res.status(status).json({
+        deleted: deleted.length,
+        total: employeeIds.length,
+        blocked,
+        ...(status === 409 && { message: `None of the selected employees can be deleted: ${blocked[0].reasons.join(", ")}` }),
+      });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3753,7 +3705,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3780,7 +3732,7 @@ export async function registerRoutes(
 
       res.status(201).json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3805,7 +3757,7 @@ export async function registerRoutes(
 
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3819,7 +3771,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3839,7 +3791,7 @@ export async function registerRoutes(
 
       res.status(201).json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3969,7 +3921,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -3992,7 +3944,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4002,8 +3954,10 @@ export async function registerRoutes(
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
       const employeeId = parseInt(req.params.id);
       const { hourlyRate, effectiveFrom, effectiveTo, reason, dutyTypeId } = req.body;
-      if (!hourlyRate || !effectiveFrom) return res.status(400).json({ message: "Hourly rate and effective from date are required" });
-      if (!dutyTypeId) return res.status(400).json({ message: "Duty type is required" });
+      if (await findInvalidTenantReference(user.tenantId, { employeeId })) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      if (respondIfInvalid(res, employeePayRateSchemas.create, req.body)) return;
 
       const { rows } = await pool.query(
         `INSERT INTO employee_pay_rates (tenant_id, employee_id, duty_type_id, hourly_rate, effective_from, effective_to, reason, created_by)
@@ -4021,7 +3975,7 @@ export async function registerRoutes(
 
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4030,6 +3984,17 @@ export async function registerRoutes(
       const user = req.user as User;
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
       const id = parseInt(req.params.id);
+      const { rows: currentRows } = await pool.query(
+        `SELECT to_char(effective_from, 'YYYY-MM-DD') AS effective_from, to_char(effective_to, 'YYYY-MM-DD') AS effective_to
+         FROM employee_pay_rates WHERE id = $1 AND tenant_id = $2`,
+        [id, user.tenantId]
+      );
+      if (currentRows.length === 0) return res.status(404).json({ message: "Pay rate not found" });
+      if (respondIfInvalid(res, employeePayRateSchemas.update, {
+        effectiveFrom: currentRows[0].effective_from,
+        effectiveTo: currentRows[0].effective_to,
+        ...req.body,
+      })) return;
       const updates: Record<string, any> = {};
       const fieldMap: Record<string, string> = {
         hourlyRate: "hourly_rate",
@@ -4065,7 +4030,7 @@ export async function registerRoutes(
 
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4089,7 +4054,7 @@ export async function registerRoutes(
 
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4113,7 +4078,7 @@ export async function registerRoutes(
       const enriched = records.map(r => ({ ...r, employee: empMap[r.employeeId] || null }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4138,7 +4103,7 @@ export async function registerRoutes(
       });
       res.status(201).json(record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4198,7 +4163,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4223,7 +4188,7 @@ export async function registerRoutes(
       );
       res.json(records.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4244,7 +4209,7 @@ export async function registerRoutes(
       const enriched = records.map(r => ({ ...r, employee: empMap[r.employeeId] || null }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4330,7 +4295,7 @@ export async function registerRoutes(
 
       res.json({ success: true, mergedCount: mergedResults.length, primaryId });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4419,23 +4384,23 @@ export async function registerRoutes(
 
       res.json({ purged, total: employeeIds.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   // Clients
-  app.get("/api/clients", requireAuth, async (req, res) => {
+  app.get("/api/clients", requireStaff, async (req, res) => {
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.json([]);
       const { rows } = await pool.query("SELECT c.*, (SELECT COUNT(*) FROM sites s WHERE s.client_id = c.id) as site_count FROM clients c WHERE c.tenant_id = $1 ORDER BY c.company_name", [user.tenantId]);
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
-  app.get("/api/clients/:id", requireAuth, async (req, res) => {
+  app.get("/api/clients/:id", requireStaff, async (req, res) => {
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
@@ -4444,22 +4409,28 @@ export async function registerRoutes(
       const { rows: siteRows } = await pool.query("SELECT * FROM sites WHERE client_id = $1 AND tenant_id = $2 ORDER BY name", [parseInt(req.params.id), user.tenantId]);
       res.json({ ...rows[0], sites: siteRows });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   app.post("/api/clients", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "hr_manager"), async (req, res) => {
     try {
       const user = req.user as User;
+      if (respondIfInvalid(res, clientSchemas.create, req.body)) return;
+      const { rows: duplicates } = await pool.query(
+        "SELECT 1 FROM clients WHERE tenant_id = $1 AND LOWER(TRIM(company_name)) = LOWER(TRIM($2)) LIMIT 1",
+        [user.tenantId, req.body.companyName],
+      );
+      if (duplicates.length > 0) return res.status(409).json({ message: "A client with this name already exists" });
       const clientCode = await generateUniqueCode("CLT-", "clients", "client_code", user.tenantId!);
       const { rows } = await pool.query(
         `INSERT INTO clients (tenant_id, client_code, company_name, company_reg_number, contact_name, contact_email, contact_phone, address, city, postcode, contract_ref, contract_start_date, contract_end_date, billing_email, notes)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-        [user.tenantId, clientCode, req.body.companyName, req.body.companyRegNumber || null, req.body.contactName, req.body.contactEmail, req.body.contactPhone, req.body.address, req.body.city, req.body.postcode, req.body.contractRef, req.body.contractStartDate || null, req.body.contractEndDate || null, req.body.billingEmail, req.body.notes]
+        [user.tenantId, clientCode, String(req.body.companyName).trim(), req.body.companyRegNumber || null, req.body.contactName, req.body.contactEmail, req.body.contactPhone, req.body.address, req.body.city, req.body.postcode, req.body.contractRef, req.body.contractStartDate || null, req.body.contractEndDate || null, req.body.billingEmail, req.body.notes]
       );
       res.status(201).json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4475,6 +4446,20 @@ export async function registerRoutes(
         contractEndDate: "contract_end_date", billingEmail: "billing_email", notes: "notes",
         isActive: "is_active",
       };
+      const { rows: [existingClient] } = await pool.query(
+        "SELECT * FROM clients WHERE id = $1 AND tenant_id = $2",
+        [parseInt(String(req.params.id)), user.tenantId],
+      );
+      if (!existingClient) return res.status(404).json({ message: "Client not found" });
+      const changed = changedFieldsOnly(req.body, existingClient, (key) => allowedColumns[key] ?? key);
+      if (respondIfInvalid(res, clientSchemas.update, changed)) return;
+      if (changed.companyName !== undefined) {
+        const { rows: duplicates } = await pool.query(
+          "SELECT 1 FROM clients WHERE tenant_id = $1 AND id <> $2 AND LOWER(TRIM(company_name)) = LOWER(TRIM($3)) LIMIT 1",
+          [user.tenantId, existingClient.id, changed.companyName],
+        );
+        if (duplicates.length > 0) return res.status(409).json({ message: "A client with this name already exists" });
+      }
       const fields: string[] = [];
       const values: any[] = [];
       let idx = 1;
@@ -4490,7 +4475,7 @@ export async function registerRoutes(
       if (rows.length === 0) return res.status(404).json({ message: "Client not found" });
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4498,11 +4483,28 @@ export async function registerRoutes(
     try {
       const user = req.user as User;
       if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
-      const { rowCount } = await pool.query("DELETE FROM clients WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), user.tenantId]);
-      if (rowCount === 0) return res.status(404).json({ message: "Client not found" });
+      const clientId = parseInt(String(req.params.id));
+      const { rows: [client] } = await pool.query("SELECT id FROM clients WHERE id = $1 AND tenant_id = $2", [clientId, user.tenantId]);
+      if (!client) return res.status(404).json({ message: "Client not found" });
+      const { rows: [links] } = await pool.query("SELECT COUNT(*)::int AS sites FROM sites WHERE client_id = $1", [clientId]);
+      if (links.sites > 0) {
+        return res.status(409).json({ message: `Cannot delete: ${links.sites} site(s) are linked to this client. Move or delete them first.` });
+      }
+      const tx = await pool.connect();
+      try {
+        await tx.query("BEGIN");
+        await tx.query("DELETE FROM client_rate_cards WHERE client_id = $1 AND tenant_id = $2", [clientId, user.tenantId]);
+        await tx.query("DELETE FROM clients WHERE id = $1 AND tenant_id = $2", [clientId, user.tenantId]);
+        await tx.query("COMMIT");
+      } catch (txErr) {
+        await tx.query("ROLLBACK");
+        throw txErr;
+      } finally {
+        tx.release();
+      }
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4517,7 +4519,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4526,7 +4528,11 @@ export async function registerRoutes(
       const user = req.user as User;
       const clientId = parseInt(req.params.id);
       const { hourlyChargeRate, roleType, effectiveFrom, effectiveTo, siteId, notes } = req.body;
-      if (!hourlyChargeRate || !effectiveFrom) return res.status(400).json({ message: "Hourly charge rate and effective from date are required" });
+      if (!user.tenantId) return res.status(403).json({ message: "No tenant" });
+      const invalidRef = await findInvalidTenantReference(user.tenantId, { clientId, siteId });
+      if (invalidRef === "clientId") return res.status(404).json({ message: "Client not found" });
+      if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      if (respondIfInvalid(res, clientRateCardSchemas.create, req.body)) return;
       const { rows } = await pool.query(
         `INSERT INTO client_rate_cards (tenant_id, client_id, site_id, role_type, hourly_charge_rate, effective_from, effective_to, notes)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
@@ -4534,7 +4540,7 @@ export async function registerRoutes(
       );
       res.status(201).json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4550,6 +4556,11 @@ export async function registerRoutes(
         effectiveFrom: "effective_from", effectiveTo: "effective_to",
         siteId: "site_id", notes: "notes"
       };
+      if (respondIfInvalid(res, clientRateCardSchemas.update, req.body)) return;
+      if (user.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(user.tenantId, { siteId: req.body.siteId });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
       for (const [key, val] of Object.entries(req.body)) {
         if (allowedFields[key]) {
           fields.push(`${allowedFields[key]} = $${idx++}`);
@@ -4562,7 +4573,7 @@ export async function registerRoutes(
       if (rows.length === 0) return res.status(404).json({ message: "Rate card not found" });
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4573,7 +4584,7 @@ export async function registerRoutes(
       await pool.query("DELETE FROM client_rate_cards WHERE id = $1 AND tenant_id = $2", [id, user.tenantId]);
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4584,21 +4595,25 @@ export async function registerRoutes(
       if (!user.tenantId) return res.json([]);
       const q = (req.query.q as string || "").trim();
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
-      let result;
-      if (q) {
-        result = await pool.query(
-          `SELECT id, name, address, postcode FROM sites WHERE tenant_id = $1 AND LOWER(name) LIKE $2 ORDER BY name LIMIT $3`,
-          [user.tenantId, `%${q.toLowerCase()}%`, limit]
-        );
-      } else {
-        result = await pool.query(
-          `SELECT id, name, address, postcode FROM sites WHERE tenant_id = $1 ORDER BY name LIMIT $2`,
-          [user.tenantId, limit]
-        );
+      const portalScope = await getPortalScope(user);
+      const conditions = ["tenant_id = $1"];
+      const params: any[] = [user.tenantId];
+      if (portalScope) {
+        params.push(await getPortalSiteIds(portalScope, user.tenantId));
+        conditions.push(`id = ANY($${params.length}::int[])`);
       }
+      if (q) {
+        params.push(`%${q.toLowerCase()}%`);
+        conditions.push(`LOWER(name) LIKE $${params.length}`);
+      }
+      params.push(limit);
+      const result = await pool.query(
+        `SELECT id, name, address, postcode FROM sites WHERE ${conditions.join(" AND ")} ORDER BY name LIMIT $${params.length}`,
+        params,
+      );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4607,9 +4622,12 @@ export async function registerRoutes(
       const user = req.user as User;
       if (!user.tenantId) return res.json([]);
 
+      const portalScope = await getPortalScope(user);
+      const portalSiteIds = portalScope ? await getPortalSiteIds(portalScope, user.tenantId) : null;
+
       if (!req.query.page && !req.query.search && !req.query.clientId) {
         const allSites = await storage.getSitesByTenant(user.tenantId);
-        return res.json(allSites);
+        return res.json(portalSiteIds ? allSites.filter((s) => portalSiteIds.includes(s.id)) : allSites);
       }
 
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -4621,6 +4639,12 @@ export async function registerRoutes(
       let conditions = ["s.tenant_id = $1"];
       let params: any[] = [user.tenantId];
       let paramIdx = 2;
+
+      if (portalSiteIds) {
+        conditions.push(`s.id = ANY($${paramIdx}::int[])`);
+        params.push(portalSiteIds);
+        paramIdx++;
+      }
 
       if (search) {
         conditions.push(`(s.name ILIKE $${paramIdx} OR s.address ILIKE $${paramIdx} OR s.city ILIKE $${paramIdx} OR s.postcode ILIKE $${paramIdx} OR c.company_name ILIKE $${paramIdx})`);
@@ -4647,10 +4671,9 @@ export async function registerRoutes(
         params
       );
 
-      const totalCountResult = await pool.query(
-        "SELECT COUNT(*) as total FROM sites WHERE tenant_id = $1",
-        [user.tenantId]
-      );
+      const totalCountResult = portalSiteIds
+        ? { rows: [{ total: portalSiteIds.length }] }
+        : await pool.query("SELECT COUNT(*) as total FROM sites WHERE tenant_id = $1", [user.tenantId]);
 
       const sitesResult = await pool.query(
         `SELECT s.id, s.tenant_id as "tenantId", s.name, s.address, s.city, s.county, s.postcode,
@@ -4687,14 +4710,19 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   app.post("/api/sites", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "controller", "scheduler", "hr_manager", "compliance_manager", "training_manager"), async (req, res) => {
     try {
       const user = req.user as User;
-      const body = { ...req.body };
+      const body = omitProtectedFields({ ...req.body }, ["siteCode"]);
+      if (respondIfInvalid(res, siteSchemas.create, body)) return;
+      if (user.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(user.tenantId, { clientId: body.clientId });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
       if (body.geofenceRadiusMetres !== undefined) {
         body.geofenceRadiusMetres = body.geofenceRadiusMetres === null || body.geofenceRadiusMetres === ""
           ? null
@@ -4703,7 +4731,7 @@ export async function registerRoutes(
       const site = await storage.createSite({ ...body, tenantId: user.tenantId });
       res.status(201).json(site);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4714,7 +4742,12 @@ export async function registerRoutes(
       const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
       const site = await storage.getSite(siteId, tenantFilter);
       if (!site) return res.status(404).json({ message: "Site not found" });
-      const body = { ...req.body };
+      const body = omitProtectedFields({ ...req.body }, ["siteCode"]);
+      if (respondIfInvalid(res, siteSchemas.update, changedFieldsOnly(body, site as Record<string, unknown>))) return;
+      if (site.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(site.tenantId, { clientId: body.clientId });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
       if (body.geofenceRadiusMetres !== undefined) {
         body.geofenceRadiusMetres = body.geofenceRadiusMetres === null || body.geofenceRadiusMetres === ""
           ? null
@@ -4744,7 +4777,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4758,7 +4791,7 @@ export async function registerRoutes(
       await storage.deleteSite(siteId);
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4798,7 +4831,7 @@ export async function registerRoutes(
 
       res.json({ deleted, failed: errors.length, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4812,16 +4845,20 @@ export async function registerRoutes(
       const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
       const site = await storage.getSite(siteId, tenantFilter);
       if (!site) return res.status(404).json({ message: "Site not found" });
+      const portalScope = await getPortalScope(user);
+      if (portalScope && !(await getPortalSiteIds(portalScope, site.tenantId!)).includes(site.id)) {
+        return res.status(404).json({ message: "Site not found" });
+      }
       let clientName = site.clientName;
       if (site.clientId) {
         try {
-          const { rows } = await pool.query(`SELECT company_name FROM clients WHERE id = $1`, [site.clientId]);
+          const { rows } = await pool.query(`SELECT company_name FROM clients WHERE id = $1 AND tenant_id = $2`, [site.clientId, site.tenantId]);
           if (rows[0]?.company_name) clientName = rows[0].company_name;
         } catch { /* ignore */ }
       }
       res.json({ ...site, clientName });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4845,7 +4882,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4856,12 +4893,10 @@ export async function registerRoutes(
       const siteId = parseInt(req.params.id, 10);
       const site = await storage.getSite(siteId, user.tenantId);
       if (!site) return res.status(404).json({ message: "Site not found" });
+      if (respondIfInvalid(res, siteChargeRateSchemas.create, req.body)) return;
       const dutyTypeId = parseInt(req.body.dutyTypeId, 10);
       const rate = req.body.hourlyChargeRate;
       const effectiveFrom = req.body.effectiveFrom;
-      if (!dutyTypeId || rate == null || rate === "" || !effectiveFrom) {
-        return res.status(400).json({ message: "Duty type, hourly rate, and effective from are required" });
-      }
       const { rows } = await pool.query(
         `INSERT INTO site_charge_rates (tenant_id, site_id, duty_type_id, hourly_charge_rate, effective_from, effective_to, notes)
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING
@@ -4875,7 +4910,7 @@ export async function registerRoutes(
       if (String(err.message || "").includes("uq_site_charge_rates")) {
         return res.status(400).json({ message: "A rate already exists for this duty type and effective date" });
       }
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4885,6 +4920,7 @@ export async function registerRoutes(
       if (!user.tenantId) return res.status(400).json({ message: "No tenant" });
       const siteId = parseInt(req.params.id, 10);
       const rateId = parseInt(req.params.rateId, 10);
+      if (respondIfInvalid(res, siteChargeRateSchemas.update, req.body)) return;
       const fields: string[] = [];
       const params: any[] = [];
       let idx = 1;
@@ -4914,7 +4950,7 @@ export async function registerRoutes(
       if (!rows[0]) return res.status(404).json({ message: "Rate not found" });
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4931,7 +4967,7 @@ export async function registerRoutes(
       if (result.rowCount === 0) return res.status(404).json({ message: "Rate not found" });
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4952,7 +4988,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4976,7 +5012,7 @@ export async function registerRoutes(
       );
       res.status(201).json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -4993,7 +5029,7 @@ export async function registerRoutes(
       if (result.rowCount === 0) return res.status(404).json({ message: "Document not found" });
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5016,7 +5052,7 @@ export async function registerRoutes(
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5036,7 +5072,7 @@ export async function registerRoutes(
       );
       res.status(201).json({ ...rows[0], authorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5085,7 +5121,7 @@ export async function registerRoutes(
         hours: hoursBetween(r.date, r.startTime, r.endTime, r.breakMinutes || 0),
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5136,7 +5172,7 @@ export async function registerRoutes(
         regions,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5454,7 +5490,7 @@ export async function registerRoutes(
         suppliers: suppliersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5561,7 +5597,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5610,7 +5646,7 @@ export async function registerRoutes(
 
       res.json({ processed, skipped, errors, fields: parsed.patch });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5627,6 +5663,13 @@ export async function registerRoutes(
       const conditions: string[] = ["sh.tenant_id = $1"];
       const params: any[] = [user.tenantId];
       let paramIdx = 2;
+
+      const portalScope = await getPortalScope(user);
+      if (portalScope) {
+        conditions.push(`sh.${portalScope.shiftColumn} = ANY($${paramIdx}::int[])`);
+        params.push(portalScope.ids);
+        paramIdx++;
+      }
 
       if (todayOnly) {
         conditions.push("sh.date = CURRENT_DATE");
@@ -5779,7 +5822,7 @@ export async function registerRoutes(
       });
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5836,7 +5879,7 @@ export async function registerRoutes(
       }
       res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius, lateMinutes: late.lateMinutes, lateHours: late.lateHours });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5863,7 +5906,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5879,7 +5922,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -5988,7 +6031,7 @@ export async function registerRoutes(
         lateHours: late.lateHours,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6052,7 +6095,7 @@ export async function registerRoutes(
       });
       res.json({ ...updated, distanceFromSite: geo.distanceMetres, withinRange: geo.withinRange, geofenceRadius: geo.geofenceRadius });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6065,7 +6108,7 @@ export async function registerRoutes(
       const due = await listDueCheckCallsForOfficer(employee.id, user.tenantId ?? null);
       res.json(due);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6111,7 +6154,7 @@ export async function registerRoutes(
         geofenceRadius: result.geo.geofenceRadius,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6165,14 +6208,21 @@ export async function registerRoutes(
       });
       res.json(rates);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   app.post("/api/shifts", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "controller", "scheduler", "hr_manager"), async (req, res) => {
     try {
       const user = req.user as User;
-      const body = { ...req.body };
+      const body = omitProtectedFields({ ...req.body }, ["status", ...SHIFT_SERVER_MANAGED_FIELDS]);
+      if (respondIfInvalid(res, shiftSchemas.create, body)) return;
+      if (user.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(user.tenantId, {
+          siteId: body.siteId, employeeId: body.employeeId, supplierId: body.supplierId,
+        });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
       if (body.employeeId && body.date && body.startTime && body.endTime && user.tenantId) {
         const { conflict, conflictingShift } = await checkShiftConflict(user.tenantId, body.employeeId, body.date, body.startTime, body.endTime);
         if (conflict) {
@@ -6182,7 +6232,7 @@ export async function registerRoutes(
           });
         }
       }
-      if (body.employeeId && !body.skipDeploymentGate) {
+      if (body.employeeId) {
         const dutyTypeId = body.dutyTypeId != null ? parseInt(String(body.dutyTypeId), 10) : null;
         const gate = await staffProfileStorage.validateDeployment(parseInt(body.employeeId), {
           dutyTypeId: Number.isFinite(dutyTypeId as number) ? dutyTypeId : null,
@@ -6218,7 +6268,7 @@ export async function registerRoutes(
       });
       res.status(201).json(shift);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6229,16 +6279,40 @@ export async function registerRoutes(
       const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
       const shift = await storage.getShift(shiftId, tenantFilter);
       if (!shift) return res.status(404).json({ message: "Shift not found" });
-      const body = req.body;
+      const body: Record<string, any> = omitProtectedFields({ ...req.body }, SHIFT_SERVER_MANAGED_FIELDS);
+      const changed = changedFieldsOnly(body, shift as Record<string, unknown>);
+      const timingChanged = ["startTime", "endTime", "breakMinutes"].some((key) => key in changed);
+      const toValidate = timingChanged
+        ? { startTime: shift.startTime, endTime: shift.endTime, breakMinutes: shift.breakMinutes, ...changed }
+        : changed;
+      if (respondIfInvalid(res, shiftSchemas.update, toValidate)) return;
+      if (shift.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(shift.tenantId, {
+          siteId: body.siteId, employeeId: body.employeeId, supplierId: body.supplierId,
+        });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
       const checkEmpId = body.employeeId ?? shift.employeeId;
       const assigningEmployee = body.employeeId != null && body.employeeId !== shift.employeeId;
+      const previousStatus = shift.status ?? "scheduled";
+      const statusChanging = body.status !== undefined && body.status !== previousStatus;
+      if (body.status !== undefined) {
+        const statusError = getEditStatusError(previousStatus, String(body.status), { reassigning: assigningEmployee });
+        if (statusError) return res.status(409).json({ message: statusError });
+      }
+      if (statusChanging && body.status === "completed") {
+        const now = new Date();
+        body.checkOutTime = shift.checkOutTime ?? now;
+        body.bookedOffAt = shift.bookedOffAt ?? now;
+        body.bookedOffBy = shift.bookedOffBy ?? user.id;
+      }
       if (body.dutyTypeId !== undefined) {
         body.dutyTypeId = body.dutyTypeId != null && body.dutyTypeId !== ""
           ? parseInt(String(body.dutyTypeId), 10)
           : null;
       }
       const dutyTypeChanged = body.dutyTypeId !== undefined && body.dutyTypeId !== shift.dutyTypeId;
-      if ((assigningEmployee || dutyTypeChanged) && checkEmpId && !body.skipDeploymentGate) {
+      if ((assigningEmployee || dutyTypeChanged) && checkEmpId) {
         const dutyTypeIdRaw = body.dutyTypeId !== undefined ? body.dutyTypeId : shift.dutyTypeId;
         const dutyTypeId = dutyTypeIdRaw != null ? parseInt(String(dutyTypeIdRaw), 10) : null;
         const gate = await staffProfileStorage.validateDeployment(parseInt(String(checkEmpId)), {
@@ -6283,9 +6357,19 @@ export async function registerRoutes(
         if (body.chargeRate === undefined) body.chargeRate = rates.chargeRate;
       }
       const updated = await storage.updateShift(shiftId, body);
+      if (statusChanging && shift.tenantId != null) {
+        await storage.createAuditLog({
+          tenantId: shift.tenantId,
+          userId: user.id,
+          action: "shift_status_changed",
+          entityType: "shift",
+          entityId: String(shiftId),
+          details: { from: previousStatus, to: body.status },
+        });
+      }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6296,10 +6380,12 @@ export async function registerRoutes(
       const tenantFilter = user.role !== "super_admin" ? user.tenantId! : undefined;
       const shift = await storage.getShift(shiftId, tenantFilter);
       if (!shift) return res.status(404).json({ message: "Shift not found" });
+      const blockReason = getShiftDeleteBlockReason(shift);
+      if (blockReason) return res.status(409).json({ message: `Cannot delete: ${blockReason}` });
       await storage.deleteShift(shiftId);
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6323,6 +6409,11 @@ export async function registerRoutes(
             errors.push(`Shift ${id}: not found`);
             continue;
           }
+          const blockReason = getShiftDeleteBlockReason(shift);
+          if (blockReason) {
+            errors.push(`Shift ${id}: cannot delete, ${blockReason}`);
+            continue;
+          }
           await storage.deleteShift(id);
           deleted.push(id);
         } catch (err: any) {
@@ -6331,7 +6422,7 @@ export async function registerRoutes(
       }
       res.json({ deleted, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6345,9 +6436,34 @@ export async function registerRoutes(
       if (shiftDefs.length > 100) {
         return res.status(400).json({ message: "Maximum 100 shifts per bulk creation" });
       }
+      const defs = shiftDefs.map((raw: Record<string, unknown>) =>
+        omitProtectedFields({ ...raw }, ["status", ...SHIFT_SERVER_MANAGED_FIELDS]) as Record<string, any>,
+      );
+      for (let i = 0; i < defs.length; i++) {
+        const def = defs[i];
+        const validation = validateBody(shiftSchemas.create, def);
+        if (!validation.ok) {
+          return res.status(400).json({ message: `Shift ${i + 1}: ${validation.message}`, errors: validation.errors });
+        }
+        if (user.tenantId != null) {
+          const invalidRef = await findInvalidTenantReference(user.tenantId, {
+            siteId: def.siteId, employeeId: def.employeeId, supplierId: def.supplierId,
+          });
+          if (invalidRef) return res.status(400).json({ message: `Shift ${i + 1}: ${invalidReferenceMessage(invalidRef)}` });
+        }
+        if (def.employeeId) {
+          const gateDutyTypeId = def.dutyTypeId != null && def.dutyTypeId !== "" ? parseInt(String(def.dutyTypeId), 10) : null;
+          const gate = await staffProfileStorage.validateDeployment(parseInt(String(def.employeeId), 10), {
+            dutyTypeId: Number.isFinite(gateDutyTypeId as number) ? gateDutyTypeId : null,
+          });
+          if (!gate.ok) {
+            return res.status(400).json({ message: `Shift ${i + 1}: Officer failed deployment validation`, missing: gate.missing });
+          }
+        }
+      }
       const created = [];
       const { resolveShiftRates } = await import("./shift-rate-resolver");
-      for (const def of shiftDefs) {
+      for (const def of defs) {
         const dutyTypeId = def.dutyTypeId != null && def.dutyTypeId !== ""
           ? parseInt(String(def.dutyTypeId), 10)
           : null;
@@ -6377,7 +6493,7 @@ export async function registerRoutes(
       }
       res.status(201).json({ created: created.length, shifts: created });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6427,7 +6543,7 @@ export async function registerRoutes(
       }
       res.json({ completed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6487,7 +6603,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6527,7 +6643,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6584,7 +6700,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6628,7 +6744,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6673,7 +6789,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6729,7 +6845,7 @@ export async function registerRoutes(
 
       res.json({ processed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6758,7 +6874,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6779,7 +6895,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6796,7 +6912,7 @@ export async function registerRoutes(
       });
       res.status(201).json(incident);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6823,7 +6939,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6873,7 +6989,7 @@ export async function registerRoutes(
       };
       res.json({ employees: complianceData, summary });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6921,7 +7037,7 @@ export async function registerRoutes(
         })),
       );
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -6964,7 +7080,7 @@ export async function registerRoutes(
         })),
       );
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7133,16 +7249,29 @@ export async function registerRoutes(
       }
       res.json(supplier);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   app.post("/api/suppliers", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "regional_manager", "admin", "hr_manager"), async (req, res) => {
     try {
       const user = req.user as User;
-      const body = { ...req.body, tenantId: user.tenantId };
-      if (body.status === undefined) body.status = "draft";
-      body.createdBy = user.id;
+      if (respondIfInvalid(res, supplierSchemas.create, req.body)) return;
+      if (req.body.email && user.tenantId != null) {
+        const { rows: duplicates } = await pool.query(
+          "SELECT 1 FROM suppliers WHERE tenant_id = $1 AND LOWER(TRIM(email)) = LOWER(TRIM($2)) LIMIT 1",
+          [user.tenantId, req.body.email],
+        );
+        if (duplicates.length > 0) return res.status(409).json({ message: "A supplier with this email already exists" });
+      }
+      const body: Record<string, any> = {
+        ...omitProtectedFields({ ...req.body }, [
+          "userId", "status", "approvedBy", "approvedAt", "submittedAt", "submittedBy", "suspendedAt", "suspendedBy",
+        ]),
+        tenantId: user.tenantId,
+        status: "draft",
+        createdBy: user.id,
+      };
       if (body.vatNumber && body.vatNumber.trim().length > 0 && !body.vatStatus) {
         body.vatStatus = "vat_registered";
       }
@@ -7154,7 +7283,7 @@ export async function registerRoutes(
       });
       res.status(201).json(supplier);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7169,7 +7298,20 @@ export async function registerRoutes(
       if (user.tenantId != null && existing.tenantId !== user.tenantId) {
         return res.status(404).json({ message: "Supplier not found" });
       }
-      const body = { ...req.body };
+      const body = omitProtectedFields({ ...req.body }, [
+        "userId", "status", "approvedBy", "submittedAt", "submittedBy",
+        "suspendedAt", "suspendedBy", "suspensionReason",
+        "infoRequiredAt", "infoRequiredBy", "infoRequiredNotes",
+      ]);
+      const changed = changedFieldsOnly(body, existing as Record<string, unknown>);
+      if (respondIfInvalid(res, supplierSchemas.update, changed)) return;
+      if (changed.email) {
+        const { rows: duplicates } = await pool.query(
+          "SELECT 1 FROM suppliers WHERE tenant_id = $1 AND id <> $2 AND LOWER(TRIM(email)) = LOWER(TRIM($3)) LIMIT 1",
+          [existing.tenantId, existing.id, changed.email],
+        );
+        if (duplicates.length > 0) return res.status(409).json({ message: "A supplier with this email already exists" });
+      }
       if (body.approvedAt && typeof body.approvedAt === "string") {
         body.approvedAt = new Date(body.approvedAt);
       } else if (body.approvedAt === null || body.approvedAt === "") {
@@ -7192,7 +7334,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7204,6 +7346,15 @@ export async function registerRoutes(
       if (user.tenantId != null && existing.tenantId !== user.tenantId) {
         return res.status(404).json({ message: "Supplier not found" });
       }
+      const statusError = getSupplierActionError("approve", existing.status);
+      if (statusError) return res.status(409).json({ message: statusError });
+      const missingDocuments = getMissingRequiredDocuments(existing, await storage.getSupplierDocuments(existing.id));
+      if (missingDocuments.length > 0) {
+        return res.status(400).json({
+          message: `Cannot approve: required documents missing (${missingDocuments.join(", ")})`,
+          missingDocuments,
+        });
+      }
       const updated = await storage.updateSupplier(parseInt(req.params.id), {
         status: "approved", approvedBy: user.id, approvedAt: existing.approvedAt || new Date(),
       });
@@ -7214,7 +7365,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7225,6 +7376,8 @@ export async function registerRoutes(
       const existing = await storage.getSupplier(id);
       if (!existing) return res.status(404).json({ message: "Supplier not found" });
       if (user.tenantId != null && existing.tenantId !== user.tenantId) return res.status(404).json({ message: "Supplier not found" });
+      const statusError = getSupplierActionError("request_info", existing.status);
+      if (statusError) return res.status(409).json({ message: statusError });
       const { notes } = req.body;
       const updated = await storage.updateSupplier(id, {
         status: "info_required",
@@ -7242,7 +7395,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7253,6 +7406,8 @@ export async function registerRoutes(
       const existing = await storage.getSupplier(id);
       if (!existing) return res.status(404).json({ message: "Supplier not found" });
       if (user.tenantId != null && existing.tenantId !== user.tenantId) return res.status(404).json({ message: "Supplier not found" });
+      const statusError = getSupplierActionError("suspend", existing.status);
+      if (statusError) return res.status(409).json({ message: statusError });
       const { reason } = req.body;
       const updated = await storage.updateSupplier(id, {
         status: "suspended",
@@ -7270,7 +7425,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7281,6 +7436,8 @@ export async function registerRoutes(
       const existing = await storage.getSupplier(id);
       if (!existing) return res.status(404).json({ message: "Supplier not found" });
       if (user.tenantId != null && existing.tenantId !== user.tenantId) return res.status(404).json({ message: "Supplier not found" });
+      const statusError = getSupplierActionError("unsuspend", existing.status);
+      if (statusError) return res.status(409).json({ message: statusError });
       const updated = await storage.updateSupplier(id, {
         status: "approved",
         suspensionReason: null,
@@ -7297,7 +7454,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7308,6 +7465,8 @@ export async function registerRoutes(
       const existing = await storage.getSupplier(id);
       if (!existing) return res.status(404).json({ message: "Supplier not found" });
       if (user.tenantId != null && existing.tenantId !== user.tenantId) return res.status(404).json({ message: "Supplier not found" });
+      const statusError = getSupplierActionError("terminate", existing.status);
+      if (statusError) return res.status(409).json({ message: statusError });
       const { reason } = req.body;
       const updated = await storage.updateSupplier(id, { status: "terminated" });
       await storage.createAuditLog({
@@ -7320,7 +7479,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7362,7 +7521,7 @@ export async function registerRoutes(
       });
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7394,7 +7553,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7423,7 +7582,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7462,7 +7621,7 @@ export async function registerRoutes(
         lastLoginMeta: lastLogin ? { ipAddress: lastLogin.ipAddress, userAgent: lastLogin.userAgent, location: lastLogin.location } : null,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7533,7 +7692,7 @@ export async function registerRoutes(
         ...(emailResult.error && { emailError: emailResult.error }),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7583,7 +7742,7 @@ export async function registerRoutes(
         ...(emailResult.error && { emailError: emailResult.error }),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7629,7 +7788,7 @@ export async function registerRoutes(
         ...(emailResult.error && { emailError: emailResult.error }),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7684,7 +7843,7 @@ export async function registerRoutes(
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       res.json(combined.slice(0, 200));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7698,7 +7857,7 @@ export async function registerRoutes(
       const docs = await storage.getSupplierDocuments(id);
       res.json(docs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7739,7 +7898,7 @@ export async function registerRoutes(
       });
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7764,7 +7923,7 @@ export async function registerRoutes(
       const updated = await storage.getSupplierDocument(docId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7801,7 +7960,7 @@ export async function registerRoutes(
       const updated = await storage.getSupplierDocument(docId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7818,7 +7977,7 @@ export async function registerRoutes(
       const audit = await storage.getSupplierDocumentAudit(docId);
       res.json(audit);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7846,7 +8005,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Document deleted" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7862,7 +8021,7 @@ export async function registerRoutes(
       const policies = await storage.getSupplierPolicies(id);
       res.json(policies);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7895,7 +8054,7 @@ export async function registerRoutes(
       const updated = await storage.getSupplierPolicy(policyId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7943,7 +8102,7 @@ export async function registerRoutes(
       const updated = await storage.getSupplierPolicy(policyId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7957,7 +8116,7 @@ export async function registerRoutes(
       const policies = await storage.getSupplierPolicies(supplier.id);
       res.json(policies);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -7992,7 +8151,7 @@ export async function registerRoutes(
       });
       res.status(201).json(policy);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8008,7 +8167,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierPendingChanges(id);
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8113,7 +8272,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Changes approved" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8172,7 +8331,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Changes rejected" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8186,7 +8345,7 @@ export async function registerRoutes(
       const archives = await storage.getAgreementArchives(supplierId);
       res.json(archives);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8233,7 +8392,7 @@ export async function registerRoutes(
       res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="SBA-${archive.agreementRef || archiveId}.pdf"` });
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8247,7 +8406,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierFieldRequests(supplierId);
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8261,7 +8420,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierProfileChangeLog(supplierId, 100);
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8342,7 +8501,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Field request sent", requestId: requestRecord.id });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8354,7 +8513,7 @@ export async function registerRoutes(
       const list = await storage.getNotificationsForUser(user.id, { unreadOnly, limit: 50 });
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
   app.get("/api/employee/notifications", requireAuth, async (req, res) => {
@@ -8367,7 +8526,7 @@ export async function registerRoutes(
         isRead: Boolean(n.readAt),
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
   app.get("/api/notifications/unread-count", requireAuth, async (req, res) => {
@@ -8376,7 +8535,7 @@ export async function registerRoutes(
       const count = await storage.getUnreadNotificationCount(user.id);
       res.json({ count });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
   app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
@@ -8388,7 +8547,7 @@ export async function registerRoutes(
       const updated = await storage.markNotificationRead(id);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8401,7 +8560,7 @@ export async function registerRoutes(
       await storage.deleteNotification(id);
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8413,7 +8572,7 @@ export async function registerRoutes(
       if (!supplier) return res.status(404).json({ message: "Supplier profile not found" });
       res.json(supplier);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8561,7 +8720,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Change request submitted for approval" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8602,7 +8761,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8614,7 +8773,7 @@ export async function registerRoutes(
       const docs = await storage.getSupplierDocuments(supplier.id);
       res.json(docs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8626,7 +8785,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierFieldRequests(supplier.id, { pendingOnly: true });
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8638,7 +8797,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierPendingChanges(supplier.id);
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8650,7 +8809,7 @@ export async function registerRoutes(
       const list = await storage.getSupplierProfileChangeLog(supplier.id, 50);
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8698,7 +8857,7 @@ export async function registerRoutes(
       });
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8727,7 +8886,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Document deleted" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8758,7 +8917,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8775,11 +8934,10 @@ export async function registerRoutes(
       if (existingUser) {
         return res.status(400).json({ message: "A user with this email already exists in this company" });
       }
-      const tempPassword = await bcrypt.hash("TempPass123!", 10);
       const newUser = await storage.createUser({
         username: email.split("@")[0] + "_" + Date.now(),
         email,
-        password: tempPassword,
+        password: ONBOARDING_PASSWORD_PLACEHOLDER,
         firstName,
         lastName,
         role: "employee",
@@ -8817,7 +8975,7 @@ export async function registerRoutes(
         createdAt: newEmployee.createdAt,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -8861,7 +9019,7 @@ export async function registerRoutes(
         createdAt: updatedEmp?.createdAt,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9013,7 +9171,7 @@ export async function registerRoutes(
         stats: statsResult.rows[0] || { total: 0, pending: 0, approved: 0, disputed: 0 },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9150,7 +9308,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="timesheets_${supplier.companyName?.replace(/[^a-zA-Z0-9]/g, "_") || "export"}.csv"`);
       res.send(csvContent);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9234,7 +9392,7 @@ export async function registerRoutes(
 
       res.json(invoices);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9341,7 +9499,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="Timesheet_${invoice.invoiceNumber || invoiceId}_${sanitizedName}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      if (!res.headersSent) res.status(500).json({ message: err.message });
+      if (!res.headersSent) sendRouteError(res, err);
     }
   });
 
@@ -9400,7 +9558,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9453,7 +9611,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9583,7 +9741,7 @@ export async function registerRoutes(
         suppliers: suppliersResult.rows.map((r: any) => ({ id: r.id, name: r.company_name })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9672,7 +9830,7 @@ export async function registerRoutes(
 
       res.json(invoices);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9778,7 +9936,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="Timesheet_${invoice.invoiceNumber || invoiceId}_${sanitizedName}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      if (!res.headersSent) res.status(500).json({ message: err.message });
+      if (!res.headersSent) sendRouteError(res, err);
     }
   });
 
@@ -9797,7 +9955,7 @@ export async function registerRoutes(
       const disputes = await storage.getDisputesByTenant(user.tenantId);
       res.json(disputes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9820,7 +9978,7 @@ export async function registerRoutes(
       const shift = await storage.getShift(dispute.shiftId);
       res.json({ ...dispute, messages, shift });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9888,7 +10046,7 @@ export async function registerRoutes(
 
       res.json(dispute);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9920,7 +10078,7 @@ export async function registerRoutes(
 
       res.json(created);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -9967,7 +10125,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10005,7 +10163,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10045,16 +10203,21 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
   app.post("/api/rate-cards", requireRole("super_admin", "tenant_admin", "ceo", "operations_manager", "admin", "accountant"), async (req, res) => {
     try {
       const user = req.user as User;
-      const { supplierId, roleType, siteId, effectiveFrom } = req.body;
+      const body = omitProtectedFields({ ...req.body });
+      if (respondIfInvalid(res, supplierRateCardSchemas.create, body)) return;
+      const { supplierId, roleType, siteId, effectiveFrom, employeeId } = body;
+      if (user.tenantId != null) {
+        const invalidRef = await findInvalidTenantReference(user.tenantId, { supplierId, siteId, employeeId });
+        if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+      }
 
-      const { employeeId } = req.body;
       if (supplierId && roleType && effectiveFrom) {
         const existingCards = await storage.getRateCardsBySupplier(supplierId);
         const matchingCards = existingCards.filter(rc => {
@@ -10079,7 +10242,7 @@ export async function registerRoutes(
       }
 
       const card = await storage.createRateCard({
-        ...req.body,
+        ...body,
         tenantId: user.tenantId,
         createdBy: user.id,
       });
@@ -10091,7 +10254,7 @@ export async function registerRoutes(
       });
       res.json(card);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10103,10 +10266,21 @@ export async function registerRoutes(
       if (!existing) return res.status(404).json({ message: "Rate card not found" });
       if (existing.tenantId !== user.tenantId) return res.status(403).json({ message: "Access denied" });
 
-      const updated = await storage.updateRateCard(cardId, req.body);
+      const body = omitProtectedFields({ ...req.body });
+      if (respondIfInvalid(res, supplierRateCardSchemas.update, {
+        effectiveFrom: existing.effectiveFrom,
+        effectiveTo: existing.effectiveTo,
+        ...body,
+      })) return;
+      const invalidRef = await findInvalidTenantReference(existing.tenantId, {
+        supplierId: body.supplierId, siteId: body.siteId, employeeId: body.employeeId,
+      });
+      if (invalidRef) return res.status(400).json({ message: invalidReferenceMessage(invalidRef) });
+
+      const updated = await storage.updateRateCard(cardId, body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10121,7 +10295,7 @@ export async function registerRoutes(
       await storage.deleteRateCard(cardId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10180,7 +10354,7 @@ export async function registerRoutes(
         })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10242,7 +10416,7 @@ export async function registerRoutes(
         supplierName: supplier.companyName,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10411,7 +10585,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10609,7 +10783,7 @@ export async function registerRoutes(
 
       res.json({ ...invoice, lineItemCount: lineItemsData.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10849,7 +11023,7 @@ export async function registerRoutes(
         invoiceNumber: invoice.invoiceNumber,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -10949,7 +11123,7 @@ export async function registerRoutes(
 
       res.json({ months, totalShifts: eligibleShifts.length, pendingApprovalCount });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -11379,7 +11553,7 @@ export async function registerRoutes(
         warnings,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -11689,7 +11863,7 @@ export async function registerRoutes(
         months,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12011,7 +12185,7 @@ export async function registerRoutes(
         client.release();
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12173,7 +12347,7 @@ export async function registerRoutes(
         client.release();
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12188,7 +12362,7 @@ export async function registerRoutes(
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12265,7 +12439,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="invoices_export_${new Date().toISOString().slice(0,10)}.csv"`);
       res.send(csv);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12289,7 +12463,7 @@ export async function registerRoutes(
 
       const archive = archiver("zip", { zlib: { level: 5 } });
       archive.on("error", (err) => {
-        if (!res.headersSent) res.status(500).json({ message: err.message });
+        if (!res.headersSent) sendRouteError(res, err);
         else res.end();
       });
       archive.pipe(res);
@@ -12383,7 +12557,7 @@ export async function registerRoutes(
       await archive.finalize();
     } catch (err: any) {
       if (!res.headersSent) {
-        res.status(500).json({ message: err.message });
+        sendRouteError(res, err);
       }
     }
   });
@@ -12398,7 +12572,7 @@ export async function registerRoutes(
       const lineItems = await storage.getInvoiceLineItems(invoice.id);
       res.json(lineItems);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12429,7 +12603,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12458,7 +12632,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12485,7 +12659,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12635,7 +12809,7 @@ export async function registerRoutes(
 
       res.json({ success: true, paidInvoiceIds, count: paidInvoiceIds.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12706,7 +12880,7 @@ export async function registerRoutes(
 
       res.json({ ...note, invoiceNumber: invoice.invoiceNumber });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12717,7 +12891,7 @@ export async function registerRoutes(
       const notes = await storage.getCreditNotesByTenant(user.tenantId);
       res.json(notes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12815,7 +12989,7 @@ export async function registerRoutes(
         client.release();
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -12912,7 +13086,7 @@ export async function registerRoutes(
         client.release();
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13091,7 +13265,7 @@ export async function registerRoutes(
         res.json(templates);
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13103,7 +13277,7 @@ export async function registerRoutes(
       if (!template || template.tenantId !== user.tenantId) return res.status(404).json({ message: "Template not found" });
       res.json(template);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13122,7 +13296,7 @@ export async function registerRoutes(
       });
       res.json(template);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13145,7 +13319,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13171,7 +13345,7 @@ export async function registerRoutes(
       });
       res.json(duplicate);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13185,7 +13359,7 @@ export async function registerRoutes(
       await storage.deleteDocumentTemplate(existing.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13198,7 +13372,7 @@ export async function registerRoutes(
       await storage.setDefaultTemplate(user.tenantId, existing.documentType, existing.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13264,7 +13438,7 @@ export async function registerRoutes(
         res.send(pdfBuffer);
       }
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13286,7 +13460,7 @@ export async function registerRoutes(
       }
       res.json(supplierInvoices);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13345,7 +13519,7 @@ export async function registerRoutes(
         })),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13490,7 +13664,7 @@ export async function registerRoutes(
       });
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13526,7 +13700,7 @@ export async function registerRoutes(
       });
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13673,7 +13847,7 @@ export async function registerRoutes(
       const { _raw, ...rest } = data;
       res.json(rest);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13770,7 +13944,7 @@ export async function registerRoutes(
       });
       res.send(result.pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -13887,7 +14061,7 @@ export async function registerRoutes(
       });
       res.send(csv);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14002,7 +14176,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${invoice.invoiceNumber}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14095,7 +14269,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${invoice.invoiceNumber}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14139,7 +14313,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${note.creditNoteNumber}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14183,7 +14357,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${note.debitNoteNumber}.pdf"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14205,7 +14379,7 @@ export async function registerRoutes(
       const lineItems = await storage.getInvoiceLineItems(invoice.id);
       res.json({ ...invoice, lineItems });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14257,7 +14431,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14318,7 +14492,7 @@ export async function registerRoutes(
 
       res.json({ dispute, message: "Invoice dispute created successfully" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14331,7 +14505,7 @@ export async function registerRoutes(
       const notes = await storage.getCreditNotesByTenant(user.tenantId);
       res.json(notes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14376,7 +14550,7 @@ export async function registerRoutes(
 
       res.json(note);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14389,7 +14563,7 @@ export async function registerRoutes(
       const notes = await storage.getDebitNotesByTenant(user.tenantId);
       res.json(notes);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14434,7 +14608,7 @@ export async function registerRoutes(
 
       res.json(note);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14445,7 +14619,7 @@ export async function registerRoutes(
       const items = await storage.getCreditNoteLineItems(parseInt(req.params.id));
       res.json(items);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14472,7 +14646,7 @@ export async function registerRoutes(
       });
       res.json(item);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14481,7 +14655,7 @@ export async function registerRoutes(
       const items = await storage.getDebitNoteLineItems(parseInt(req.params.id));
       res.json(items);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14508,7 +14682,7 @@ export async function registerRoutes(
       });
       res.json(item);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14584,7 +14758,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14637,7 +14811,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14688,7 +14862,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14766,7 +14940,7 @@ export async function registerRoutes(
         status: "active",
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14813,7 +14987,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14857,7 +15031,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14903,7 +15077,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -14962,7 +15136,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Password set. You can now log in." });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15044,7 +15218,7 @@ export async function registerRoutes(
         emailVia: emailResult.via || null,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15078,7 +15252,7 @@ export async function registerRoutes(
       }
       res.json({ message: "Password updated. You can now log in." });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15100,7 +15274,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15127,7 +15301,7 @@ export async function registerRoutes(
       });
       res.status(201).json(invoice);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15170,7 +15344,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15196,7 +15370,7 @@ export async function registerRoutes(
         overdueCount: overdue.length,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15236,7 +15410,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15266,7 +15440,7 @@ export async function registerRoutes(
       }
       res.json({ approved: results.length, shifts: results });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15299,7 +15473,7 @@ export async function registerRoutes(
       }
       res.json({ rejected: results.length, shifts: results });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15310,7 +15484,7 @@ export async function registerRoutes(
       const runs = await storage.getPayrollRuns(user.tenantId);
       res.json(runs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15392,7 +15566,7 @@ export async function registerRoutes(
       });
       res.status(201).json(run);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15418,7 +15592,7 @@ export async function registerRoutes(
       }));
       res.json({ ...run, items: enrichedItems });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15524,7 +15698,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(csvContent);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15551,7 +15725,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15606,7 +15780,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15674,7 +15848,7 @@ export async function registerRoutes(
         variance: variance.toFixed(2),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15698,7 +15872,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15715,7 +15889,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15730,7 +15904,7 @@ export async function registerRoutes(
       });
       res.status(201).json(posting);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15740,7 +15914,7 @@ export async function registerRoutes(
       const updated = await storage.updateJobPosting(parseInt(req.params.id), req.body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15758,7 +15932,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15768,7 +15942,7 @@ export async function registerRoutes(
       const applicant = await storage.createApplicant({ ...req.body, tenantId: user.tenantId });
       res.status(201).json(applicant);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15822,7 +15996,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15862,7 +16036,7 @@ export async function registerRoutes(
       }
       res.json({ imported, duplicates, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -15901,7 +16075,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16003,7 +16177,7 @@ export async function registerRoutes(
       const pdfBase64 = pdfBuffer.toString("base64");
       res.json({ applicant: { ...updated, offerLetterUrl, offerEmailSentAt, offerResponseToken }, pdfBase64, message: "Offer made successfully", emailSent: !!offerEmailSentAt });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16064,7 +16238,7 @@ export async function registerRoutes(
 
       res.json({ message: "Offer letter email sent successfully", offerEmailSentAt });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16122,7 +16296,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16143,7 +16317,7 @@ export async function registerRoutes(
       } as any);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16173,7 +16347,7 @@ export async function registerRoutes(
         companyName: tenant?.name || "Gardeo",
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16202,7 +16376,7 @@ export async function registerRoutes(
       } as any);
       res.json({ message: response === "accepted" ? "Offer accepted successfully" : "Offer declined" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16272,7 +16446,7 @@ export async function registerRoutes(
 
       res.json({ employee, onboarding, message: "Applicant hired and employee record created" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16387,7 +16561,7 @@ export async function registerRoutes(
 
       res.json({ funnel, stageTransitions, sources, conversionRates, monthlyHires, avgTimeToHire, total: cohort.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16408,7 +16582,7 @@ export async function registerRoutes(
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16430,7 +16604,7 @@ export async function registerRoutes(
       }
       res.status(201).json(record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16453,7 +16627,7 @@ export async function registerRoutes(
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16466,7 +16640,7 @@ export async function registerRoutes(
       const safeUsers = allUsers.map(({ password, ...u }) => u);
       res.json(safeUsers);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16491,7 +16665,7 @@ export async function registerRoutes(
       const { password, ...safeUser } = updated;
       res.json(safeUser);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16503,7 +16677,7 @@ export async function registerRoutes(
       const invitations = await storage.getTenantInvitationsByTenant(user.tenantId);
       res.json(invitations);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16539,7 +16713,7 @@ export async function registerRoutes(
 
       res.json(invitation);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16559,7 +16733,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Invitation revoked" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -16684,7 +16858,7 @@ export async function registerRoutes(
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17089,7 +17263,7 @@ Respond in JSON:
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17101,7 +17275,7 @@ Respond in JSON:
       const decisions = await storage.getAiDecisions(user.tenantId, 200);
       res.json(decisions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17111,7 +17285,7 @@ Respond in JSON:
       const decisions = await storage.getAiDecisionsByBatch(req.params.batchId);
       res.json(decisions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17158,7 +17332,7 @@ Respond in JSON format:
   });
 
   // Dashboard Stats
-  app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
+  app.get("/api/dashboard/stats", requireStaff, async (req, res) => {
     try {
       const user = (req as any).user as User;
       if (!user.tenantId) return res.json({});
@@ -17387,7 +17561,7 @@ Respond in JSON format:
         activeUsers: userStats.rows[0]?.active || 0,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17452,7 +17626,7 @@ Respond in JSON format:
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17518,7 +17692,7 @@ Respond in JSON format:
       `, params);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17564,7 +17738,7 @@ Respond in JSON format:
       `, params);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17614,7 +17788,7 @@ Respond in JSON format:
       `, params);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17726,14 +17900,12 @@ Respond in JSON format:
           }
 
           const username = row.email.split("@")[0] + "_" + Date.now() + "_" + i;
-          const bcrypt = await import("bcryptjs");
-          const hashedPw = await bcrypt.hash("Welcome123!", 10);
 
           const newUser = await storage.createUser({
             tenantId: user.tenantId,
             username,
             email: row.email,
-            password: hashedPw,
+            password: ONBOARDING_PASSWORD_PLACEHOLDER,
             firstName: row.firstName,
             lastName: row.lastName,
             role: "employee",
@@ -17819,7 +17991,7 @@ Respond in JSON format:
 
       res.json({ success, failed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17894,7 +18066,7 @@ Respond in JSON format:
 
       res.json({ potentialDuplicates, toCreate, toMerge, toSkip, totalRows });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17936,7 +18108,7 @@ Respond in JSON format:
 
       res.json({ potentialDuplicates, toCreate, toMerge, totalRows });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -17992,7 +18164,7 @@ Respond in JSON format:
 
       res.json({ potentialDuplicates, toCreate, toMerge, totalRows });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -18118,7 +18290,7 @@ Respond in JSON format:
 
       res.json({ success, failed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -18229,7 +18401,7 @@ Respond in JSON format:
 
       res.json({ success, failed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -18288,7 +18460,7 @@ Respond in JSON format:
 
       res.json({ potentialDuplicates, totalNewSites: uniqueSiteNames.size, totalRows: data.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -18756,7 +18928,7 @@ Respond in JSON format:
 
       res.json({ success, failed, skipped: skippedDuplicates, skippedDuplicates, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     } finally {
       const user = req.user as User;
       if (user?.tenantId) timesheetImportCache.delete(user.tenantId);
@@ -18861,7 +19033,7 @@ Respond in JSON format:
         errors: allErrors,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -19111,7 +19283,7 @@ Respond in JSON format:
       });
     } catch (err: any) {
       console.error("Alliance invoice generation error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -19236,7 +19408,7 @@ Respond in JSON format:
 
       res.json({ success, failed, skipped, errors });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -19333,7 +19505,7 @@ Respond in JSON format:
       }
       res.json({ success: true, updated: results.length, results });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21150,7 +21322,7 @@ Respond in JSON format:
 
       res.json({ results });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21162,7 +21334,7 @@ Respond in JSON format:
       const logs = await storage.getAuditLogs(user.tenantId);
       res.json(logs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21173,7 +21345,7 @@ Respond in JSON format:
       const logs = await storage.getInvoiceNumberAuditLogsByTenant(user.tenantId);
       res.json(logs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21187,7 +21359,7 @@ Respond in JSON format:
       if (!entry) return res.status(404).json({ message: "No mapping found for that invoice number" });
       res.json(entry);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21247,7 +21419,7 @@ Respond in JSON format:
       res.json({ message: `Renumbered ${mappings.length} VAT invoices`, count: mappings.length, mappings });
     } catch (err: any) {
       await client.query("ROLLBACK");
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     } finally {
       client.release();
     }
@@ -21296,7 +21468,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="gdpr-data-export-${user.id}-${new Date().toISOString().split("T")[0]}.json"`);
       res.json(exportData);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21307,7 +21479,7 @@ Respond in JSON format:
       const consents = await storage.getDataConsents(user.id);
       res.json(consents);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21335,7 +21507,7 @@ Respond in JSON format:
       }
       res.status(201).json(consent);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21361,7 +21533,7 @@ Respond in JSON format:
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21387,7 +21559,7 @@ Respond in JSON format:
       }
       res.status(201).json(request);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21397,7 +21569,7 @@ Respond in JSON format:
       const request = await storage.getDataErasureRequestByUser(user.id);
       res.json(request || null);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21412,7 +21584,7 @@ Respond in JSON format:
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21466,7 +21638,7 @@ Respond in JSON format:
       }
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21617,7 +21789,7 @@ Respond in JSON format:
       });
     } catch (err: any) {
       console.error("Predictive analytics error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21629,7 +21801,7 @@ Respond in JSON format:
       const insights = await storage.getAiInsights(user.tenantId);
       res.json(insights);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21690,7 +21862,7 @@ Respond in JSON format:
         },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21724,7 +21896,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21743,7 +21915,7 @@ Respond in JSON format:
       await logControllerAction(user.tenantId, user.id, "handover_written", null, null, "Handover note submitted");
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21765,7 +21937,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21781,7 +21953,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21800,7 +21972,7 @@ Respond in JSON format:
       );
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21827,7 +21999,7 @@ Respond in JSON format:
       if (rows.length === 0) return res.status(404).json({ message: "Rule not found" });
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21839,7 +22011,7 @@ Respond in JSON format:
       await pool.query(`DELETE FROM auto_escalation_rules WHERE id = $1 AND tenant_id = $2`, [id, user.tenantId]);
       res.json({ ok: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21908,7 +22080,7 @@ Respond in JSON format:
       res.json({ escalated: escalatedCount, actions });
     } catch (err: any) {
       console.error("[escalation] Error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21946,7 +22118,7 @@ Respond in JSON format:
       });
       res.json(sites);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -21972,7 +22144,7 @@ Respond in JSON format:
       });
     } catch (err: any) {
       console.error("[pending-calls]", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22003,7 +22175,7 @@ Respond in JSON format:
       res.json(result.shift);
     } catch (err: any) {
       console.error("[take-precheck]", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22040,7 +22212,7 @@ Respond in JSON format:
       res.json({ shift: result.shift, emailQueued: result.emailQueued, emailError: result.emailError });
     } catch (err: any) {
       console.error("[take-book-on]", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22071,7 +22243,7 @@ Respond in JSON format:
       res.json(result.checkCall);
     } catch (err: any) {
       console.error("[take-check-call]", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22090,7 +22262,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22256,7 +22428,7 @@ Respond in JSON format:
       res.json({ alertsSent: sentCount, breakdown, details: alerts.map(a => ({ ...a })) });
     } catch (err: any) {
       console.error("[compliance-alerts] Error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22269,7 +22441,7 @@ Respond in JSON format:
       const userChannels = await storage.getUserChannels(user.id, user.tenantId);
       res.json(userChannels);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22287,7 +22459,7 @@ Respond in JSON format:
         .map(({ channel }) => channel);
       res.json(visible);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22343,7 +22515,7 @@ Respond in JSON format:
 
       res.json(channel);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22359,7 +22531,7 @@ Respond in JSON format:
       await storage.updateChannelMemberLastRead(channelId, user.id);
       res.json(msgs.reverse());
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22414,7 +22586,7 @@ Respond in JSON format:
 
       res.json(msg);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22432,7 +22604,7 @@ Respond in JSON format:
       }
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22445,7 +22617,7 @@ Respond in JSON format:
       const members = await storage.getChannelMembers(channelId);
       res.json(members);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22462,7 +22634,7 @@ Respond in JSON format:
       const member = await storage.addChannelMember({ channelId, userId });
       res.json(member);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22482,7 +22654,7 @@ Respond in JSON format:
       }));
       res.json(withReadStatus);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22509,7 +22681,7 @@ Respond in JSON format:
 
       res.json(broadcast);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22523,7 +22695,7 @@ Respond in JSON format:
       }
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22551,7 +22723,7 @@ Respond in JSON format:
         displayName: u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.username,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22581,7 +22753,7 @@ Respond in JSON format:
         unreadCount: 0,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22635,7 +22807,7 @@ Respond in JSON format:
       });
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22691,7 +22863,7 @@ Respond in JSON format:
       await storage.savePushSubscription(user.id, endpoint, keys.p256dh, keys.auth);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22702,7 +22874,7 @@ Respond in JSON format:
       if (endpoint) await storage.deletePushSubscriptionForUser(endpoint, user.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22754,7 +22926,7 @@ Respond in JSON format:
 
       res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22924,7 +23096,7 @@ Respond in JSON format:
 
       res.json({ rows, totalRows: rows.length, newRows, duplicateRows });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -22996,7 +23168,7 @@ Respond in JSON format:
         autoClassified: autoClassifyResult.suggestions
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23052,7 +23224,7 @@ Respond in JSON format:
 
       res.json({ transactions: result.rows, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23070,7 +23242,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23092,7 +23264,7 @@ Respond in JSON format:
       await pool.query("DELETE FROM bank_transactions WHERE tenant_id = $1 AND import_batch_id = $2", [tenantId, batchId]);
       res.json({ message: "Batch deleted successfully" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23115,7 +23287,7 @@ Respond in JSON format:
 
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23196,7 +23368,7 @@ Respond in JSON format:
         autoClassified,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23341,7 +23513,7 @@ Respond in JSON format:
         paidInvoices: paidInvoiceNumbers,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23478,7 +23650,7 @@ Respond in JSON format:
       }
     } catch (err: any) {
       console.error("Incremental allocation error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23526,7 +23698,7 @@ Respond in JSON format:
 
       res.json({ message: "Allocation removed successfully" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23554,7 +23726,7 @@ Respond in JSON format:
       const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23584,7 +23756,7 @@ Respond in JSON format:
 
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23595,7 +23767,7 @@ Respond in JSON format:
       const result = await classifyTransactions(tenantId, transactionIds);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23626,7 +23798,7 @@ Respond in JSON format:
 
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23763,7 +23935,7 @@ Respond in JSON format:
 
       res.json({ message: "Suggestion accepted and applied" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23780,7 +23952,7 @@ Respond in JSON format:
 
       res.json({ message: "Suggestion rejected" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23896,7 +24068,7 @@ Respond in JSON format:
 
       res.json({ message: `Batch complete: ${accepted} accepted, ${failed} failed`, accepted, failed });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23915,7 +24087,7 @@ Respond in JSON format:
 
       res.json({ message: `${result.rowCount} suggestions rejected`, rejected: result.rowCount });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23952,7 +24124,7 @@ Respond in JSON format:
       const updated = await pool.query("SELECT * FROM auto_classification_suggestions WHERE id = $1", [suggestionId]);
       res.json(updated.rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23969,7 +24141,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -23987,7 +24159,7 @@ Respond in JSON format:
       );
       res.json(result.rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24021,7 +24193,7 @@ Respond in JSON format:
       );
       res.json(result.rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24033,7 +24205,7 @@ Respond in JSON format:
       await pool.query("UPDATE purchase_vendors SET is_active = false, updated_at = NOW() WHERE id = $1 AND tenant_id = $2", [vendorId, tenantId]);
       res.json({ message: "Vendor deleted" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24048,7 +24220,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24078,7 +24250,7 @@ Respond in JSON format:
 
       res.json({ message: "Transaction categorised as general purchase", autoClassified });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24094,7 +24266,7 @@ Respond in JSON format:
 
       res.json({ message: "Categorisation removed" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24107,7 +24279,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24120,7 +24292,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24142,7 +24314,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24247,7 +24419,7 @@ Respond in JSON format:
 
       res.json({ summary, suppliers });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24441,7 +24613,7 @@ Respond in JSON format:
       return res.send(html);
 
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24465,7 +24637,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24545,7 +24717,7 @@ Respond in JSON format:
 
       res.json({ created: created.length, invoices: created });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24645,7 +24817,7 @@ Respond in JSON format:
 
       res.json({ message: "Client invoice generated", invoiceId, invoiceNumber: invoiceNum, subtotal: subtotal.toFixed(2), vatAmount: vatAmount.toFixed(2), totalAmount: totalAmount.toFixed(2), lineItemCount: lineItems.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24676,7 +24848,7 @@ Respond in JSON format:
       const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24691,7 +24863,7 @@ Respond in JSON format:
       const result = await pool.query("SELECT * FROM client_invoice_line_items WHERE client_invoice_id = $1 ORDER BY id", [invoiceId]);
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24714,7 +24886,7 @@ Respond in JSON format:
       }
       res.json({ updated });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24741,7 +24913,7 @@ Respond in JSON format:
 
       res.json({ message: "Invoice updated" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24754,7 +24926,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24777,7 +24949,7 @@ Respond in JSON format:
 
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24848,7 +25020,7 @@ Respond in JSON format:
 
       res.json({ message: "Allocated to client successfully", allocated: newAllocated.toFixed(2), fullyAllocated, autoClassified });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24884,7 +25056,7 @@ Respond in JSON format:
 
       res.json({ message: `${assigned} transactions assigned to supplier`, assigned, autoClassified });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24922,7 +25094,7 @@ Respond in JSON format:
 
       res.json({ message: `${assigned} transactions assigned to client`, assigned, autoClassified });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -24968,7 +25140,7 @@ Respond in JSON format:
 
       res.json({ message: `${assigned} transactions categorised as purchases`, assigned, autoClassified });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25006,7 +25178,7 @@ Respond in JSON format:
 
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25020,7 +25192,7 @@ Respond in JSON format:
       await pool.query("UPDATE tenants SET vat_calculation_type = $1 WHERE id = $2", [type, tenantId]);
       res.json({ success: true, vatCalculationType: type });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25033,7 +25205,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25079,7 +25251,7 @@ Respond in JSON format:
       );
       res.json(result.rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25099,7 +25271,7 @@ Respond in JSON format:
       );
       res.json(result.rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25124,7 +25296,7 @@ Respond in JSON format:
       }
       res.json({ success: true, count: results.length, classifications: results });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25266,7 +25438,7 @@ Respond in JSON format:
         classified,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25525,7 +25697,7 @@ Respond in JSON format:
       const result = await computeVatReturnData(tenantId, quarter);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25567,7 +25739,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25667,7 +25839,7 @@ Respond in JSON format:
 
       res.json({ transactions, totalPayments, transactionCount: transactions.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25704,7 +25876,7 @@ Respond in JSON format:
         external_id: s.externalId,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25721,7 +25893,7 @@ Respond in JSON format:
         syncEntities: c.syncEntities,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25757,7 +25929,7 @@ Respond in JSON format:
         external_id: updated?.externalId ?? externalId,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25785,7 +25957,7 @@ Respond in JSON format:
       );
       res.json(log);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25802,7 +25974,7 @@ Respond in JSON format:
       const results = await runDrySync(configId, tenantId, undefined, dateFrom, dateTo, supplierId, pageFrom, pageTo);
       res.json(results);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25817,7 +25989,7 @@ Respond in JSON format:
         external_id: s.externalId,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25828,7 +26000,7 @@ Respond in JSON format:
       const safeConfigs = configs.map(c => ({ ...c, apiKeyEncrypted: "••••••••" }));
       res.json(safeConfigs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25861,7 +26033,7 @@ Respond in JSON format:
       });
       res.json({ ...config, apiKeyEncrypted: "••••••••" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25890,7 +26062,7 @@ Respond in JSON format:
       const updated = await storage.updateSyncConfiguration(configId, updates);
       res.json({ ...updated, apiKeyEncrypted: "••••••••" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25905,7 +26077,7 @@ Respond in JSON format:
       await storage.deleteSyncConfiguration(configId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25921,7 +26093,7 @@ Respond in JSON format:
       const result = await testConnection(config);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25939,7 +26111,7 @@ Respond in JSON format:
       const results = await runDrySync(configId, user.tenantId, entityType, dateFrom, dateTo, supplierId, pageFrom, pageTo);
       res.json(results);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25957,7 +26129,7 @@ Respond in JSON format:
       const log = await runSync(configId, user.tenantId, entityType, dateFrom, dateTo, supplierId, siteDecisions, pageFrom, pageTo);
       res.json(log);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25968,7 +26140,7 @@ Respond in JSON format:
       const logs = await storage.getSyncLogs(user.tenantId, limit);
       res.json(logs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -25988,7 +26160,7 @@ Respond in JSON format:
       });
       res.json(updated || { id: logId, status: "failed" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26009,7 +26181,7 @@ Respond in JSON format:
       const result = await backfillUnassignedShifts(configId, tenantId, dryRun, req.body.dateFrom, req.body.dateTo);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26028,7 +26200,7 @@ Respond in JSON format:
       const result = await backfillSiteExternalIds(configId, user.tenantId, minScore, true);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26047,7 +26219,7 @@ Respond in JSON format:
       const result = await backfillSiteExternalIds(configId, user.tenantId, minScore, false);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26060,7 +26232,7 @@ Respond in JSON format:
       const items = await storage.getOpsCheckItems(user.tenantId);
       res.json(items);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26077,7 +26249,7 @@ Respond in JSON format:
       });
       res.json(item);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26136,7 +26308,7 @@ Respond in JSON format:
       });
       res.json(check);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26154,7 +26326,7 @@ Respond in JSON format:
       const checks = await storage.getOpsChecksForShift(shiftId);
       res.json(checks);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26181,7 +26353,7 @@ Respond in JSON format:
       });
       res.json(events);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26199,7 +26371,7 @@ Respond in JSON format:
       });
       res.json(events);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26269,7 +26441,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -26544,7 +26716,7 @@ Respond in JSON format:
       const archive = archiver("zip", { zlib: { level: 5 } });
       archive.on("error", (err) => {
         if (!res.headersSent) {
-          res.status(500).json({ message: err.message });
+          sendRouteError(res, err);
         } else {
           res.end();
         }
@@ -26886,7 +27058,7 @@ Respond in JSON format:
       await archive.finalize();
     } catch (err: any) {
       if (!res.headersSent) {
-        res.status(500).json({ message: err.message });
+        sendRouteError(res, err);
       }
     }
   });
@@ -26924,7 +27096,7 @@ Respond in JSON format:
 
       const archive = archiver("zip", { zlib: { level: 5 } });
       archive.on("error", (err) => {
-        if (!res.headersSent) res.status(500).json({ message: err.message });
+        if (!res.headersSent) sendRouteError(res, err);
         else res.end();
       });
       archive.on("warning", (err) => {
@@ -27284,7 +27456,7 @@ Respond in JSON format:
       await archive.finalize();
     } catch (err: any) {
       if (!res.headersSent) {
-        res.status(500).json({ message: err.message });
+        sendRouteError(res, err);
       }
     }
   });
@@ -27294,7 +27466,7 @@ Respond in JSON format:
       const events = await storage.getInvoiceAuditTrail(Number(req.params.invoiceId));
       res.json(events);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27303,7 +27475,7 @@ Respond in JSON format:
       const verifications = await storage.getVatVerifications(Number(req.params.supplierId));
       res.json(verifications);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27339,7 +27511,7 @@ Respond in JSON format:
       });
       res.json(verification);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27409,7 +27581,7 @@ Respond in JSON format:
 
       res.json(responsePayload);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27419,7 +27591,7 @@ Respond in JSON format:
       const history = await storage.getRateCardHistoryBySupplier(Number(req.params.supplierId));
       res.json(history);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27442,7 +27614,7 @@ Respond in JSON format:
         }));
       res.json(alerts);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27463,7 +27635,7 @@ Respond in JSON format:
       }));
       res.json(safeEvents);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27507,7 +27679,7 @@ Respond in JSON format:
       const result = await callOpenAI(prompt, data);
       res.json(JSON.parse(result));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27520,7 +27692,7 @@ Respond in JSON format:
       const parsed = JSON.parse(result);
       res.json(parsed.alerts || []);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27533,7 +27705,7 @@ Respond in JSON format:
       const parsed = JSON.parse(result);
       res.json(parsed.actions || []);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27542,7 +27714,7 @@ Respond in JSON format:
       const { actionId, type } = req.body;
       res.json({ success: true, message: `AI action '${type}' queued for execution. The system will process this and update shifts accordingly.`, actionId });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27566,7 +27738,7 @@ Respond in JSON format:
       });
       res.json({ response: response.choices[0]?.message?.content || "I'm unable to process that request." });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27579,7 +27751,7 @@ Respond in JSON format:
       const parsed = JSON.parse(result);
       res.json({ insights: parsed.insights || [] });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27726,7 +27898,7 @@ Respond in JSON format:
         decisions: await storage.getAiDecisions(user.tenantId, 20),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27785,7 +27957,7 @@ Respond in JSON format:
         shift: await storage.getShift(shiftId),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27903,7 +28075,7 @@ Respond in JSON format:
         batchId,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27914,7 +28086,7 @@ Respond in JSON format:
       const decisions = await storage.getAiDecisions(user.tenantId, 50);
       res.json(decisions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -27996,7 +28168,7 @@ Respond in JSON format:
       }));
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28010,7 +28182,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28024,7 +28196,7 @@ Respond in JSON format:
       );
       res.json({ active: rows.length > 0 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28034,7 +28206,7 @@ Respond in JSON format:
       const key = await getStripePublishableKey();
       res.json({ publishableKey: key });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28088,7 +28260,7 @@ Respond in JSON format:
       res.json({ url: session.url });
     } catch (err: any) {
       console.error("Checkout error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28175,7 +28347,7 @@ Respond in JSON format:
 
       res.json({ success: true, message: "Add-on activated" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -28237,7 +28409,7 @@ Respond in JSON format:
         params
       );
       res.json(rows);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.post("/api/fm/workers", requireRole("tenant_admin", "ceo", "operations_manager", "admin", "controller", "supervisor"), requireFmAddon as any, async (req, res) => {
@@ -28279,7 +28451,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       await pool.query("DELETE FROM fm_workers WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), tenantId]);
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // FM Suppliers
@@ -28288,7 +28460,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       const { rows } = await pool.query("SELECT * FROM fm_suppliers WHERE tenant_id = $1 ORDER BY company_name", [tenantId]);
       res.json(rows);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.post("/api/fm/suppliers", requireRole("tenant_admin", "ceo", "operations_manager", "admin", "controller", "supervisor"), requireFmAddon as any, async (req, res) => {
@@ -28330,7 +28502,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       await pool.query("DELETE FROM fm_suppliers WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), tenantId]);
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // FM Jobs
@@ -28361,7 +28533,7 @@ Respond in JSON format:
         params
       );
       res.json(rows);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.get("/api/fm/jobs/:id", requireRole("tenant_admin", "ceo", "operations_manager", "admin", "controller", "supervisor"), requireFmAddon as any, async (req, res) => {
@@ -28384,7 +28556,7 @@ Respond in JSON format:
          WHERE a.job_id = $1 AND a.tenant_id = $2`, [id, tenantId]
       );
       res.json({ ...rows[0], assignments: assignments.rows });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.post("/api/fm/jobs", requireRole("tenant_admin", "ceo", "operations_manager", "admin", "controller", "supervisor"), requireFmAddon as any, async (req, res) => {
@@ -28483,7 +28655,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       await pool.query("DELETE FROM fm_jobs WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), tenantId]);
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // FM Job assignments
@@ -28512,7 +28684,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       await pool.query("DELETE FROM fm_job_assignments WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), tenantId]);
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // FM PPM Schedules
@@ -28528,7 +28700,7 @@ Respond in JSON format:
         [tenantId]
       );
       res.json(rows);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.post("/api/fm/ppm", requireRole("tenant_admin", "ceo", "operations_manager", "admin", "controller", "supervisor"), requireFmAddon as any, async (req, res) => {
@@ -28575,7 +28747,7 @@ Respond in JSON format:
       const tenantId = (req.user as User).tenantId!;
       await pool.query("DELETE FROM fm_ppm_schedules WHERE id = $1 AND tenant_id = $2", [parseInt(req.params.id), tenantId]);
       res.json({ success: true });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // Generate a job from a PPM schedule
@@ -28662,7 +28834,7 @@ Respond in JSON format:
         serviceBreakdown: serviceBreakdown.rows,
         upcomingJobs: upcoming.rows,
       });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // ── FM Worker self-service portal ──
@@ -28696,7 +28868,7 @@ Respond in JSON format:
       const worker = await getFmWorkerForUser(user);
       if (!worker) return res.status(404).json({ message: "No FM worker profile linked to this account" });
       res.json(worker);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.get("/api/fm/my-jobs", requireAuth, requireFmAddon as any, async (req, res) => {
@@ -28719,7 +28891,7 @@ Respond in JSON format:
         [tenantId, worker.id]
       );
       res.json(rows);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.get("/api/fm/my-jobs/:id", requireAuth, requireFmAddon as any, async (req, res) => {
@@ -28742,7 +28914,7 @@ Respond in JSON format:
       );
       if (!rows[0]) return res.status(404).json({ message: "Job not assigned to you" });
       res.json(rows[0]);
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // Worker-driven status update: start, complete (with notes + photos), or pause.
@@ -28870,7 +29042,7 @@ Respond in JSON format:
         params
       );
       res.json({ from, to, jobs: rows });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // FM Reports: aggregated operational reports for a date range
@@ -28925,7 +29097,7 @@ Respond in JSON format:
         supplierLoad: supplierLoad.rows,
         sitesLoad: sitesLoad.rows,
       });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // ── FM Billing — wires FM jobs into the existing invoice / self-billing engine ──
@@ -29010,7 +29182,7 @@ Respond in JSON format:
       });
       const subtotal = Math.round(lines.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
       res.json({ jobs: lines, subtotal, jobCount: lines.length });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // Generate self-bill invoice from completed FM jobs
@@ -29092,7 +29264,7 @@ Respond in JSON format:
       });
 
       res.json({ ...invoice, lineItemCount: lineItemsData.length });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // Preview FM jobs available for client invoicing
@@ -29129,7 +29301,7 @@ Respond in JSON format:
       });
       const subtotal = Math.round(lines.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
       res.json({ jobs: lines, subtotal, jobCount: lines.length });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   // Generate client invoice from completed FM jobs
@@ -29209,7 +29381,7 @@ Respond in JSON format:
       });
 
       res.json({ ...invoice, lineItemCount: items.length });
-    } catch (err: any) { res.status(500).json({ message: err.message }); }
+    } catch (err: any) { sendRouteError(res, err); }
   });
 
   app.get("/api/ai-contact/status", requireAuth, (req: Request, res: Response) => {
@@ -29229,7 +29401,7 @@ Respond in JSON format:
       });
       res.json(logs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29278,7 +29450,7 @@ Respond in JSON format:
 
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29329,7 +29501,7 @@ Respond in JSON format:
 
       res.json({ results, employee: `${emp.first_name} ${emp.last_name}` });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29366,7 +29538,7 @@ Respond in JSON format:
       const result = await callEmployee(target, triggerType || "general", baseUrl);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29392,7 +29564,7 @@ Respond in JSON format:
 
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29487,7 +29659,7 @@ Respond in JSON format:
         recentUploads: recentUploads.rows,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29541,7 +29713,7 @@ Respond in JSON format:
       );
       res.json(rows);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29563,7 +29735,7 @@ Respond in JSON format:
       if (rows.length === 0) return res.status(404).json({ message: "Document not found" });
       res.json(rows[0]);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29633,7 +29805,7 @@ Respond in JSON format:
       res.status(201).json(rows[0]);
     } catch (err: any) {
       if (err.name === "ZodError") return res.status(400).json({ message: "Validation failed", errors: err.errors });
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29713,7 +29885,7 @@ Respond in JSON format:
       res.json(rows[0]);
     } catch (err: any) {
       if (err.name === "ZodError") return res.status(400).json({ message: "Validation failed", errors: err.errors });
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29730,7 +29902,7 @@ Respond in JSON format:
       if (rowCount === 0) return res.status(404).json({ message: "Document not found" });
       res.json({ message: "Document deleted" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29896,7 +30068,7 @@ Respond in JSON format:
       res.json({ timesheets, total, page, limit, totalPages: Math.ceil(total / limit) });
     } catch (err: any) {
       console.error("admin timesheets error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -29962,7 +30134,7 @@ Respond in JSON format:
       res.send(csvHeader + csvRows);
     } catch (err: any) {
       console.error("timesheets csv export error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -30096,7 +30268,7 @@ Respond in JSON format:
       doc.end();
     } catch (err: any) {
       console.error("timesheets pdf export error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -30329,7 +30501,7 @@ Respond in JSON format:
       res.json({ success: true, results });
     } catch (err: any) {
       console.error("populate-shift-timestamps error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -30943,7 +31115,7 @@ Respond in JSON format:
 
       res.json({ message: `Backfill complete. Updated ${updated} shifts, skipped ${skipped} (already had check-in data).` });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -30971,7 +31143,7 @@ Respond in JSON format:
       res.json(result);
     } catch (err: any) {
       console.error("pre-audit-check error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -30991,7 +31163,7 @@ Respond in JSON format:
       res.send(pdfBuffer);
     } catch (err: any) {
       console.error("pre-audit-check pdf error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31113,7 +31285,7 @@ Respond in JSON format:
     } catch (err: any) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("fix-invoice-1517 error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     } finally {
       client.release();
     }
@@ -31305,7 +31477,7 @@ Respond in JSON format:
     } catch (err: any) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("migrate-nv-invoices error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     } finally {
       client.release();
     }
@@ -31362,7 +31534,7 @@ Respond in JSON format:
         return res.json({ entries: [], totalCount: 0 });
       }
       console.error("invoice-number-audit-log error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
   // Employee Availability Preferences
@@ -31372,7 +31544,7 @@ Respond in JSON format:
       const avail = await storage.getEmployeeAvailability(employeeId);
       res.json(avail);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31384,7 +31556,7 @@ Respond in JSON format:
       const avail = await storage.getEmployeeAvailability(employee.id);
       res.json(avail);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31406,7 +31578,7 @@ Respond in JSON format:
       });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31428,7 +31600,7 @@ Respond in JSON format:
       });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31485,7 +31657,7 @@ Respond in JSON format:
 
       res.json(sorted);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31500,7 +31672,7 @@ Respond in JSON format:
       const enriched = templates.map(t => ({ ...t, siteName: t.siteId ? sitesById[t.siteId]?.name || null : null }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31529,7 +31701,7 @@ Respond in JSON format:
       });
       res.status(201).json(template);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31543,7 +31715,7 @@ Respond in JSON format:
       const updated = await storage.updateShiftTemplate(id, req.body);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31557,7 +31729,7 @@ Respond in JSON format:
       await storage.deleteShiftTemplate(id);
       res.status(204).send();
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31611,7 +31783,7 @@ Respond in JSON format:
       const created = await storage.createShiftsBulk(shiftsToCreate);
       res.json({ created: created.length, shifts: created });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31628,7 +31800,7 @@ Respond in JSON format:
       const emergencyContacts = await storage.getEmergencyContacts(employee.id);
       res.json({ ...safeUser, employee, emergencyContacts });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31698,7 +31870,7 @@ Respond in JSON format:
       const { password: _, ...safeUser } = updatedUser;
       res.json({ ...safeUser, employee: updatedEmployee, emergencyContacts: updatedEmergencyContacts });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31714,7 +31886,7 @@ Respond in JSON format:
       }));
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31830,7 +32002,7 @@ Respond in JSON format:
         lateHours: late.lateHours,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31904,7 +32076,7 @@ Respond in JSON format:
       });
       res.json({ ...updated, distanceFromSite: distanceMetres, withinRange, geofenceRadius });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31963,7 +32135,7 @@ Respond in JSON format:
       });
       res.json(check);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31975,7 +32147,7 @@ Respond in JSON format:
       const docs = await storage.getDocuments(employee.id);
       res.json(docs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -31994,7 +32166,7 @@ Respond in JSON format:
       ).catch(() => {});
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32005,7 +32177,7 @@ Respond in JSON format:
       const list = await storage.getNotificationsForUser(user.id, { unreadOnly, limit: 50 });
       res.json(list);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32039,7 +32211,7 @@ Respond in JSON format:
       }));
       res.json(payslips);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32050,7 +32222,7 @@ Respond in JSON format:
       const userChannels = await storage.getUserChannels(user.id, user.tenantId);
       res.json(userChannels);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32067,7 +32239,7 @@ Respond in JSON format:
       });
       res.status(201).json(incident);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32100,7 +32272,7 @@ Respond in JSON format:
         handoverNotes: shift.handoverNotes,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32121,7 +32293,7 @@ Respond in JSON format:
         updatedAt: inc.updatedAt,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32150,7 +32322,7 @@ Respond in JSON format:
         createdAt: m.createdAt,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32187,7 +32359,7 @@ Respond in JSON format:
         createdAt: msg.createdAt,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32201,7 +32373,7 @@ Respond in JSON format:
       await storage.updateChannelMemberLastRead(channelId, user.id);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32230,7 +32402,7 @@ Respond in JSON format:
       }));
       res.json(results);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32242,7 +32414,7 @@ Respond in JSON format:
       await storage.saveMobilePushToken(user.id, token, platform);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32262,7 +32434,7 @@ Respond in JSON format:
         createdAt: r.createdAt,
       })));
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32314,7 +32486,7 @@ Respond in JSON format:
         createdAt: request.createdAt,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32404,7 +32576,7 @@ Respond in JSON format:
 
       res.status(201).json(request);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32417,7 +32589,7 @@ Respond in JSON format:
       const requests = await storage.getTimeOffRequestsByEmployee(employee.id);
       res.json(requests);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32456,7 +32628,7 @@ Respond in JSON format:
 
       res.json(cancelled);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32488,7 +32660,7 @@ Respond in JSON format:
 
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32542,7 +32714,7 @@ Respond in JSON format:
 
       res.json(approved);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32596,7 +32768,7 @@ Respond in JSON format:
 
       res.json(rejected);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32616,7 +32788,7 @@ Respond in JSON format:
       const entitlementRecord = await storage.getLeaveEntitlement(employeeId, year);
       res.json({ ...balance, year, entitlementRecord: entitlementRecord ?? null });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32630,7 +32802,7 @@ Respond in JSON format:
       const tenant = await storage.getTenant(employee.tenantId!);
       res.json({ ...balance, year, defaultEntitlement: tenant?.defaultLeaveEntitlementDays ?? 28 });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32667,7 +32839,7 @@ Respond in JSON format:
       });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32692,7 +32864,7 @@ Respond in JSON format:
       });
       res.json({ message: `Year-end carry-forward complete. Processed: ${result.processed}, Errors: ${result.errors}`, ...result });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32714,7 +32886,7 @@ Respond in JSON format:
 
       res.json(emailsWithClassifications);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32727,7 +32899,7 @@ Respond in JSON format:
       const actions = await storage.getProposedActionsByEmail(email.id);
       res.json({ ...email, classification, proposedActions: actions });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32743,7 +32915,7 @@ Respond in JSON format:
       const result = await pollAndProcessEmails(tenantId, userId, accessToken);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32764,7 +32936,7 @@ Respond in JSON format:
       const actions = await storage.getProposedActionsByEmail(emailId);
       res.json({ ...updated, classification, proposedActions: actions });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32776,7 +32948,7 @@ Respond in JSON format:
       const actions = await storage.getProposedActions(tenantId, status, limit);
       res.json(actions);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32820,7 +32992,7 @@ Respond in JSON format:
       const updated = await storage.getProposedAction(actionId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32862,7 +33034,7 @@ Respond in JSON format:
       const updated = await storage.getProposedAction(actionId);
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32872,7 +33044,7 @@ Respond in JSON format:
       const settings = await storage.getEmailAutoApproveSettings(tenantId);
       res.json(settings);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32889,7 +33061,7 @@ Respond in JSON format:
       const setting = await storage.upsertEmailAutoApproveSetting(tenantId, actionType, enabled, userId);
       res.json(setting);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32913,7 +33085,7 @@ Respond in JSON format:
 
       res.json(stats);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32925,7 +33097,7 @@ Respond in JSON format:
       const events = await storage.getAiLearningEvents(tenantId, domain, limit);
       res.json(events);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -32981,7 +33153,7 @@ Respond in JSON format:
         avgConfidence: Math.round(avgConfidence),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33028,7 +33200,7 @@ Respond in JSON format:
 
       res.json({ message: `Backfilled ${backfilled} scheduling decisions to unified learning engine`, backfilled, total: decisions.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33054,7 +33226,7 @@ Respond in JSON format:
         createdAt: conn.createdAt,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33068,7 +33240,7 @@ Respond in JSON format:
       const result = await testEmailConnection(clientId, clientSecret, azureTenantId, connectedEmail);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33112,7 +33284,7 @@ Respond in JSON format:
         pollingIntervalMinutes: conn.pollingIntervalMinutes,
       }});
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33143,7 +33315,7 @@ Respond in JSON format:
 
       res.json({ message: "Connection settings updated" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33155,7 +33327,7 @@ Respond in JSON format:
       await storage.deleteTenantEmailConnection(tenantId);
       res.json({ message: "Email connection removed" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33246,7 +33418,7 @@ Respond in JSON format:
 
       res.json({ message: `Created and processed ${created.length} demo emails`, emails: result });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33494,7 +33666,7 @@ Respond in JSON format:
       });
     } catch (err: any) {
       console.error("HR dashboard error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33532,7 +33704,7 @@ Respond in JSON format:
 
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33564,7 +33736,7 @@ Respond in JSON format:
 
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33576,7 +33748,7 @@ Respond in JSON format:
       const records = await storage.getTrainingRecordsByTenant(tenantId);
       res.json(records);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
   app.post("/api/admin/hr-cases", requireRole(...hrRoles), async (req, res) => {
@@ -33649,7 +33821,7 @@ Respond in JSON format:
       res.status(201).json(record);
 
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33663,7 +33835,7 @@ Respond in JSON format:
       const records = await storage.getTrainingRecordsByEmployeeForTenant(employeeId, tenantId);
       res.json(records);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33681,7 +33853,7 @@ Respond in JSON format:
       const record = await storage.createTrainingRecord({ ...req.body, tenantId });
       res.status(201).json(record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33710,11 +33882,11 @@ Respond in JSON format:
       }
       res.status(201).json({ created: created.length, records: created });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33755,7 +33927,7 @@ Respond in JSON format:
         documents,
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33868,7 +34040,7 @@ Respond in JSON format:
 
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33893,7 +34065,7 @@ Respond in JSON format:
       const record = await storage.updateTrainingRecord(id, patch);
       res.json(record);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33907,7 +34079,7 @@ Respond in JSON format:
       await storage.deleteTrainingRecord(id);
       res.json({ message: "Training record deleted" });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33957,11 +34129,11 @@ Respond in JSON format:
       const enrichedMatrix = matrix.map(m => ({ ...m, employeeName: nameMap[m.employeeId] || `Employee ${m.employeeId}` }));
       res.json({ trainingTypes, employees: enrichedMatrix, totalRecords: allRecords.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33981,7 +34153,7 @@ Respond in JSON format:
       const createdByName = row.rows[0] ? `${row.rows[0].first_name} ${row.rows[0].last_name}` : "Unknown";
       res.status(201).json({ ...event, createdByName });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -33996,7 +34168,7 @@ Respond in JSON format:
       res.json(records);
 
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34010,7 +34182,7 @@ Respond in JSON format:
       const docs = await storage.getHrCaseDocuments(caseId);
       res.json(docs);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34028,7 +34200,7 @@ Respond in JSON format:
       const doc = await storage.createHrCaseDocument({ caseId, tenantId, fileName, fileUrl, fileSize: fileSize || null, mimeType: mimeType || null, documentType: documentType || "evidence", uploadedBy: user.id });
       res.status(201).json(doc);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34047,7 +34219,7 @@ Respond in JSON format:
       await storage.deleteHrCaseDocument(docId, caseId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34065,7 +34237,7 @@ Respond in JSON format:
       if (!updated) return res.status(404).json({ message: "Event not found" });
       res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34080,7 +34252,7 @@ Respond in JSON format:
       await storage.deleteHrCaseEvent(eventId, caseId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34102,7 +34274,7 @@ Respond in JSON format:
       await storage.deleteHrCase(caseId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34132,7 +34304,7 @@ Respond in JSON format:
       };
       res.json(summary);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34147,7 +34319,7 @@ Respond in JSON format:
       res.json(result);
 
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34161,7 +34333,7 @@ Respond in JSON format:
       const records = await storage.getTrainingRecordsByEmployeeForTenant(employee.id, tenantId);
       res.json(records);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34201,7 +34373,7 @@ Respond in JSON format:
         clientId: conn.clientId ? "***configured***" : "",
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34221,7 +34393,7 @@ Respond in JSON format:
       });
       res.json({ success: true, message: "Credentials saved. Click Connect to authorise with Xero." });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34282,7 +34454,7 @@ Respond in JSON format:
       await storage.upsertTenantXeroConnection(tenantId, { connectionStatus: "connected", lastError: null });
       res.json({ success: true, message: `Connection verified. Organisation: ${xeroTenantName}`, xeroTenantName });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34304,7 +34476,7 @@ Respond in JSON format:
       const authUrl = generateXeroAuthUrl(clientId, redirectUri, state);
       res.json({ authUrl, redirectUri });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34379,7 +34551,7 @@ Respond in JSON format:
 
       res.json({ success: true, syncEnabled: updated.syncEnabled, syncIntervalMinutes: updated.syncIntervalMinutes });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34397,7 +34569,7 @@ Respond in JSON format:
       });
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34413,7 +34585,7 @@ Respond in JSON format:
       const stats = await runXeroSync(tenantId, req.user!.id);
       res.json({ success: true, ...stats });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34437,7 +34609,7 @@ Respond in JSON format:
       };
       res.json(summary);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34452,7 +34624,7 @@ Respond in JSON format:
       });
       res.json({ success: true, message: "Record marked for retry. Trigger a sync to re-process." });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34652,7 +34824,7 @@ Respond in JSON format:
         totalFlaggedDuplicates: parseInt(stats.rows[0]?.flagged || "0"),
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34713,7 +34885,7 @@ Respond in JSON format:
         meta: { dateFrom, dateTo, count: entries.length },
       });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34801,7 +34973,7 @@ Respond in JSON format:
 
       res.json({ entry: result.rows[0] });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34844,7 +35016,7 @@ Respond in JSON format:
 
       res.json({ entry: result.rows[0] });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34859,7 +35031,7 @@ Respond in JSON format:
       await pool.query("DELETE FROM manual_purchases WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -34942,7 +35114,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.send(csvContent);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35009,7 +35181,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.send(pdfBuffer);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35056,7 +35228,7 @@ Respond in JSON format:
 
       res.json({ entries, total: Math.round(total * 100) / 100, count: entries.length });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35086,7 +35258,7 @@ Respond in JSON format:
 
       res.json({ entry: result.rows[0] });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35120,7 +35292,7 @@ Respond in JSON format:
 
       res.json({ entry: result.rows[0] });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35135,7 +35307,7 @@ Respond in JSON format:
       await pool.query("DELETE FROM wages_ledger WHERE id = $1 AND tenant_id = $2", [id, tenantId]);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35209,7 +35381,7 @@ Respond in JSON format:
       res.setHeader("Content-Disposition", `attachment; filename="wages-ledger.csv"`);
       res.send(csvContent);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 
@@ -35537,7 +35709,7 @@ Respond in JSON format:
       });
     } catch (err: any) {
       console.error("Import ledger CSV error:", err);
-      res.status(500).json({ message: err.message });
+      sendRouteError(res, err);
     }
   });
 

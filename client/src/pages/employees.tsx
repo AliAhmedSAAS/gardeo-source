@@ -537,7 +537,7 @@ export default function EmployeesPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Employee added", description: "New employee has been created successfully. Default password: Password123!" });
+      toast({ title: "Employee added", description: "New employee has been created. Enable portal access and send an invitation so they can set a password." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
       setShowAddDialog(false);
       setAddFieldErrors({});
@@ -707,7 +707,13 @@ export default function EmployeesPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: `${data.deleted} employee${data.deleted !== 1 ? "s" : ""} deleted` });
+      const blockedCount = data.blocked?.length ?? 0;
+      toast({
+        title: `${data.deleted} employee${data.deleted !== 1 ? "s" : ""} deleted`,
+        ...(blockedCount > 0 && {
+          description: `${blockedCount} kept because they have worked, invoiced, payroll or other linked records.`,
+        }),
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/employees"] });
       setSelectedIds(new Set());
     },
@@ -2036,7 +2042,7 @@ export default function EmployeesPage() {
 
           <div className="space-y-4 mt-2">
             <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800">
-              Default password is <strong>Password123!</strong>. Username is created from the email address.
+              Username is created from the email address. The employee cannot sign in until portal access is enabled and they set a password from their invitation email.
             </div>
 
             <div className="grid grid-cols-2 gap-3">

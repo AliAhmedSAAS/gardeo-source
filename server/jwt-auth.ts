@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import { getLoginBlockReason } from "./login-policy";
 import type { User } from "@shared/schema";
 
 const ACCESS_TOKEN_EXPIRY = "15m";
@@ -103,6 +104,8 @@ export function registerMobileAuthRoutes(app: any) {
           }
           if (validUsers.length === 1) {
             const matchedUser = validUsers[0];
+            const blockReason = await getLoginBlockReason(matchedUser);
+            if (blockReason) return res.status(401).json({ message: blockReason });
             if (matchedUser.failedLoginAttempts && matchedUser.failedLoginAttempts > 0) {
               await storage.updateUser(matchedUser.id, { failedLoginAttempts: 0, lockedUntil: null } as any);
             }
@@ -164,9 +167,8 @@ export function registerMobileAuthRoutes(app: any) {
         });
       }
 
-      if (!user.isActive) {
-        return res.status(401).json({ message: "Account is deactivated" });
-      }
+      const blockReason = await getLoginBlockReason(user);
+      if (blockReason) return res.status(401).json({ message: blockReason });
 
       if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
         await storage.updateUser(user.id, { failedLoginAttempts: 0, lockedUntil: null } as any);
@@ -230,7 +232,8 @@ export function registerMobileAuthRoutes(app: any) {
         return res.status(401).json({ message: `Invalid credentials. ${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining.` });
       }
 
-      if (!user.isActive) return res.status(401).json({ message: "Account is deactivated" });
+      const blockReason = await getLoginBlockReason(user);
+      if (blockReason) return res.status(401).json({ message: blockReason });
 
       await storage.updateUser(user.id, { lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: null } as any);
 
@@ -280,9 +283,8 @@ export function registerMobileAuthRoutes(app: any) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      if (!user.isActive) {
-        return res.status(401).json({ message: "Account is deactivated" });
-      }
+      const blockReason = await getLoginBlockReason(user);
+      if (blockReason) return res.status(401).json({ message: blockReason });
 
       const accessToken = generateAccessToken(user);
       const newRefreshToken = generateRefreshToken(user);
