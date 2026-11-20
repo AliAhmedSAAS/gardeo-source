@@ -10445,12 +10445,14 @@ export async function registerRoutes(
       const limit = Math.min(200, Math.max(1, parseInt(req.body.limit as string) || 100));
       const offset = (page - 1) * limit;
 
-      // Supplier timesheet approval is optional — include pending/approved (exclude disputed/cancelled/scheduled).
+      // Supplier timesheet approval is optional — include pending/approved.
+      // Exclude disputed, cancelled/scheduled, finance-rejected, and already-invoiced.
       const conditions: string[] = [
         "sh.tenant_id = $1",
         "sh.supplier_id = $2",
         "sh.status NOT IN ('scheduled', 'cancelled')",
         "COALESCE(sh.supplier_approval_status::text, 'pending') <> 'disputed'",
+        "COALESCE(sh.finance_status::text, 'pending') <> 'rejected'",
         "NOT EXISTS (SELECT 1 FROM disputes d WHERE d.shift_id = sh.id AND d.status IN ('open', 'under_review', 'escalated'))",
         "NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)",
       ];
@@ -10519,7 +10521,7 @@ export async function registerRoutes(
 
       const totalCount = countResult.rows[0]?.total || 0;
       if (totalCount === 0) {
-        return res.status(400).json({ message: "No billable timesheets found for this supplier" + (periodStart && periodEnd ? " in the specified period" : "") + ". Shifts may already be invoiced, under dispute, cancelled, or not yet worked." });
+        return res.status(400).json({ message: "No billable timesheets found for this supplier" + (periodStart && periodEnd ? " in the specified period" : "") + ". Shifts may already be invoiced, under dispute, finance-rejected, cancelled, or not yet worked." });
       }
 
       const allShiftIds = allShiftIdsResult ? allShiftIdsResult.rows.map((r: any) => r.id) : undefined;
@@ -10612,12 +10614,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Supplier's self-billing agreement has expired. Please renew before generating invoices." });
       }
 
-      // Supplier timesheet approval is optional — include pending/approved (exclude disputed/cancelled/scheduled).
+      // Supplier timesheet approval is optional — include pending/approved.
+      // Exclude disputed, cancelled/scheduled, finance-rejected, and already-invoiced.
       const genConditions: string[] = [
         "sh.tenant_id = $1",
         "sh.supplier_id = $2",
         "sh.status NOT IN ('scheduled', 'cancelled')",
         "COALESCE(sh.supplier_approval_status::text, 'pending') <> 'disputed'",
+        "COALESCE(sh.finance_status::text, 'pending') <> 'rejected'",
         `sh.date >= $3 AND sh.date <= $4`,
         "NOT EXISTS (SELECT 1 FROM disputes d WHERE d.shift_id = sh.id AND d.status IN ('open', 'under_review', 'escalated'))",
         "NOT EXISTS (SELECT 1 FROM invoice_line_items ili WHERE ili.shift_id = sh.id)",
@@ -10651,7 +10655,7 @@ export async function registerRoutes(
       );
 
       if (genDataResult.rows.length === 0) {
-        return res.status(400).json({ message: "No billable timesheets found for this supplier in the specified period. Shifts may already be invoiced, under dispute, cancelled, or not yet worked." });
+        return res.status(400).json({ message: "No billable timesheets found for this supplier in the specified period. Shifts may already be invoiced, under dispute, finance-rejected, cancelled, or not yet worked." });
       }
 
       const rateCards = await storage.getRateCardsBySupplier(supplierId);
