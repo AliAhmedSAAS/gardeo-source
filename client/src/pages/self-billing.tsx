@@ -746,7 +746,7 @@ export default function SelfBillingPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Self-Billing Management</h1>
           <p className="text-muted-foreground text-sm">
-            Manage self-billing invoices, generate invoices from approved timesheets, and configure rate cards.
+            Manage self-billing invoices, generate invoices from timesheets, and configure rate cards.
           </p>
         </div>
       </div>
@@ -1281,7 +1281,7 @@ export default function SelfBillingPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">Generate Self-Billing Invoice</h2>
-                  <p className="text-sm text-muted-foreground">Create an invoice from approved timesheets for a supplier and period.</p>
+                  <p className="text-sm text-muted-foreground">Create an invoice from timesheets for a supplier and period. Supplier approval is optional.</p>
                 </div>
               </div>
 
