@@ -27,6 +27,7 @@ type EmailSettings = {
   smtpUser: string | null;
   hasSmtpPassword: boolean;
   hasResendApiKey: boolean;
+  hasElasticEmailApiKey: boolean;
   lastTestedAt: string | null;
   lastTestStatus: string | null;
   lastError: string | null;
@@ -48,6 +49,7 @@ export function TenantEmailSettingsCard() {
     smtpUser: "",
     smtpPassword: "",
     resendApiKey: "",
+    elasticEmailApiKey: "",
     testTo: "",
   });
 
@@ -70,6 +72,7 @@ export function TenantEmailSettingsCard() {
       smtpUser: data.smtpUser || "",
       smtpPassword: "",
       resendApiKey: "",
+      elasticEmailApiKey: "",
       testTo: f.testTo || user?.email || "",
     }));
   }, [data, user?.email]);
@@ -89,12 +92,13 @@ export function TenantEmailSettingsCard() {
       };
       if (form.smtpPassword.trim()) body.smtpPassword = form.smtpPassword.trim();
       if (form.resendApiKey.trim()) body.resendApiKey = form.resendApiKey.trim();
+      if (form.elasticEmailApiKey.trim()) body.elasticEmailApiKey = form.elasticEmailApiKey.trim();
       const res = await apiRequest("PATCH", "/api/tenant/email-settings", body);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tenant/email-settings"] });
-      setForm((f) => ({ ...f, smtpPassword: "", resendApiKey: "" }));
+      setForm((f) => ({ ...f, smtpPassword: "", resendApiKey: "", elasticEmailApiKey: "" }));
       toast({ title: "Email settings saved" });
     },
     onError: (err: Error) => toast({ title: "Save failed", description: err.message, variant: "destructive" }),
@@ -156,6 +160,7 @@ export function TenantEmailSettingsCard() {
               <SelectContent>
                 <SelectItem value="smtp">SMTP</SelectItem>
                 <SelectItem value="resend">Resend API</SelectItem>
+                <SelectItem value="elasticemail">Elastic Email API</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -252,6 +257,21 @@ export function TenantEmailSettingsCard() {
                 autoComplete="new-password"
               />
             </div>
+          </div>
+        ) : form.provider === "elasticemail" ? (
+          <div className="space-y-1.5 rounded-lg border p-4">
+            <Label>Elastic Email API key {data?.hasElasticEmailApiKey ? "(saved — leave blank to keep)" : "*"}</Label>
+            <Input
+              type="password"
+              value={form.elasticEmailApiKey}
+              onChange={(e) => setForm((f) => ({ ...f, elasticEmailApiKey: e.target.value }))}
+              placeholder={data?.hasElasticEmailApiKey ? "••••••••" : "Elastic Email API key"}
+              data-testid="input-elastic-email-api-key"
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-muted-foreground">
+              Create the key in Elastic Email → Settings → Manage API Keys with "Send Email" access. The From email must be on a verified domain.
+            </p>
           </div>
         ) : (
           <div className="space-y-1.5 rounded-lg border p-4">

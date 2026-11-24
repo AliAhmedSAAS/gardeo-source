@@ -1,5 +1,5 @@
 /**
- * Per-tenant email sending (SMTP primary, optional Resend key).
+ * Per-tenant email sending (SMTP primary, optional Resend or Elastic Email API key).
  * Passwords / API keys stored encrypted via the same helper as Outlook connections.
  */
 
@@ -7,7 +7,16 @@ import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { storage } from "./storage";
 import { encryptSecret, decryptSecret } from "./email-command-service";
+import { sendViaElasticEmail } from "./elastic-email";
 import type { TenantEmailSettings } from "@shared/schema";
+
+const EMAIL_PROVIDERS = ["smtp", "resend", "elasticemail"] as const;
+type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
+
+function normalizeProvider(raw: unknown): EmailProvider {
+  const p = String(raw || "smtp").toLowerCase();
+  return (EMAIL_PROVIDERS as readonly string[]).includes(p) ? (p as EmailProvider) : "smtp";
+}
 
 export type PublicTenantEmailSettings = {
   enabled: boolean;
@@ -21,6 +30,7 @@ export type PublicTenantEmailSettings = {
   smtpUser: string | null;
   hasSmtpPassword: boolean;
   hasResendApiKey: boolean;
+  hasElasticEmailApiKey: boolean;
   lastTestedAt: Date | null;
   lastTestStatus: string | null;
   lastError: string | null;
@@ -46,6 +56,15 @@ function isResendReady(row: TenantEmailSettings): boolean {
   );
 }
 
+function isElasticEmailReady(row: TenantEmailSettings): boolean {
+  return !!(
+    row.enabled &&
+    row.provider === "elasticemail" &&
+    row.fromEmail?.trim() &&
+    row.elasticEmailApiKeyEncrypted
+  );
+}
+
 export function toPublicTenantEmailSettings(row: TenantEmailSettings | undefined | null): PublicTenantEmailSettings {
   if (!row) {
     return {
@@ -60,6 +79,7 @@ export function toPublicTenantEmailSettings(row: TenantEmailSettings | undefined
       smtpUser: null,
       hasSmtpPassword: false,
       hasResendApiKey: false,
+      hasElasticEmailApiKey: false,
       lastTestedAt: null,
       lastTestStatus: null,
       lastError: null,
@@ -78,10 +98,11 @@ export function toPublicTenantEmailSettings(row: TenantEmailSettings | undefined
     smtpUser: row.smtpUser,
     hasSmtpPassword: !!row.smtpPasswordEncrypted,
     hasResendApiKey: !!row.resendApiKeyEncrypted,
+    hasElasticEmailApiKey: !!row.elasticEmailApiKeyEncrypted,
     lastTestedAt: row.lastTestedAt,
     lastTestStatus: row.lastTestStatus,
     lastError: row.lastError,
-    configured: isSmtpReady(row) || isResendReady(row),
+    configured: isSmtpReady(row) || isResendReady(row) || isElasticEmailReady(row),
   };
 }
 
@@ -102,8 +123,10 @@ export type UpsertEmailSettingsInput = {
   smtpUser?: string | null;
   smtpPassword?: string | null;
   resendApiKey?: string | null;
+  elasticEmailApiKey?: string | null;
   clearSmtpPassword?: boolean;
   clearResendApiKey?: boolean;
+  clearElasticEmailApiKey?: boolean;
   updatedBy?: string;
 };
 
@@ -117,10 +140,7 @@ export async function upsertTenantEmailSettings(
   };
 
   if (input.enabled !== undefined) data.enabled = !!input.enabled;
-  if (input.provider !== undefined) {
-    const p = String(input.provider || "smtp").toLowerCase();
-    data.provider = p === "resend" ? "resend" : "smtp";
-  }
+  if (input.provider !== undefined) data.provider = normalizeProvider(input.provider);
   if (input.fromName !== undefined) data.fromName = input.fromName?.trim() || null;
   if (input.fromEmail !== undefined) data.fromEmail = input.fromEmail?.trim() || null;
   if (input.replyToEmail !== undefined) data.replyToEmail = input.replyToEmail?.trim() || null;
@@ -144,6 +164,12 @@ export async function upsertTenantEmailSettings(
     data.resendApiKeyEncrypted = encryptSecret(input.resendApiKey);
   }
 
+  if (input.clearElasticEmailApiKey) {
+    data.elasticEmailApiKeyEncrypted = null;
+  } else if (typeof input.elasticEmailApiKey === "string" && input.elasticEmailApiKey.trim().length > 0) {
+    data.elasticEmailApiKeyEncrypted = encryptSecret(input.elasticEmailApiKey.trim());
+  }
+
   const saved = await storage.upsertTenantEmailSettings(tenantId, data as any);
   return toPublicTenantEmailSettings(saved);
 }
@@ -161,7 +187,7 @@ export async function sendViaTenantEmailSettings(params: {
   html: string;
   replyTo?: string | null;
   attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
-}): Promise<{ ok: boolean; error?: string; via?: "smtp" | "resend" }> {
+}): Promise<{ ok: boolean; error?: string; via?: EmailProvider }> {
   const row = await storage.getTenantEmailSettings(params.tenantId);
   if (!row || !row.enabled) {
     return { ok: false, error: "Tenant email settings are not enabled" };
@@ -214,6 +240,30 @@ export async function sendViaTenantEmailSettings(params: {
       });
       return { ok: false, error: message };
     }
+  }
+
+  if (row.provider === "elasticemail") {
+    if (!row.elasticEmailApiKeyEncrypted) {
+      return { ok: false, error: "Tenant Elastic Email API key is not configured" };
+    }
+    const result = await sendViaElasticEmail({
+      apiKey: decryptSecret(row.elasticEmailApiKeyEncrypted),
+      from,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      replyTo,
+      attachments,
+    });
+    if (!result.ok) {
+      console.error("[tenant-email] Elastic Email send failed:", result.error);
+      await storage.upsertTenantEmailSettings(params.tenantId, {
+        lastError: result.error.slice(0, 1000),
+        lastTestStatus: "failed",
+      });
+      return { ok: false, error: result.error };
+    }
+    return { ok: true, via: "elasticemail" };
   }
 
   // Default: SMTP
@@ -271,7 +321,7 @@ export async function testTenantEmailSettings(
     tenantId,
     to,
     subject: "Gardeo email settings test",
-    html: "<p>This is a test email from your tenant SMTP / email settings. If you received it, configuration is working.</p>",
+    html: "<p>This is a test email from your tenant email settings. If you received it, configuration is working.</p>",
   });
 
   await storage.upsertTenantEmailSettings(tenantId, {
