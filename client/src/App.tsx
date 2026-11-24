@@ -58,6 +58,7 @@ const TimesheetsPage = lazy(() => import("@/pages/timesheets"));
 const ComplianceSettingsPage = lazy(() => import("@/pages/compliance-settings"));
 const AIAnalyticsPage = lazy(() => import("@/pages/ai-analytics"));
 const CommunicationsPage = lazy(() => import("@/pages/communications"));
+const BroadcastPage = lazy(() => import("@/pages/broadcast"));
 const AdminSupplierTimesheetsPage = lazy(() => import("@/pages/admin-supplier-timesheets"));
 const DisputeManagementPage = lazy(() => import("@/pages/dispute-management"));
 const SelfBillingPage = lazy(() => import("@/pages/self-billing"));
@@ -280,6 +281,7 @@ function AuthenticatedRoutes() {
         <Route path="/download-audit-pack" component={DownloadAuditPackPage} />
         <Route path="/ai-analytics" component={AIAnalyticsPage} />
         <Route path="/communications" component={CommunicationsPage} />
+        <Route path="/broadcast" component={BroadcastPage} />
         <Route path="/admin/supplier-timesheets" component={AdminSupplierTimesheetsPage} />
         <Route path="/disputes" component={DisputeManagementPage} />
         <Route path="/self-billing" component={SelfBillingPage} />

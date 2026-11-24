@@ -25,8 +25,9 @@ import {
   Plus, Calendar, Clock, MapPin, Users, Building2, CalendarDays, Truck,
   ChevronLeft, ChevronRight, Copy, Eye, LayoutList, LayoutGrid,
   Pencil, Trash2, CheckSquare, X, AlertTriangle, Zap, CheckCircle2,
-  BookTemplate, LayoutTemplate, RefreshCw, Search, Download,
+  BookTemplate, LayoutTemplate, RefreshCw, Search, Download, Megaphone,
 } from "lucide-react";
+import { Link } from "wouter";
 import type { Site, ShiftTemplate } from "@shared/schema";
 
 type EnrichedShift = {
@@ -1652,6 +1653,20 @@ export default function SchedulingPage() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
+                      {shift.siteId && (
+                        <Button
+                          asChild
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-sky-600 hover:text-sky-700"
+                          title="Broadcast to nearby officers"
+                          data-testid={`button-broadcast-row-${shift.id}`}
+                        >
+                          <Link href={`/broadcast?id=${shift.id}`} onClick={(e) => e.stopPropagation()}>
+                            <Megaphone className="w-3.5 h-3.5" />
+                          </Link>
+                        </Button>
+                      )}
                     </td>
                     <td className="p-2 max-w-[160px] truncate" title={guardDisplay(shift)}>{guardDisplay(shift)}</td>
                     <td className="p-2 font-medium max-w-[160px] truncate" title={shift.supplierName || shift.branchCode || "MAIN"}>

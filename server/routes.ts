@@ -45,6 +45,7 @@ import { registerPanlRoutes } from "./panl-routes";
 import { registerQuEmailsCronRoutes } from "./qu-emails-cron";
 import { registerSyncMonthCronRoutes } from "./sync-month-cron";
 import { registerMcpRoutes } from "./mcp";
+import { registerBroadcastRoutes } from "./broadcast/routes";
 import { createEmployeeVettingFormToken } from "./employee-vetting-form-service";
 import { staffProfileStorage } from "./staff-profile-storage";
 import { getCachedSessionUser, setCachedSessionUser, invalidateSessionUser } from "./session-user-cache";
@@ -975,6 +976,7 @@ export async function registerRoutes(
   registerQuEmailsCronRoutes(app, requireRole);
   registerSyncMonthCronRoutes(app, requireRole);
   registerMcpRoutes(app, requireRole);
+  registerBroadcastRoutes(app, requireRole);
 
   // ─── Tenant Onboarding Routes (public) ───
   app.get("/api/subscription-plans", async (_req, res) => {

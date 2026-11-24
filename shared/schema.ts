@@ -200,6 +200,10 @@ export const employees = pgTable("employees", {
   previousLivingFrom: date("previous_living_from"),
   previousLivingTo: date("previous_living_to"),
   carOwner: text("car_owner"),
+  latitude: numeric("latitude", { precision: 9, scale: 6 }),
+  longitude: numeric("longitude", { precision: 9, scale: 6 }),
+  geocodedPostcode: text("geocoded_postcode"),
+  geocodedAt: timestamp("geocoded_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -3263,6 +3267,7 @@ export const tenantEmailSettings = pgTable("tenant_email_settings", {
   smtpUser: text("smtp_user"),
   smtpPasswordEncrypted: text("smtp_password_encrypted"),
   resendApiKeyEncrypted: text("resend_api_key_encrypted"),
+  elasticEmailApiKeyEncrypted: text("elastic_email_api_key_encrypted"),
   lastTestedAt: timestamp("last_tested_at"),
   lastTestStatus: text("last_test_status"),
   lastError: text("last_error"),
@@ -3291,6 +3296,48 @@ export const tenantOfficerTypes = pgTable("tenant_officer_types", {
 export const insertTenantOfficerTypeSchema = createInsertSchema(tenantOfficerTypes).omit({ id: true, createdAt: true });
 export type TenantOfficerType = typeof tenantOfficerTypes.$inferSelect;
 export type InsertTenantOfficerType = z.infer<typeof insertTenantOfficerTypeSchema>;
+
+export const broadcastMessages = pgTable("broadcast_messages", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  shiftId: integer("shift_id").references(() => shifts.id, { onDelete: "set null" }),
+  siteId: integer("site_id").references(() => sites.id, { onDelete: "set null" }),
+  /** email | sms */
+  channel: text("channel").notNull(),
+  subject: text("subject"),
+  body: text("body").notNull(),
+  /** sending | completed */
+  status: text("status").notNull().default("sending"),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  sentBy: varchar("sent_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_broadcast_messages_tenant_created").on(table.tenantId, table.createdAt),
+]);
+
+export const broadcastRecipients = pgTable("broadcast_recipients", {
+  id: serial("id").primaryKey(),
+  broadcastId: integer("broadcast_id").notNull().references(() => broadcastMessages.id, { onDelete: "cascade" }),
+  tenantId: integer("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  channel: text("channel").notNull(),
+  destination: text("destination").notNull(),
+  /** pending | sent | failed */
+  status: text("status").notNull().default("pending"),
+  error: text("error"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_broadcast_recipients_broadcast").on(table.broadcastId),
+  index("idx_broadcast_recipients_employee").on(table.tenantId, table.employeeId),
+]);
+
+export type BroadcastMessage = typeof broadcastMessages.$inferSelect;
+export type BroadcastRecipient = typeof broadcastRecipients.$inferSelect;
 
 export const tenantDutyTypes = pgTable("tenant_duty_types", {
   id: serial("id").primaryKey(),

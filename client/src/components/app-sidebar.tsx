@@ -12,7 +12,7 @@ import {
   LayoutDashboard, ClipboardList, Users, ShieldCheck, FileText,
   LogOut, UserPlus, Shield, CalendarDays, Radio, Clock, User, MapPin, PoundSterling,
   Truck, Briefcase, Settings, BarChart3, UserCheck, Brain, ScrollText, DatabaseBackup, Building2, Lock, TrendingUp, MessageSquare,
-  AlertTriangle, Receipt, ClipboardCheck, Sparkles, ChevronDown, Building, MapPinned, Banknote, RotateCcw, FileStack, Download, History, X, Calculator, RefreshCw, FileSpreadsheet, FolderOpen, CalendarOff, Mail, LayoutGrid, Scale, GraduationCap, Wrench, BookOpen, CreditCard,
+  AlertTriangle, Receipt, ClipboardCheck, Sparkles, ChevronDown, Building, MapPinned, Banknote, RotateCcw, FileStack, Download, History, X, Calculator, RefreshCw, FileSpreadsheet, FolderOpen, CalendarOff, Mail, LayoutGrid, Scale, GraduationCap, Wrench, BookOpen, CreditCard, Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -61,6 +61,7 @@ const navGroups: NavGroup[] = [
     icon: Radio,
     items: [
       { title: "Scheduling", url: "/scheduling", icon: CalendarDays, permKey: "screen:scheduling" },
+      { title: "Broadcast", url: "/broadcast", icon: Megaphone, permKey: "screen:broadcast" },
       { title: "AI Scheduling", url: "/ai-scheduling", icon: Brain, permKey: "screen:ai-scheduling" },
       { title: "Email Command Centre", url: "/email-command-centre", icon: Mail, permKey: "screen:email-command-centre" },
       { title: "Control Room", url: "/control-room", icon: Radio, permKey: "screen:control-room" },

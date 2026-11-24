@@ -231,6 +231,7 @@ app.use((req, res, next) => {
         smtp_user text,
         smtp_password_encrypted text,
         resend_api_key_encrypted text,
+        elastic_email_api_key_encrypted text,
         last_tested_at timestamp,
         last_test_status text,
         last_error text,
@@ -927,6 +928,7 @@ app.use((req, res, next) => {
         "screen:my-pay": ["employee"],
         "screen:leave-requests": ["tenant_admin","ceo","operations_manager","regional_manager","admin","hr_manager"],
         "screen:absences": ["tenant_admin","ceo","operations_manager","regional_manager","admin","hr_manager"],
+        "screen:broadcast": ["tenant_admin","ceo","operations_manager","regional_manager","admin","controller","scheduler","hr_manager"],
       };
       const allRoles = ["tenant_admin","ceo","operations_manager","regional_manager","admin","controller","scheduler","hr_manager","compliance_manager","accountant","payroll_manager","training_manager","supplier","employee"];
       for (const [perm, enabledRoles] of Object.entries(newPerms)) {
