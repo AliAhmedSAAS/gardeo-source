@@ -203,6 +203,7 @@ const FINANCE_CSV_HEADERS = [
   "Pay rate",
   "Charge rate",
   "Total pay £",
+  "Total charge £",
   "Shift status",
   "Finance status",
   "Finance note",
@@ -247,12 +248,22 @@ function shiftTotalPay(shift: EnrichedShift): number | null {
   return Math.round((wageHours * rate + travel - dedAmt) * 100) / 100;
 }
 
+/** Client charge: (hours + holiday) × charge rate — late/deductions are not charged back to the client. */
+function shiftTotalCharge(shift: EnrichedShift): number | null {
+  const hours = shiftDisplayHours(shift);
+  const rate = shift.chargeRate != null ? Number(shift.chargeRate) : NaN;
+  if (hours == null || !Number.isFinite(rate)) return null;
+  const sellHours = Math.max(0, hours + Number(shift.holidayHours || 0));
+  return Math.round(sellHours * rate * 100) / 100;
+}
+
 interface PaginatedResponse {
   data: EnrichedShift[];
   total: number;
   page: number;
   limit: number;
   stats: { total: number; pending: number; approved: number; rejected: number; late_arrivals: number };
+  totals?: { pay: number; charge: number; missingPayRate: number; missingChargeRate: number };
   sites: { id: number; name: string }[];
   clients: { id: number; name: string }[];
   officers: { id: number; name: string }[];
@@ -379,6 +390,8 @@ export default function FinanceApprovalPage() {
   const shifts = response?.data || [];
   const total = response?.total || 0;
   const stats = response?.stats || { total: 0, pending: 0, approved: 0, rejected: 0, late_arrivals: 0 };
+  const totals = response?.totals || { pay: 0, charge: 0, missingPayRate: 0, missingChargeRate: 0 };
+  const formatGbp = (n: number) => `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const sites = response?.sites || [];
   const clients = response?.clients || [];
   const officers = response?.officers || [];
@@ -670,6 +683,7 @@ export default function FinanceApprovalPage() {
         s.payRate ?? "",
         s.chargeRate ?? "",
         shiftTotalPay(s) ?? "",
+        shiftTotalCharge(s) ?? "",
         s.status || "",
         s.financeStatus || "pending",
         s.financeNote || "",
@@ -730,7 +744,7 @@ export default function FinanceApprovalPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
         <Card>
           <CardContent className="p-3 text-center">
             <div className="text-xl font-bold" data-testid="text-total-workable">{stats.total}</div>
@@ -761,7 +775,26 @@ export default function FinanceApprovalPage() {
             <div className="text-xs text-muted-foreground">Late Arrivals</div>
           </CardContent>
         </Card>
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardContent className="p-3 text-center">
+            <div className="text-xl font-bold text-blue-700 dark:text-blue-400" data-testid="text-total-pay">{formatGbp(totals.pay)}</div>
+            <div className="text-xs text-muted-foreground">Total Pay</div>
+            {totals.missingPayRate > 0 && (
+              <div className="text-[10px] text-amber-600">{totals.missingPayRate} without pay rate</div>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="border-purple-200 dark:border-purple-800">
+          <CardContent className="p-3 text-center">
+            <div className="text-xl font-bold text-purple-700 dark:text-purple-400" data-testid="text-total-charge">{formatGbp(totals.charge)}</div>
+            <div className="text-xs text-muted-foreground">Total Charge</div>
+            {totals.missingChargeRate > 0 && (
+              <div className="text-[10px] text-amber-600">{totals.missingChargeRate} without charge rate</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-3">All cards follow the filters below. Status counts ignore the finance status filter so the Pending / Approved / Rejected split stays visible.</p>
 
       <Card>
         <CardHeader className="pb-3">
@@ -1016,6 +1049,8 @@ export default function FinanceApprovalPage() {
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Travel £</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Pay rate</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Charge rate</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Total Pay</th>
+                    <th className="p-3 text-right text-xs font-semibold text-muted-foreground whitespace-nowrap">Total Charge</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Shift Status</th>
                     <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Finance</th>
                     <th className="p-3 text-right text-xs font-semibold text-muted-foreground">Actions</th>
@@ -1164,6 +1199,12 @@ export default function FinanceApprovalPage() {
                           ) : shift.chargeRate == null || Number.isNaN(Number(shift.chargeRate))
                             ? "—"
                             : `£${fmtNum(shift.chargeRate)}`}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap" data-testid={`text-total-pay-${shift.id}`}>
+                          {shiftTotalPay(shift) == null ? "—" : `£${fmtNum(shiftTotalPay(shift))}`}
+                        </td>
+                        <td className="p-3 text-right tabular-nums text-xs font-semibold text-purple-700 dark:text-purple-400 whitespace-nowrap" data-testid={`text-total-charge-${shift.id}`}>
+                          {shiftTotalCharge(shift) == null ? "—" : `£${fmtNum(shiftTotalCharge(shift))}`}
                         </td>
                         <td className="p-3">
                           <Badge variant="secondary" className={`text-[10px] ${shiftConf.className}`} data-testid={`badge-shift-status-${shift.id}`}>

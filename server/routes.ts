@@ -5188,6 +5188,7 @@ export async function registerRoutes(
           page: 1,
           limit: 50,
           stats: { total: 0, pending: 0, approved: 0, rejected: 0, lateArrivals: 0 },
+          totals: { pay: 0, charge: 0, missingPayRate: 0, missingChargeRate: 0 },
           sites: [],
           clients: [],
           officers: [],
@@ -5219,14 +5220,12 @@ export async function registerRoutes(
       const params: any[] = [user.tenantId];
       let paramIdx = 2;
 
-      if (financeStatus && financeStatus !== "all") {
-        if (financeStatus === "pending") {
-          conditions.push(`(sh.finance_status = 'pending' OR sh.finance_status IS NULL)`);
-        } else {
-          conditions.push(`sh.finance_status = $${paramIdx}`);
-          params.push(financeStatus);
-          paramIdx++;
-        }
+      // Kept parameter-free so the status cards can reuse every other filter without renumbering params.
+      let financeCondition: string | null = null;
+      if (financeStatus === "pending") {
+        financeCondition = `(sh.finance_status = 'pending' OR sh.finance_status IS NULL)`;
+      } else if (financeStatus === "approved" || financeStatus === "rejected") {
+        financeCondition = `sh.finance_status = '${financeStatus}'`;
       }
       if (shiftStatus && shiftStatus !== "all") {
         conditions.push(`sh.status = $${paramIdx}`);
@@ -5278,7 +5277,8 @@ export async function registerRoutes(
         paramIdx++;
       }
 
-      const whereClause = conditions.join(" AND ");
+      const statsWhereClause = conditions.join(" AND ");
+      const whereClause = financeCondition ? `${statsWhereClause} AND ${financeCondition}` : statsWhereClause;
       const fromJoins = `
           FROM shifts sh
           LEFT JOIN sites si ON sh.site_id = si.id
@@ -5311,7 +5311,7 @@ export async function registerRoutes(
         /* keep defaults */
       }
 
-      const [dataResult, countResult, statsResult, sitesResult, clientsResult, officersResult, suppliersResult] = await Promise.all([
+      const [dataResult, countResult, statsResult, sitesResult, clientsResult, officersResult, suppliersResult, totalsResult] = await Promise.all([
         pool.query(
           `SELECT sh.id, sh.title, sh.date::text AS date, sh.start_time, sh.end_time, sh.break_minutes, sh.status, sh.finance_status,
             sh.finance_note, sh.finance_approved_by, sh.finance_approved_at, sh.employee_id, sh.site_id,
@@ -5340,12 +5340,13 @@ export async function registerRoutes(
         pool.query(
           `SELECT
             COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE finance_status = 'pending' OR finance_status IS NULL)::int AS pending,
-            COUNT(*) FILTER (WHERE finance_status = 'approved')::int AS approved,
-            COUNT(*) FILTER (WHERE finance_status = 'rejected')::int AS rejected,
-            COUNT(*) FILTER (WHERE late_minutes > 0)::int AS late_arrivals
-          FROM shifts WHERE tenant_id = $1 AND status NOT IN ('scheduled', 'cancelled')`,
-          [user.tenantId]
+            COUNT(*) FILTER (WHERE sh.finance_status = 'pending' OR sh.finance_status IS NULL)::int AS pending,
+            COUNT(*) FILTER (WHERE sh.finance_status = 'approved')::int AS approved,
+            COUNT(*) FILTER (WHERE sh.finance_status = 'rejected')::int AS rejected,
+            COUNT(*) FILTER (WHERE sh.late_minutes > 0)::int AS late_arrivals
+          ${fromJoins}
+          WHERE ${statsWhereClause}`,
+          params
         ),
         pool.query(
           `SELECT DISTINCT si.id, si.name FROM sites si
@@ -5379,6 +5380,41 @@ export async function registerRoutes(
            WHERE su.tenant_id = $1
            ORDER BY su.company_name`,
           [user.tenantId]
+        ),
+        // Pay/charge totals across all filtered shifts, using the same rate fallbacks as the rows below.
+        pool.query(
+          `SELECT
+            COALESCE(SUM(GREATEST(0,
+              ROUND((x.wage_hours * x.pay_rate + GREATEST(0, COALESCE(sh.travel_allowance, 0)))::numeric, 2)
+              - GREATEST(0, COALESCE(sh.deduction_amount, 0))
+            )) FILTER (WHERE x.pay_rate IS NOT NULL), 0) AS total_pay,
+            COALESCE(SUM(ROUND((x.sell_hours * x.charge_rate)::numeric, 2)) FILTER (WHERE x.charge_rate IS NOT NULL), 0) AS total_charge,
+            COUNT(*) FILTER (WHERE x.pay_rate IS NULL)::int AS missing_pay_rate,
+            COUNT(*) FILTER (WHERE x.charge_rate IS NULL)::int AS missing_charge_rate
+          ${fromJoins}
+          LEFT JOIN LATERAL (
+            SELECT r.hourly_rate FROM employee_pay_rates r
+            WHERE r.tenant_id = $1 AND r.employee_id = sh.employee_id
+              AND r.effective_from <= CURRENT_DATE
+              AND (r.effective_to IS NULL OR r.effective_to >= CURRENT_DATE)
+            ORDER BY r.effective_from DESC LIMIT 1
+          ) epr ON sh.pay_rate IS NULL
+          LEFT JOIN LATERAL (
+            SELECT r.hourly_charge_rate FROM site_charge_rates r
+            WHERE r.tenant_id = $1 AND r.site_id = sh.site_id
+              AND r.effective_from <= CURRENT_DATE
+              AND (r.effective_to IS NULL OR r.effective_to >= CURRENT_DATE)
+            ORDER BY r.effective_from DESC LIMIT 1
+          ) scr ON sh.charge_rate IS NULL
+          CROSS JOIN LATERAL (
+            SELECT
+              COALESCE(sh.pay_rate, epr.hourly_rate) AS pay_rate,
+              COALESCE(sh.charge_rate, scr.hourly_charge_rate) AS charge_rate,
+              ${INVOICE_WAGE_HOURS_SQL} AS wage_hours,
+              GREATEST(0, FLOOR((${INVOICE_BASE_HOURS_SQL} + COALESCE(sh.holiday_hours, 0)) * 100) / 100.0) AS sell_hours
+          ) x
+          WHERE ${whereClause}`,
+          params
         ),
       ]);
 
@@ -5486,6 +5522,12 @@ export async function registerRoutes(
         page,
         limit,
         stats: statsResult.rows[0] || { total: 0, pending: 0, approved: 0, rejected: 0, late_arrivals: 0 },
+        totals: {
+          pay: roundMoney(parseFloat(String(totalsResult.rows[0]?.total_pay ?? 0)) || 0),
+          charge: roundMoney(parseFloat(String(totalsResult.rows[0]?.total_charge ?? 0)) || 0),
+          missingPayRate: totalsResult.rows[0]?.missing_pay_rate ?? 0,
+          missingChargeRate: totalsResult.rows[0]?.missing_charge_rate ?? 0,
+        },
         sites: sitesResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
         clients: clientsResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
         officers: officersResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
@@ -10479,15 +10521,17 @@ export async function registerRoutes(
       const supplierVatActiveForPeriod = supplierHasValidVat && (!supplierVatFromDate || (previewPeriodDate && previewPeriodDate >= supplierVatFromDate));
       const vatRate = (tenantHasValidVat && supplierVatActiveForPeriod) ? parseFloat(supplier.defaultVatRate || "20") : 0;
 
-      const queries: Promise<any>[] = [
-        pool.query(
-          `SELECT sh.id, sh.title, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
+      const shiftAmountColumns = `sh.id, sh.date, CASE WHEN sh.start_time LIKE '____-__-__ %' THEN SUBSTRING(sh.start_time FROM 12 FOR 5) ELSE LEFT(sh.start_time, 5) END AS start_time, CASE WHEN sh.end_time LIKE '____-__-__ %' THEN SUBSTRING(sh.end_time FROM 12 FOR 5) ELSE LEFT(sh.end_time, 5) END AS end_time, sh.break_minutes, sh.site_id, sh.employee_id, sh.pay_rate,
             sh.hours_override,
             COALESCE(sh.holiday_hours, 0) AS holiday_hours,
             COALESCE(sh.late_hours, 0) AS late_hours,
             COALESCE(sh.deduction_hours, 0) AS deduction_hours,
             COALESCE(sh.deduction_amount, 0) AS deduction_amount,
-            COALESCE(sh.travel_allowance, 0) AS travel_allowance,
+            COALESCE(sh.travel_allowance, 0) AS travel_allowance`;
+
+      const queries: Promise<any>[] = [
+        pool.query(
+          `SELECT ${shiftAmountColumns}, sh.title,
             COALESCE(si.name, 'N/A') AS site_name,
             COALESCE(u.first_name || ' ' || u.last_name, 'N/A') AS employee_name
           FROM shifts sh
@@ -10506,30 +10550,25 @@ export async function registerRoutes(
           WHERE ${whereClause}`,
           params
         ),
+        // Summary totals must cover every matching shift, not just the current page.
+        pool.query(
+          `SELECT ${shiftAmountColumns} FROM shifts sh WHERE ${whereClause} ORDER BY sh.date ASC, sh.start_time ASC`,
+          params
+        ),
       ];
-      if (page === 1) {
-        queries.push(
-          pool.query(
-            `SELECT sh.id FROM shifts sh WHERE ${whereClause} ORDER BY sh.date ASC, sh.start_time ASC`,
-            params
-          )
-        );
-      }
 
       const results = await Promise.all(queries);
       const dataResult = results[0];
       const countResult = results[1];
-      const allShiftIdsResult = results[2];
+      const allShiftsResult = results[2];
 
       const totalCount = countResult.rows[0]?.total || 0;
       if (totalCount === 0) {
         return res.status(400).json({ message: "No billable timesheets found for this supplier" + (periodStart && periodEnd ? " in the specified period" : "") + ". Shifts may already be invoiced, under dispute, finance-rejected, cancelled, or not yet worked." });
       }
 
-      const allShiftIds = allShiftIdsResult ? allShiftIdsResult.rows.map((r: any) => r.id) : undefined;
+      const allShiftIds = page === 1 ? allShiftsResult.rows.map((r: any) => r.id) : undefined;
       const totalHoursAll = Math.round(parseFloat(countResult.rows[0]?.total_hours || "0") * 100) / 100;
-      const estimatedSubtotal = Math.round(totalHoursAll * defaultRate * 100) / 100;
-      const estimatedVat = Math.round(estimatedSubtotal * (vatRate / 100) * 100) / 100;
 
       const shifts: Array<{ shiftId: number; date: string; siteName: string; employeeName: string; startTime: string; endTime: string; breakMinutes: number; hours: number; rate: number; amount: number; title: string; holidayHours: number; lateHours: number; deductionHours: number; deductionAmount: number; travelAllowance: number }> = [];
 
@@ -10560,17 +10599,21 @@ export async function registerRoutes(
       }
 
       const rateMap = new Map<string, { rate: number; shifts: number; hours: number; amount: number }>();
-      for (const s of shifts) {
-        const key = s.rate.toFixed(2);
-        const existing = rateMap.get(key) || { rate: s.rate, shifts: 0, hours: 0, amount: 0 };
+      let actualSubtotal = 0;
+      for (const row of allShiftsResult.rows) {
+        const hours = resolveInvoiceWageHours(row);
+        const rate = resolveInvoiceShiftRate(row.pay_rate, rateCards, new Date(row.date), row.site_id, row.employee_id, defaultRate);
+        const amount = resolveInvoiceLineSubtotal(hours, rate, row.deduction_amount, row.travel_allowance);
+        actualSubtotal += amount;
+        const key = rate.toFixed(2);
+        const existing = rateMap.get(key) || { rate, shifts: 0, hours: 0, amount: 0 };
         existing.shifts++;
-        existing.hours = Math.round((existing.hours + s.hours) * 100) / 100;
-        existing.amount = Math.round((existing.amount + s.amount) * 100) / 100;
+        existing.hours = Math.round((existing.hours + hours) * 100) / 100;
+        existing.amount = Math.round((existing.amount + amount) * 100) / 100;
         rateMap.set(key, existing);
       }
       const rateBreakdown = Array.from(rateMap.values()).sort((a, b) => a.rate - b.rate);
 
-      const actualSubtotal = shifts.reduce((sum, s) => sum + s.amount, 0);
       const roundedActualSubtotal = Math.round(actualSubtotal * 100) / 100;
       const actualVat = Math.round(roundedActualSubtotal * (vatRate / 100) * 100) / 100;
 
