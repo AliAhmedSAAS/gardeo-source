@@ -13,8 +13,11 @@ import { sendViaTenantEmailSettings } from "./tenant-email-settings";
 import { parseGpsCoords, resolveShiftGeofence, type GeofenceResult } from "./geofence";
 import { calculateLateDeduction, shiftDateTime } from "@shared/lateDeduction";
 
-const PRECHECK_VISIBLE_MINUTES_BEFORE = 90;
-const BOOK_ON_VISIBLE_MINUTES_BEFORE = 15;
+/**
+ * Precheck / book-on window: today's previous pending (start already passed)
+ * plus shifts starting within this many hours from now.
+ */
+const PRECHECK_BOOKON_VISIBLE_HOURS_AHEAD = 2;
 
 export const PRECHECK_REASONS = [
   "No internet",
@@ -62,13 +65,18 @@ function parseTimeOnDate(dateStr: string, timeStr: string): Date {
   return new Date(`${dateStr}T${t}`);
 }
 
-/** True once we are within `minutesBefore` of shift start (and afterwards if still pending). */
-function isWithinMinutesBeforeStart(dateStr: string, startTime: string, minutesBefore: number, now = new Date()): boolean {
+/**
+ * True when shift start is on the given day and at or before (now + hoursAhead).
+ * Covers all earlier-today pending chases plus the next `hoursAhead` hours.
+ */
+function isStartInDayPendingOrNextHours(dateStr: string, startTime: string, hoursAhead: number, now = new Date()): boolean {
   if (!dateStr || !startTime) return false;
   const start = parseTimeOnDate(dateStr, startTime);
   if (Number.isNaN(start.getTime())) return false;
-  const windowOpensAt = new Date(start.getTime() - minutesBefore * 60 * 1000);
-  return now.getTime() >= windowOpensAt.getTime();
+  const dayStart = parseTimeOnDate(dateStr, "00:00");
+  if (Number.isNaN(dayStart.getTime())) return false;
+  const windowEnd = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000);
+  return start.getTime() >= dayStart.getTime() && start.getTime() <= windowEnd.getTime();
 }
 
 /** Create pending check-call slots from book-on until shift end using site settings. */
@@ -139,6 +147,18 @@ export async function ensureCheckCallsForShift(shiftId: number, tenantId: number
   }
 }
 
+/** Statuses that can still appear in Call Chase (sync often marks open shifts completed). */
+const CALL_CHASE_SHIFT_STATUSES = [
+  "scheduled",
+  "in_progress",
+  "booked_on",
+  "completed",
+  "verified",
+  "booked_off",
+] as const;
+
+const ACTIVE_BOOKED_STATUSES = ["booked_on", "in_progress", "completed", "verified", "booked_off"] as const;
+
 export type PendingCallRow = {
   id: string;
   callType: "precheck" | "book_on" | "check_call";
@@ -153,6 +173,7 @@ export type PendingCallRow = {
   startTime: string;
   endTime: string;
   date: string;
+  shiftStatus: string;
   status: "pending" | "taken_manual" | "taken_app";
   clientEmail: string | null;
   bookOnEmail: string | null;
@@ -190,7 +211,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
     .where(and(
       eq(shifts.tenantId, tenantId),
       sql`${shifts.date}::text = ${today}`,
-      inArray(shifts.status, ["scheduled", "in_progress", "booked_on"]),
+      inArray(shifts.status, [...CALL_CHASE_SHIFT_STATUSES]),
     ));
 
   const rows: PendingCallRow[] = [];
@@ -202,15 +223,28 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
     const siteName = row.siteName || "Unassigned";
     const dateStr = String(s.date).slice(0, 10);
     const clientEmail = row.siteBookOnEmail || row.siteClientEmail || row.siteManagerEmail || null;
+    const shiftStatus = String(s.status || "scheduled");
+    // Sync often marks shifts completed before start — still chase missing precheck/book-on.
+    const isCompletedLike = shiftStatus === "completed" || shiftStatus === "verified" || shiftStatus === "booked_off";
+    const canChaseOpen = shiftStatus === "scheduled" || isCompletedLike;
+    const inChaseWindow = isStartInDayPendingOrNextHours(
+      dateStr,
+      s.startTime,
+      PRECHECK_BOOKON_VISIBLE_HOURS_AHEAD,
+      now,
+    );
 
     const precheckPassed = Boolean(s.precheckData?.passed);
-    const bookOnDone = Boolean(s.bookedOnAt || s.checkInTime || s.status === "booked_on" || s.status === "in_progress");
+    const bookOnDone = Boolean(
+      s.bookedOnAt
+      || s.checkInTime
+      || s.status === "booked_on"
+      || s.status === "in_progress"
+      || s.bookOnCallData?.method,
+    );
 
-    if (
-      s.status === "scheduled" &&
-      !precheckPassed &&
-      isWithinMinutesBeforeStart(dateStr, s.startTime, PRECHECK_VISIBLE_MINUTES_BEFORE, now)
-    ) {
+    // Precheck / book-on: earlier today (still pending) + next 2 hours from now.
+    if (canChaseOpen && !precheckPassed && inChaseWindow) {
       rows.push({
         id: `precheck-${s.id}`,
         callType: "precheck",
@@ -224,6 +258,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
         startTime: s.startTime,
         endTime: s.endTime,
         date: dateStr,
+        shiftStatus,
         status: "pending",
         clientEmail,
         bookOnEmail: row.siteBookOnEmail || null,
@@ -235,13 +270,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
       });
     }
 
-    // Book-on pending: precheck done, scheduled, not booked yet — only from 15 min before start
-    if (
-      s.status === "scheduled" &&
-      precheckPassed &&
-      !bookOnDone &&
-      isWithinMinutesBeforeStart(dateStr, s.startTime, BOOK_ON_VISIBLE_MINUTES_BEFORE, now)
-    ) {
+    if (canChaseOpen && precheckPassed && !bookOnDone && inChaseWindow) {
       rows.push({
         id: `bookon-${s.id}`,
         callType: "book_on",
@@ -255,6 +284,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
         startTime: s.startTime,
         endTime: s.endTime,
         date: dateStr,
+        shiftStatus,
         status: "pending",
         clientEmail,
         bookOnEmail: row.siteBookOnEmail || null,
@@ -266,8 +296,8 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
       });
     }
 
-    // Ensure check-calls for active booked shifts
-    if (bookOnDone && (s.status === "booked_on" || s.status === "in_progress")) {
+    // Ensure check-calls for booked / completed-with-book-on shifts
+    if (bookOnDone && (ACTIVE_BOOKED_STATUSES as readonly string[]).includes(shiftStatus)) {
       await ensureCheckCallsForShift(s.id, tenantId);
     }
   }
@@ -297,7 +327,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
       eq(shiftCheckCalls.tenantId, tenantId),
       eq(shiftCheckCalls.status, "pending"),
       lte(shiftCheckCalls.dueAt, now),
-      inArray(shifts.status, ["booked_on", "in_progress"]),
+      inArray(shifts.status, [...ACTIVE_BOOKED_STATUSES]),
       sql`${shifts.date}::text = ${today}`,
     ))
     .orderBy(asc(shiftCheckCalls.dueAt));
@@ -318,6 +348,7 @@ export async function listPendingCalls(tenantId: number): Promise<PendingCallRow
       startTime: s.startTime,
       endTime: s.endTime,
       date: String(s.date).slice(0, 10),
+      shiftStatus: String(s.status || "scheduled"),
       status: "pending",
       clientEmail: row.siteBookOnEmail || row.siteClientEmail || row.siteManagerEmail || null,
       bookOnEmail: row.siteBookOnEmail || null,

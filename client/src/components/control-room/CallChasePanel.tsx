@@ -74,6 +74,7 @@ type PendingCall = {
   startTime: string;
   endTime: string;
   date: string;
+  shiftStatus?: string;
   status: "pending" | "taken_manual" | "taken_app";
   clientEmail: string | null;
   bookOnEmail: string | null;
@@ -377,6 +378,9 @@ export function CallChasePanel() {
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{callTypeLabel(row.callType)}</Badge>
           <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Pending</Badge>
+          {row.shiftStatus === "completed" && (
+            <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100">Shift completed</Badge>
+          )}
           <span className="font-medium truncate">{row.employeeName}</span>
           <span className="text-muted-foreground text-sm truncate">@ {row.siteName}</span>
         </div>
@@ -420,7 +424,7 @@ export function CallChasePanel() {
             Call Chase
           </h2>
           <p className="text-sm text-muted-foreground">
-            Take pending Precheck, Book-on, and Check-call when officers cannot use the app.
+            Take pending Precheck, Book-on, and Check-call when officers cannot use the app. Precheck and book-on show today&apos;s earlier pending plus shifts starting within the next 2 hours.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
