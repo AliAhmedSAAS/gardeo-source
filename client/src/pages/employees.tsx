@@ -394,6 +394,8 @@ export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [officerTypeFilter, setOfficerTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const pageLimit = 50;
   const [matchDetail, detailParams] = useRoute("/admin/employees/:id");
@@ -460,9 +462,11 @@ export default function EmployeesPage() {
   queryParams.set("limit", String(pageLimit));
   if (debouncedSearch) queryParams.set("search", debouncedSearch);
   if (statusFilter !== "all") queryParams.set("status", statusFilter);
+  if (supplierFilter !== "all") queryParams.set("supplierId", supplierFilter);
+  if (officerTypeFilter !== "all") queryParams.set("officerType", officerTypeFilter);
 
   const { data: paginatedData, isLoading } = useQuery<PaginatedEmployeeResponse>({
-    queryKey: ["/api/admin/employees", page, debouncedSearch, statusFilter],
+    queryKey: ["/api/admin/employees", page, debouncedSearch, statusFilter, supplierFilter, officerTypeFilter],
     queryFn: async () => {
       const res = await fetch(`/api/admin/employees?${queryParams.toString()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch employees");
@@ -475,7 +479,7 @@ export default function EmployeesPage() {
   const totalPages = Math.ceil(totalCount / pageLimit);
 
   const { data: supplierOptions = [] } = useQuery<Array<{ id: number; companyName: string }>>({
-    queryKey: ["/api/suppliers"],
+    queryKey: ["/api/suppliers/approved-list"],
   });
 
   const { data: employeeDetail, isLoading: isDetailLoading, isError: isDetailError } = useQuery<EmployeeDetail>({
@@ -486,7 +490,7 @@ export default function EmployeesPage() {
 
   const { data: officerTypes = [] } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ["/api/tenant/officer-types"],
-    enabled: !!selectedEmployeeId,
+    enabled: true,
   });
 
   const { data: dutyTypes = [] } = useQuery<Array<{ id: number; name: string; requiresLicense?: boolean }>>({
@@ -966,6 +970,40 @@ export default function EmployeesPage() {
             className="pl-9"
           />
         </div>
+        <div className="w-[220px]">
+          <SearchableSelect
+            value={supplierFilter}
+            onValueChange={(v) => { setSupplierFilter(v); setPage(1); setSelectedIds(new Set()); }}
+            options={[
+              { value: "inhouse", label: "In-house" },
+              ...supplierOptions.map((s) => ({
+                value: String(s.id),
+                label: s.companyName,
+              })),
+            ]}
+            noneValue="all"
+            noneLabel="All suppliers"
+            placeholder="All suppliers"
+            searchPlaceholder="Search suppliers…"
+            data-testid="select-filter-supplier"
+          />
+        </div>
+        <div className="w-[180px]">
+          <Select
+            value={officerTypeFilter}
+            onValueChange={(v) => { setOfficerTypeFilter(v); setPage(1); setSelectedIds(new Set()); }}
+          >
+            <SelectTrigger data-testid="select-filter-officer-type">
+              <SelectValue placeholder="All officer types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All officer types</SelectItem>
+              {officerTypes.map((t) => (
+                <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           {[
             { value: "all", label: "All" },
@@ -1026,7 +1064,7 @@ export default function EmployeesPage() {
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="font-semibold">No employees found</h3>
             <p className="text-sm text-muted-foreground">
-              {searchTerm || statusFilter !== "all"
+              {searchTerm || statusFilter !== "all" || supplierFilter !== "all" || officerTypeFilter !== "all"
                 ? "Try adjusting your search or filters."
                 : "Click 'Add Employee' to create your first employee record."}
             </p>

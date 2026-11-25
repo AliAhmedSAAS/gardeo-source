@@ -40,7 +40,7 @@ import { generateTwiML } from "./twilio-service";
 import { classifyTransactions, learnFromAllocation } from "./auto-classify-service";
 import { registerStaffProfileRoutes } from "./staff-profile-routes";
 import { registerPayrollControlRoutes } from "./payroll-control-routes";
-import { shiftHours as calcShiftHours, syncAppliedLinesFromShift } from "./payroll-control";
+import { shiftHours as calcShiftHours, syncAppliedLinesFromShift, sqlEmployeeIsInhouse } from "./payroll-control";
 import { registerPanlRoutes } from "./panl-routes";
 import { registerQuEmailsCronRoutes } from "./qu-emails-cron";
 import { registerSyncMonthCronRoutes } from "./sync-month-cron";
@@ -2746,6 +2746,8 @@ export async function registerRoutes(
       const offset = (page - 1) * limit;
       const search = (req.query.search as string || "").trim().toLowerCase();
       const statusFilter = req.query.status as string || "all";
+      const supplierFilter = String(req.query.supplierId || "all").trim();
+      const officerTypeFilter = String(req.query.officerType || "").trim();
 
       const conditions: string[] = ["e.tenant_id = $1", "(e.is_merged IS NULL OR e.is_merged = false)"];
       const params: any[] = [user.tenantId];
@@ -2759,6 +2761,23 @@ export async function registerRoutes(
         conditions.push(`vc.vetting_count > 0 AND vc.vetting_passed = vc.vetting_count`);
       } else if (statusFilter === "non_compliant") {
         conditions.push(`(vc.vetting_count = 0 OR vc.vetting_passed < vc.vetting_count)`);
+      }
+
+      if (supplierFilter === "inhouse") {
+        conditions.push(sqlEmployeeIsInhouse("e"));
+      } else if (supplierFilter && supplierFilter !== "all") {
+        const supplierId = parseInt(supplierFilter, 10);
+        if (Number.isFinite(supplierId)) {
+          conditions.push(`e.supplier_id = $${paramIdx}`);
+          params.push(supplierId);
+          paramIdx++;
+        }
+      }
+
+      if (officerTypeFilter && officerTypeFilter !== "all") {
+        conditions.push(`LOWER(TRIM(COALESCE(e.officer_type, ''))) = $${paramIdx}`);
+        params.push(officerTypeFilter.toLowerCase());
+        paramIdx++;
       }
 
       if (search) {
@@ -7138,7 +7157,8 @@ export async function registerRoutes(
       const allSuppliers = await storage.getSuppliersByTenant(tenantId);
       const approved = allSuppliers
         .filter(s => s.status === "approved" || s.status === "active")
-        .map(s => ({ id: s.id, companyName: s.companyName }));
+        .map(s => ({ id: s.id, companyName: s.companyName }))
+        .sort((a, b) => (a.companyName || "").localeCompare(b.companyName || "", undefined, { sensitivity: "base" }));
       res.json(approved);
     } catch (err: any) {
       res.status(500).json({ message: err?.message ?? "Failed to load suppliers" });
